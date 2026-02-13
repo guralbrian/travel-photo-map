@@ -43,14 +43,20 @@ If a `google_photos_url` is provided, clicking the popup image will open the ful
 
 ## Map Layers
 
-The map includes a layer switcher (top-right corner) with four base map styles:
+The map includes a layer switcher (top-right corner) with ten base map styles:
 
 | Layer | Provider | Description |
 |-------|----------|-------------|
 | Street Map | OpenStreetMap | Standard street map (default) |
+| Humanitarian | OpenStreetMap France / HOT | Humanitarian-focused style |
 | Terrain | OpenTopoMap | Topographic map with contour lines |
-| Satellite | Esri World Imagery | Satellite/aerial photography |
-| CartoDB Voyager | CartoDB | Clean, modern cartographic style |
+| Satellite (Esri) | Esri World Imagery | Satellite/aerial photography |
+| Esri Street | Esri | Detailed street map |
+| CartoDB Positron | CARTO | Light, minimal style |
+| CartoDB Dark Matter | CARTO | Dark theme |
+| CartoDB Voyager | CARTO | Modern cartographic style |
+| USGS Topo | U.S. Geological Survey | US topographic map |
+| USGS Imagery | U.S. Geological Survey | US satellite imagery |
 
 All tile providers are free and require no API key.
 

@@ -20,34 +20,75 @@
         (function () {
             var map = L.map('map').setView([20, 0], 2);
 
-            var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            var osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+            var cartoAttr = osmAttr + ', &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+            var streetMap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: osmAttr,
+                maxZoom: 19
+            });
+
+            var humanitarian = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                attribution: osmAttr + ', Tiles by <a href="https://www.hotosm.org/">HOT</a> hosted by <a href="https://openstreetmap.fr/">OSM France</a>',
                 maxZoom: 19
             });
 
             var terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                attribution: 'Map data: ' + osmAttr + ', <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
                 maxZoom: 17
             });
 
             var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri, DigitalGlobe, Earthstar Geographics',
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
                 maxZoom: 18
             });
 
-            var cartoDB = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CartoDB</a>',
+            var esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, TomTom',
+                maxZoom: 18
+            });
+
+            var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                attribution: cartoAttr,
                 maxZoom: 20,
                 subdomains: 'abcd'
+            });
+
+            var darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+                attribution: cartoAttr,
+                maxZoom: 20,
+                subdomains: 'abcd'
+            });
+
+            var voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+                attribution: cartoAttr,
+                maxZoom: 20,
+                subdomains: 'abcd'
+            });
+
+            var usgsTopo = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles courtesy of the <a href="https://usgs.gov/">U.S. Geological Survey</a>',
+                maxZoom: 20
+            });
+
+            var usgsImagery = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles courtesy of the <a href="https://usgs.gov/">U.S. Geological Survey</a>',
+                maxZoom: 20
             });
 
             streetMap.addTo(map);
 
             L.control.layers({
                 'Street Map': streetMap,
+                'Humanitarian': humanitarian,
                 'Terrain': terrain,
-                'Satellite': satellite,
-                'CartoDB Voyager': cartoDB
+                'Satellite (Esri)': satellite,
+                'Esri Street': esriStreet,
+                'CartoDB Positron': positron,
+                'CartoDB Dark Matter': darkMatter,
+                'CartoDB Voyager': voyager,
+                'USGS Topo': usgsTopo,
+                'USGS Imagery': usgsImagery
             }).addTo(map);
 
             function buildPopupHTML(photo) {
