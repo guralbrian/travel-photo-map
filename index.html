@@ -134,7 +134,10 @@
                         return;
                     }
 
-                    var photoLayer = L.photo.cluster({ spiderfyDistanceMultiplier: 1.2 });
+                    var photoLayer = L.photo.cluster({
+                        maxClusterRadius: 30,
+                        spiderfyDistanceMultiplier: 2
+                    });
 
                     photoLayer.on('click', function (e) {
                         var photo = e.layer.photo;
