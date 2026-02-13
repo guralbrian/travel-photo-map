@@ -94,12 +94,9 @@
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
                 var imgTag = '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
+                html += imgTag;
                 if (photo.google_photos_url) {
-                    html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link" title="View full resolution on Google Photos">';
-                    html += imgTag;
-                    html += '</a>';
-                } else {
-                    html += imgTag;
+                    html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link">View on Google Photos</a>';
                 }
                 html += '<div class="popup-info">';
                 if (photo.caption) {
