@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Photo Map</title>
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link rel="stylesheet" href="css/MarkerCluster.css">
+    <link rel="stylesheet" href="css/MarkerCluster.Default.css">
+    <link rel="stylesheet" href="css/Leaflet.Photo.css">
+    <link rel="stylesheet" href="css/map.css">
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="js/leaflet.js"></script>
+    <script src="js/leaflet.markercluster.js"></script>
+    <script src="js/Leaflet.Photo.js"></script>
+    <script>
+        (function () {
+            var map = L.map('map').setView([20, 0], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            function buildPopupHTML(photo) {
+                var html = '<div class="photo-popup">';
+                html += '<img src="' + photo.url + '" alt="' + (photo.caption || 'Photo') + '">';
+                html += '<div class="popup-info">';
+                if (photo.caption) {
+                    html += '<p class="popup-caption">' + photo.caption + '</p>';
+                }
+                if (photo.date) {
+                    html += '<p class="popup-date">' + photo.date + '</p>';
+                }
+                if (photo.tags && photo.tags.length > 0) {
+                    html += '<div class="popup-tags">';
+                    for (var i = 0; i < photo.tags.length; i++) {
+                        html += '<span class="popup-tag">' + photo.tags[i] + '</span>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div></div>';
+                return html;
+            }
+
+            function showEmptyState() {
+                var el = document.createElement('div');
+                el.className = 'empty-state';
+                el.innerHTML = '<h2>No Photos Yet</h2><p>Add geotagged photos to the <code>photos/</code> folder<br>and run <code>python scripts/process_photos.py</code></p>';
+                document.body.appendChild(el);
+            }
+
+            fetch('data/manifest.json')
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Failed to load manifest');
+                    return response.json();
+                })
+                .then(function (photos) {
+                    if (!photos || photos.length === 0) {
+                        showEmptyState();
+                        return;
+                    }
+
+                    var photoLayer = L.photo.cluster({ spiderfyDistanceMultiplier: 1.2 });
+
+                    photoLayer.on('click', function (e) {
+                        var photo = e.layer.photo;
+                        var popup = L.popup({
+                            className: 'leaflet-popup-photo',
+                            maxWidth: 320,
+                            minWidth: 200
+                        })
+                        .setLatLng(e.latlng)
+                        .setContent(buildPopupHTML(photo))
+                        .openOn(map);
+                    });
+
+                    photoLayer.add(photos).addTo(map);
+
+                    try {
+                        map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
+                    } catch (e) {
+                        // getBounds can fail if all markers are at the same point
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error loading photo manifest:', err);
+                    showEmptyState();
+                });
+        })();
+    </script>
+</body>
+</html>

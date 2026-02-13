@@ -1,0 +1,73 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+/* Photo popup styles */
+.photo-popup img {
+    width: 100%;
+    display: block;
+}
+
+.photo-popup .popup-info {
+    padding: 8px 10px;
+}
+
+.photo-popup .popup-caption {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 0 0 4px 0;
+}
+
+.photo-popup .popup-date {
+    color: #666;
+    font-size: 12px;
+    margin: 0 0 6px 0;
+}
+
+.photo-popup .popup-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.photo-popup .popup-tag {
+    display: inline-block;
+    background: #e0e7ef;
+    color: #333;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+/* Empty state */
+.empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: white;
+    padding: 24px 32px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    font-family: sans-serif;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+}
+
+.empty-state p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
