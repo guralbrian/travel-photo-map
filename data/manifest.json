@@ -1,9 +1,1519 @@
 [
   {
+    "lat": 51.520294,
+    "lng": -0.060744,
+    "url": "photos/IMG_7374.HEIC",
+    "thumbnail": "thumbs/IMG_7374.jpg",
+    "caption": "",
+    "date": "2026-01-28",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.518883,
+    "lng": -0.061711,
+    "url": "photos/IMG_7377.HEIC",
+    "thumbnail": "thumbs/IMG_7377.jpg",
+    "caption": "",
+    "date": "2026-01-28",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.518883,
+    "lng": -0.061711,
+    "url": "photos/IMG_7378.HEIC",
+    "thumbnail": "thumbs/IMG_7378.jpg",
+    "caption": "",
+    "date": "2026-01-28",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.5199,
+    "lng": -0.060464,
+    "url": "photos/IMG_7383.HEIC",
+    "thumbnail": "thumbs/IMG_7383.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.5199,
+    "lng": -0.060458,
+    "url": "photos/IMG_7384.HEIC",
+    "thumbnail": "thumbs/IMG_7384.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.520144,
+    "lng": -0.060689,
+    "url": "photos/IMG_7385.HEIC",
+    "thumbnail": "thumbs/IMG_7385.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.520144,
+    "lng": -0.060689,
+    "url": "photos/IMG_7386.HEIC",
+    "thumbnail": "thumbs/IMG_7386.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.520144,
+    "lng": -0.060689,
+    "url": "photos/IMG_7387.HEIC",
+    "thumbnail": "thumbs/IMG_7387.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.504733,
+    "lng": -0.057194,
+    "url": "photos/IMG_7388.HEIC",
+    "thumbnail": "thumbs/IMG_7388.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.502797,
+    "lng": -0.059158,
+    "url": "photos/IMG_7389.HEIC",
+    "thumbnail": "thumbs/IMG_7389.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.502808,
+    "lng": -0.059156,
+    "url": "photos/IMG_7390.HEIC",
+    "thumbnail": "thumbs/IMG_7390.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.519756,
+    "lng": -0.060306,
+    "url": "photos/IMG_7402.HEIC",
+    "thumbnail": "thumbs/IMG_7402.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.519192,
+    "lng": -0.060219,
+    "url": "photos/IMG_7403.HEIC",
+    "thumbnail": "thumbs/IMG_7403.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.517539,
+    "lng": -0.06625,
+    "url": "photos/IMG_7404.HEIC",
+    "thumbnail": "thumbs/IMG_7404.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.514347,
+    "lng": -0.074342,
+    "url": "photos/IMG_7405.HEIC",
+    "thumbnail": "thumbs/IMG_7405.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.514347,
+    "lng": -0.074342,
+    "url": "photos/IMG_7406.HEIC",
+    "thumbnail": "thumbs/IMG_7406.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.514392,
+    "lng": -0.074306,
+    "url": "photos/IMG_7407.HEIC",
+    "thumbnail": "thumbs/IMG_7407.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.514392,
+    "lng": -0.074306,
+    "url": "photos/IMG_7408.HEIC",
+    "thumbnail": "thumbs/IMG_7408.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.514356,
+    "lng": -0.074256,
+    "url": "photos/IMG_7409.HEIC",
+    "thumbnail": "thumbs/IMG_7409.jpg",
+    "caption": "",
+    "date": "2026-01-29",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.519814,
+    "lng": -0.104597,
+    "url": "photos/IMG_7413.HEIC",
+    "thumbnail": "thumbs/IMG_7413.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.156564,
+    "lng": -0.163681,
+    "url": "photos/IMG_7414.HEIC",
+    "thumbnail": "thumbs/IMG_7414.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.156475,
+    "lng": -0.163694,
+    "url": "photos/IMG_7416.HEIC",
+    "thumbnail": "thumbs/IMG_7416.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 51.156536,
+    "lng": -0.163678,
+    "url": "photos/IMG_7417.HEIC",
+    "thumbnail": "thumbs/IMG_7417.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622125,
+    "lng": 12.573986,
+    "url": "photos/IMG_7420.HEIC",
+    "thumbnail": "thumbs/IMG_7420.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622111,
+    "lng": 12.573983,
+    "url": "photos/IMG_7421.HEIC",
+    "thumbnail": "thumbs/IMG_7421.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.620736,
+    "lng": 12.564889,
+    "url": "photos/IMG_7423.HEIC",
+    "thumbnail": "thumbs/IMG_7423.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.620708,
+    "lng": 12.564883,
+    "url": "photos/IMG_7424.HEIC",
+    "thumbnail": "thumbs/IMG_7424.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.620694,
+    "lng": 12.564875,
+    "url": "photos/IMG_7425.HEIC",
+    "thumbnail": "thumbs/IMG_7425.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.617589,
+    "lng": 12.559778,
+    "url": "photos/IMG_7426.HEIC",
+    "thumbnail": "thumbs/IMG_7426.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.621578,
+    "lng": 12.573989,
+    "url": "photos/IMG_7431.HEIC",
+    "thumbnail": "thumbs/IMG_7431.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.619883,
+    "lng": 12.573347,
+    "url": "photos/IMG_7433.HEIC",
+    "thumbnail": "thumbs/IMG_7433.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.619919,
+    "lng": 12.573472,
+    "url": "photos/IMG_7434.HEIC",
+    "thumbnail": "thumbs/IMG_7434.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.619897,
+    "lng": 12.573472,
+    "url": "photos/IMG_7435.HEIC",
+    "thumbnail": "thumbs/IMG_7435.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.620544,
+    "lng": 12.576069,
+    "url": "photos/IMG_7436.HEIC",
+    "thumbnail": "thumbs/IMG_7436.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.673317,
+    "lng": 12.592706,
+    "url": "photos/IMG_7438.HEIC",
+    "thumbnail": "thumbs/IMG_7438.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.680881,
+    "lng": 12.604472,
+    "url": "photos/IMG_7439.HEIC",
+    "thumbnail": "thumbs/IMG_7439.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693261,
+    "lng": 12.609994,
+    "url": "photos/IMG_7441.HEIC",
+    "thumbnail": "thumbs/IMG_7441.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693253,
+    "lng": 12.609983,
+    "url": "photos/IMG_7442.HEIC",
+    "thumbnail": "thumbs/IMG_7442.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693567,
+    "lng": 12.608936,
+    "url": "photos/IMG_7444.HEIC",
+    "thumbnail": "thumbs/IMG_7444.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693264,
+    "lng": 12.609914,
+    "url": "photos/IMG_7445.HEIC",
+    "thumbnail": "thumbs/IMG_7445.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693242,
+    "lng": 12.610114,
+    "url": "photos/IMG_7446.HEIC",
+    "thumbnail": "thumbs/IMG_7446.jpg",
+    "caption": "",
+    "date": "2026-01-30",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.693378,
+    "lng": 12.613025,
+    "url": "photos/IMG_7455.HEIC",
+    "thumbnail": "thumbs/IMG_7455.jpg",
+    "caption": "",
+    "date": "2026-01-31",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.695883,
+    "lng": 12.608831,
+    "url": "photos/IMG_7459.HEIC",
+    "thumbnail": "thumbs/IMG_7459.jpg",
+    "caption": "",
+    "date": "2026-01-31",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622275,
+    "lng": 12.573794,
+    "url": "photos/IMG_7460.HEIC",
+    "thumbnail": "thumbs/IMG_7460.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622275,
+    "lng": 12.573794,
+    "url": "photos/IMG_7461.HEIC",
+    "thumbnail": "thumbs/IMG_7461.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622275,
+    "lng": 12.573794,
+    "url": "photos/IMG_7462.HEIC",
+    "thumbnail": "thumbs/IMG_7462.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615856,
+    "lng": 12.572303,
+    "url": "photos/IMG_7464.HEIC",
+    "thumbnail": "thumbs/IMG_7464.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615753,
+    "lng": 12.572175,
+    "url": "photos/IMG_7465.HEIC",
+    "thumbnail": "thumbs/IMG_7465.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615689,
+    "lng": 12.572178,
+    "url": "photos/IMG_7466.HEIC",
+    "thumbnail": "thumbs/IMG_7466.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615689,
+    "lng": 12.572178,
+    "url": "photos/IMG_7467.HEIC",
+    "thumbnail": "thumbs/IMG_7467.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615689,
+    "lng": 12.572178,
+    "url": "photos/IMG_7468.HEIC",
+    "thumbnail": "thumbs/IMG_7468.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615689,
+    "lng": 12.572178,
+    "url": "photos/IMG_7469.HEIC",
+    "thumbnail": "thumbs/IMG_7469.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.6157,
+    "lng": 12.572211,
+    "url": "photos/IMG_7470.HEIC",
+    "thumbnail": "thumbs/IMG_7470.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615711,
+    "lng": 12.572217,
+    "url": "photos/IMG_7471.HEIC",
+    "thumbnail": "thumbs/IMG_7471.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615714,
+    "lng": 12.572225,
+    "url": "photos/IMG_7472.HEIC",
+    "thumbnail": "thumbs/IMG_7472.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615714,
+    "lng": 12.572236,
+    "url": "photos/IMG_7473.HEIC",
+    "thumbnail": "thumbs/IMG_7473.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615719,
+    "lng": 12.572297,
+    "url": "photos/IMG_7474.HEIC",
+    "thumbnail": "thumbs/IMG_7474.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615803,
+    "lng": 12.573544,
+    "url": "photos/IMG_7475.HEIC",
+    "thumbnail": "thumbs/IMG_7475.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615789,
+    "lng": 12.573553,
+    "url": "photos/IMG_7476.HEIC",
+    "thumbnail": "thumbs/IMG_7476.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615772,
+    "lng": 12.573567,
+    "url": "photos/IMG_7477.HEIC",
+    "thumbnail": "thumbs/IMG_7477.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615764,
+    "lng": 12.573581,
+    "url": "photos/IMG_7478.HEIC",
+    "thumbnail": "thumbs/IMG_7478.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615764,
+    "lng": 12.573583,
+    "url": "photos/IMG_7479.HEIC",
+    "thumbnail": "thumbs/IMG_7479.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615758,
+    "lng": 12.573589,
+    "url": "photos/IMG_7480.HEIC",
+    "thumbnail": "thumbs/IMG_7480.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615758,
+    "lng": 12.573583,
+    "url": "photos/IMG_7481.HEIC",
+    "thumbnail": "thumbs/IMG_7481.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615697,
+    "lng": 12.573786,
+    "url": "photos/IMG_7482.HEIC",
+    "thumbnail": "thumbs/IMG_7482.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615689,
+    "lng": 12.573792,
+    "url": "photos/IMG_7483.HEIC",
+    "thumbnail": "thumbs/IMG_7483.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615692,
+    "lng": 12.573794,
+    "url": "photos/IMG_7484.HEIC",
+    "thumbnail": "thumbs/IMG_7484.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615672,
+    "lng": 12.573789,
+    "url": "photos/IMG_7485.HEIC",
+    "thumbnail": "thumbs/IMG_7485.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615669,
+    "lng": 12.573786,
+    "url": "photos/IMG_7486.HEIC",
+    "thumbnail": "thumbs/IMG_7486.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615667,
+    "lng": 12.573789,
+    "url": "photos/IMG_7487.HEIC",
+    "thumbnail": "thumbs/IMG_7487.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615667,
+    "lng": 12.573789,
+    "url": "photos/IMG_7488.HEIC",
+    "thumbnail": "thumbs/IMG_7488.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615667,
+    "lng": 12.573794,
+    "url": "photos/IMG_7489.HEIC",
+    "thumbnail": "thumbs/IMG_7489.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615667,
+    "lng": 12.573794,
+    "url": "photos/IMG_7490.HEIC",
+    "thumbnail": "thumbs/IMG_7490.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615667,
+    "lng": 12.573792,
+    "url": "photos/IMG_7491.HEIC",
+    "thumbnail": "thumbs/IMG_7491.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615669,
+    "lng": 12.573794,
+    "url": "photos/IMG_7492.HEIC",
+    "thumbnail": "thumbs/IMG_7492.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615708,
+    "lng": 12.574431,
+    "url": "photos/IMG_7495.HEIC",
+    "thumbnail": "thumbs/IMG_7495.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615708,
+    "lng": 12.574431,
+    "url": "photos/IMG_7496.HEIC",
+    "thumbnail": "thumbs/IMG_7496.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615708,
+    "lng": 12.574431,
+    "url": "photos/IMG_7497.HEIC",
+    "thumbnail": "thumbs/IMG_7497.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615853,
+    "lng": 12.574717,
+    "url": "photos/IMG_7499.HEIC",
+    "thumbnail": "thumbs/IMG_7499.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615853,
+    "lng": 12.574717,
+    "url": "photos/IMG_7500.HEIC",
+    "thumbnail": "thumbs/IMG_7500.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615844,
+    "lng": 12.575306,
+    "url": "photos/IMG_7501.HEIC",
+    "thumbnail": "thumbs/IMG_7501.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.615825,
+    "lng": 12.575242,
+    "url": "photos/IMG_7502.HEIC",
+    "thumbnail": "thumbs/IMG_7502.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616617,
+    "lng": 12.5755,
+    "url": "photos/IMG_7503.HEIC",
+    "thumbnail": "thumbs/IMG_7503.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616619,
+    "lng": 12.5755,
+    "url": "photos/IMG_7504.HEIC",
+    "thumbnail": "thumbs/IMG_7504.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616619,
+    "lng": 12.575503,
+    "url": "photos/IMG_7505.HEIC",
+    "thumbnail": "thumbs/IMG_7505.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616619,
+    "lng": 12.575506,
+    "url": "photos/IMG_7506.HEIC",
+    "thumbnail": "thumbs/IMG_7506.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616617,
+    "lng": 12.575506,
+    "url": "photos/IMG_7507.HEIC",
+    "thumbnail": "thumbs/IMG_7507.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616617,
+    "lng": 12.575506,
+    "url": "photos/IMG_7508.HEIC",
+    "thumbnail": "thumbs/IMG_7508.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616619,
+    "lng": 12.575547,
+    "url": "photos/IMG_7510.HEIC",
+    "thumbnail": "thumbs/IMG_7510.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616619,
+    "lng": 12.575547,
+    "url": "photos/IMG_7511.HEIC",
+    "thumbnail": "thumbs/IMG_7511.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616803,
+    "lng": 12.575492,
+    "url": "photos/IMG_7513.HEIC",
+    "thumbnail": "thumbs/IMG_7513.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616803,
+    "lng": 12.575506,
+    "url": "photos/IMG_7516.HEIC",
+    "thumbnail": "thumbs/IMG_7516.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616792,
+    "lng": 12.575483,
+    "url": "photos/IMG_7517.HEIC",
+    "thumbnail": "thumbs/IMG_7517.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616794,
+    "lng": 12.575478,
+    "url": "photos/IMG_7518.HEIC",
+    "thumbnail": "thumbs/IMG_7518.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.616794,
+    "lng": 12.575478,
+    "url": "photos/IMG_7519.HEIC",
+    "thumbnail": "thumbs/IMG_7519.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.617267,
+    "lng": 12.573925,
+    "url": "photos/IMG_7520.HEIC",
+    "thumbnail": "thumbs/IMG_7520.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.617275,
+    "lng": 12.573803,
+    "url": "photos/IMG_7521.HEIC",
+    "thumbnail": "thumbs/IMG_7521.jpg",
+    "caption": "",
+    "date": "2026-02-01",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.686572,
+    "lng": 12.564606,
+    "url": "photos/IMG_7527.HEIC",
+    "thumbnail": "thumbs/IMG_7527.jpg",
+    "caption": "",
+    "date": "2026-02-02",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.686569,
+    "lng": 12.564614,
+    "url": "photos/IMG_7528.HEIC",
+    "thumbnail": "thumbs/IMG_7528.jpg",
+    "caption": "",
+    "date": "2026-02-02",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.686572,
+    "lng": 12.564611,
+    "url": "photos/IMG_7529.HEIC",
+    "thumbnail": "thumbs/IMG_7529.jpg",
+    "caption": "",
+    "date": "2026-02-02",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.688806,
+    "lng": 12.558417,
+    "url": "photos/IMG_7530.HEIC",
+    "thumbnail": "thumbs/IMG_7530.jpg",
+    "caption": "",
+    "date": "2026-02-02",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622283,
+    "lng": 12.573869,
+    "url": "photos/IMG_7532.HEIC",
+    "thumbnail": "thumbs/IMG_7532.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622283,
+    "lng": 12.573869,
+    "url": "photos/IMG_7533.HEIC",
+    "thumbnail": "thumbs/IMG_7533.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 55.622283,
+    "lng": 12.573869,
+    "url": "photos/IMG_7534.HEIC",
+    "thumbnail": "thumbs/IMG_7534.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 53.553031,
+    "lng": 10.007228,
+    "url": "photos/IMG_7538.HEIC",
+    "thumbnail": "thumbs/IMG_7538.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 53.553061,
+    "lng": 10.006422,
+    "url": "photos/IMG_7540.HEIC",
+    "thumbnail": "thumbs/IMG_7540.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 53.342614,
+    "lng": 10.226372,
+    "url": "photos/IMG_7541.HEIC",
+    "thumbnail": "thumbs/IMG_7541.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 52.166033,
+    "lng": 9.864711,
+    "url": "photos/IMG_7544.HEIC",
+    "thumbnail": "thumbs/IMG_7544.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 52.166033,
+    "lng": 9.864711,
+    "url": "photos/IMG_7545.HEIC",
+    "thumbnail": "thumbs/IMG_7545.jpg",
+    "caption": "",
+    "date": "2026-02-03",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.442672,
+    "lng": 8.606492,
+    "url": "photos/IMG_7553.HEIC",
+    "thumbnail": "thumbs/IMG_7553.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.442672,
+    "lng": 8.606492,
+    "url": "photos/IMG_7554.HEIC",
+    "thumbnail": "thumbs/IMG_7554.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.443397,
+    "lng": 8.607269,
+    "url": "photos/IMG_7555.HEIC",
+    "thumbnail": "thumbs/IMG_7555.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.443203,
+    "lng": 8.610331,
+    "url": "photos/IMG_7556.HEIC",
+    "thumbnail": "thumbs/IMG_7556.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.441594,
+    "lng": 8.613981,
+    "url": "photos/IMG_7558.HEIC",
+    "thumbnail": "thumbs/IMG_7558.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.441594,
+    "lng": 8.613972,
+    "url": "photos/IMG_7559.HEIC",
+    "thumbnail": "thumbs/IMG_7559.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.441586,
+    "lng": 8.613981,
+    "url": "photos/IMG_7560.HEIC",
+    "thumbnail": "thumbs/IMG_7560.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384339,
+    "lng": 8.70925,
+    "url": "photos/IMG_7562.HEIC",
+    "thumbnail": "thumbs/IMG_7562.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384272,
+    "lng": 8.709175,
+    "url": "photos/IMG_7567.HEIC",
+    "thumbnail": "thumbs/IMG_7567.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384278,
+    "lng": 8.709172,
+    "url": "photos/IMG_7568.HEIC",
+    "thumbnail": "thumbs/IMG_7568.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.383972,
+    "lng": 8.709525,
+    "url": "photos/IMG_7569.HEIC",
+    "thumbnail": "thumbs/IMG_7569.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384875,
+    "lng": 8.710236,
+    "url": "photos/IMG_7570.HEIC",
+    "thumbnail": "thumbs/IMG_7570.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384875,
+    "lng": 8.710236,
+    "url": "photos/IMG_7571.HEIC",
+    "thumbnail": "thumbs/IMG_7571.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384875,
+    "lng": 8.710239,
+    "url": "photos/IMG_7572.HEIC",
+    "thumbnail": "thumbs/IMG_7572.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.384347,
+    "lng": 8.709983,
+    "url": "photos/IMG_7576.HEIC",
+    "thumbnail": "thumbs/IMG_7576.jpg",
+    "caption": "",
+    "date": "2026-02-04",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.442661,
+    "lng": 8.606486,
+    "url": "photos/IMG_7582.HEIC",
+    "thumbnail": "thumbs/IMG_7582.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.442664,
+    "lng": 8.606486,
+    "url": "photos/IMG_7583.HEIC",
+    "thumbnail": "thumbs/IMG_7583.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.442786,
+    "lng": 8.606508,
+    "url": "photos/IMG_7589.HEIC",
+    "thumbnail": "thumbs/IMG_7589.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.443222,
+    "lng": 8.608533,
+    "url": "photos/IMG_7590.HEIC",
+    "thumbnail": "thumbs/IMG_7590.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.441494,
+    "lng": 8.614611,
+    "url": "photos/IMG_7593.HEIC",
+    "thumbnail": "thumbs/IMG_7593.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.409339,
+    "lng": 8.702825,
+    "url": "photos/IMG_7595.HEIC",
+    "thumbnail": "thumbs/IMG_7595.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.409606,
+    "lng": 8.705958,
+    "url": "photos/IMG_7596.HEIC",
+    "thumbnail": "thumbs/IMG_7596.jpg",
+    "caption": "",
+    "date": "2026-02-05",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.441508,
+    "lng": 8.614628,
+    "url": "photos/IMG_7602.HEIC",
+    "thumbnail": "thumbs/IMG_7602.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.709531,
+    "lng": 9.273078,
+    "url": "photos/IMG_7603.HEIC",
+    "thumbnail": "thumbs/IMG_7603.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.713589,
+    "lng": 9.271539,
+    "url": "photos/IMG_7604.HEIC",
+    "thumbnail": "thumbs/IMG_7604.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.714622,
+    "lng": 9.269256,
+    "url": "photos/IMG_7606.HEIC",
+    "thumbnail": "thumbs/IMG_7606.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.714622,
+    "lng": 9.268861,
+    "url": "photos/IMG_7608.HEIC",
+    "thumbnail": "thumbs/IMG_7608.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.700353,
+    "lng": 9.256025,
+    "url": "photos/IMG_7617.HEIC",
+    "thumbnail": "thumbs/IMG_7617.jpg",
+    "caption": "",
+    "date": "2026-02-06",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.709572,
+    "lng": 9.273211,
+    "url": "photos/IMG_7623.HEIC",
+    "thumbnail": "thumbs/IMG_7623.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.709644,
+    "lng": 9.273222,
+    "url": "photos/IMG_7625.HEIC",
+    "thumbnail": "thumbs/IMG_7625.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.71625,
+    "lng": 9.268169,
+    "url": "photos/IMG_7636.HEIC",
+    "thumbnail": "thumbs/IMG_7636.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.716336,
+    "lng": 9.268344,
+    "url": "photos/IMG_7638.HEIC",
+    "thumbnail": "thumbs/IMG_7638.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.716389,
+    "lng": 9.268114,
+    "url": "photos/IMG_7641.HEIC",
+    "thumbnail": "thumbs/IMG_7641.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.71645,
+    "lng": 9.268225,
+    "url": "photos/IMG_7645.HEIC",
+    "thumbnail": "thumbs/IMG_7645.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.716403,
+    "lng": 9.268206,
+    "url": "photos/IMG_7646.HEIC",
+    "thumbnail": "thumbs/IMG_7646.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.716447,
+    "lng": 9.268183,
+    "url": "photos/IMG_7648.HEIC",
+    "thumbnail": "thumbs/IMG_7648.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.7164,
+    "lng": 9.268006,
+    "url": "photos/IMG_7650.HEIC",
+    "thumbnail": "thumbs/IMG_7650.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
     "lat": 49.716536,
     "lng": 9.267133,
     "url": "photos/IMG_7652.HEIC",
     "thumbnail": "thumbs/IMG_7652.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.716511,
+    "lng": 9.267261,
+    "url": "photos/IMG_7654.HEIC",
+    "thumbnail": "thumbs/IMG_7654.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.705458,
+    "lng": 9.281381,
+    "url": "photos/IMG_7667.HEIC",
+    "thumbnail": "thumbs/IMG_7667.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.705342,
+    "lng": 9.282158,
+    "url": "photos/IMG_7669.HEIC",
+    "thumbnail": "thumbs/IMG_7669.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.625644,
+    "lng": 9.319458,
+    "url": "photos/IMG_7671.HEIC",
+    "thumbnail": "thumbs/IMG_7671.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.626011,
+    "lng": 9.319617,
+    "url": "photos/IMG_7675.HEIC",
+    "thumbnail": "thumbs/IMG_7675.jpg",
     "caption": "",
     "date": "2026-02-07",
     "tags": [],
@@ -16,6 +1526,166 @@
     "thumbnail": "thumbs/IMG_7676.jpg",
     "caption": "",
     "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.626008,
+    "lng": 9.319853,
+    "url": "photos/IMG_7678.HEIC",
+    "thumbnail": "thumbs/IMG_7678.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.631011,
+    "lng": 9.480211,
+    "url": "photos/IMG_7683.HEIC",
+    "thumbnail": "thumbs/IMG_7683.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.630825,
+    "lng": 9.478742,
+    "url": "photos/IMG_7691.HEIC",
+    "thumbnail": "thumbs/IMG_7691.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.631008,
+    "lng": 9.478489,
+    "url": "photos/IMG_7692.HEIC",
+    "thumbnail": "thumbs/IMG_7692.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.631114,
+    "lng": 9.477639,
+    "url": "photos/IMG_7699.HEIC",
+    "thumbnail": "thumbs/IMG_7699.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.631275,
+    "lng": 9.480306,
+    "url": "photos/IMG_7709.HEIC",
+    "thumbnail": "thumbs/IMG_7709.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.714603,
+    "lng": 9.2694,
+    "url": "photos/IMG_7716.HEIC",
+    "thumbnail": "thumbs/IMG_7716.jpg",
+    "caption": "",
+    "date": "2026-02-07",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.44265,
+    "lng": 8.606561,
+    "url": "photos/IMG_7720.HEIC",
+    "thumbnail": "thumbs/IMG_7720.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415139,
+    "lng": 8.700228,
+    "url": "photos/IMG_7730.HEIC",
+    "thumbnail": "thumbs/IMG_7730.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415097,
+    "lng": 8.700567,
+    "url": "photos/IMG_7732.HEIC",
+    "thumbnail": "thumbs/IMG_7732.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.4151,
+    "lng": 8.700567,
+    "url": "photos/IMG_7733.HEIC",
+    "thumbnail": "thumbs/IMG_7733.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415081,
+    "lng": 8.700578,
+    "url": "photos/IMG_7735.HEIC",
+    "thumbnail": "thumbs/IMG_7735.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415225,
+    "lng": 8.700533,
+    "url": "photos/IMG_7737.HEIC",
+    "thumbnail": "thumbs/IMG_7737.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415181,
+    "lng": 8.70055,
+    "url": "photos/IMG_7739.HEIC",
+    "thumbnail": "thumbs/IMG_7739.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 49.415214,
+    "lng": 8.695192,
+    "url": "photos/IMG_7743.HEIC",
+    "thumbnail": "thumbs/IMG_7743.jpg",
+    "caption": "",
+    "date": "2026-02-08",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.122197,
+    "lng": 11.6601,
+    "url": "photos/IMG_7754.HEIC",
+    "thumbnail": "thumbs/IMG_7754.jpg",
+    "caption": "",
+    "date": "2026-02-09",
     "tags": [],
     "google_photos_url": ""
   },
@@ -40,12 +1710,52 @@
     "google_photos_url": ""
   },
   {
+    "lat": 48.1431,
+    "lng": 11.575606,
+    "url": "photos/IMG_7771.HEIC",
+    "thumbnail": "thumbs/IMG_7771.jpg",
+    "caption": "",
+    "date": "2026-02-11",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
     "lat": 48.14315,
     "lng": 11.575667,
     "url": "photos/IMG_7775.HEIC",
     "thumbnail": "thumbs/IMG_7775.jpg",
     "caption": "",
     "date": "2026-02-11",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.149039,
+    "lng": 11.580078,
+    "url": "photos/IMG_7779.HEIC",
+    "thumbnail": "thumbs/IMG_7779.jpg",
+    "caption": "",
+    "date": "2026-02-11",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.151886,
+    "lng": 11.579481,
+    "url": "photos/IMG_7782.HEIC",
+    "thumbnail": "thumbs/IMG_7782.jpg",
+    "caption": "",
+    "date": "2026-02-11",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.220617,
+    "lng": 11.595672,
+    "url": "photos/IMG_7788.HEIC",
+    "thumbnail": "thumbs/IMG_7788.jpg",
+    "caption": "",
+    "date": "2026-02-12",
     "tags": [],
     "google_photos_url": ""
   },
@@ -70,6 +1780,16 @@
     "google_photos_url": ""
   },
   {
+    "lat": 48.221942,
+    "lng": 11.594997,
+    "url": "photos/IMG_7792.HEIC",
+    "thumbnail": "thumbs/IMG_7792.jpg",
+    "caption": "",
+    "date": "2026-02-12",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
     "lat": 48.221969,
     "lng": 11.595086,
     "url": "photos/IMG_7794.HEIC",
@@ -84,6 +1804,26 @@
     "lng": 11.590036,
     "url": "photos/IMG_7800.HEIC",
     "thumbnail": "thumbs/IMG_7800.jpg",
+    "caption": "",
+    "date": "2026-02-12",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.220131,
+    "lng": 11.589472,
+    "url": "photos/IMG_7801.HEIC",
+    "thumbnail": "thumbs/IMG_7801.jpg",
+    "caption": "",
+    "date": "2026-02-12",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.125558,
+    "lng": 11.663656,
+    "url": "photos/IMG_7802.HEIC",
+    "thumbnail": "thumbs/IMG_7802.jpg",
     "caption": "",
     "date": "2026-02-12",
     "tags": [],
@@ -120,6 +1860,16 @@
     "google_photos_url": ""
   },
   {
+    "lat": 48.129606,
+    "lng": 11.60615,
+    "url": "photos/IMG_7832.HEIC",
+    "thumbnail": "thumbs/IMG_7832.jpg",
+    "caption": "",
+    "date": "2026-02-12",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
     "lat": 48.129817,
     "lng": 11.623431,
     "url": "photos/IMG_7837.HEIC",
@@ -144,6 +1894,16 @@
     "lng": 11.643417,
     "url": "photos/IMG_7846.HEIC",
     "thumbnail": "thumbs/IMG_7846.jpg",
+    "caption": "",
+    "date": "2026-02-12",
+    "tags": [],
+    "google_photos_url": ""
+  },
+  {
+    "lat": 48.126342,
+    "lng": 11.643978,
+    "url": "photos/IMG_7847.HEIC",
+    "thumbnail": "thumbs/IMG_7847.jpg",
     "caption": "",
     "date": "2026-02-12",
     "tags": [],
