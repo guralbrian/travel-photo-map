@@ -9,8 +9,12 @@ import sys
 from pathlib import Path
 
 from PIL import Image, ExifTags
+from pillow_heif import register_heif_opener
 
-SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff'}
+# Register HEIC/HEIF support so Pillow can open .heic files
+register_heif_opener()
+
+SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff', '.heic', '.heif'}
 
 
 def dms_to_decimal(dms, ref):
@@ -243,6 +247,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
         tags = file_notes.get('tags', [])
         if isinstance(tags, str):
             tags = [t.strip() for t in tags.split(',')]
+        google_photos_url = file_notes.get('google_photos_url', '')
 
         entry = {
             'lat': round(lat, 6),
@@ -252,6 +257,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
             'caption': caption,
             'date': date,
             'tags': tags,
+            'google_photos_url': google_photos_url,
         }
         manifest.append(entry)
         print(f"  OK: ({lat:.4f}, {lng:.4f}) {date}")

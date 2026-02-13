@@ -15,6 +15,40 @@ html, body {
     display: block;
 }
 
+.photo-popup a.photo-link {
+    display: block;
+    position: relative;
+}
+
+.photo-popup a.photo-link img {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.photo-popup a.photo-link:hover img {
+    opacity: 0.85;
+}
+
+.photo-popup a.photo-link::after {
+    content: 'View on Google Photos';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 12px;
+    text-align: center;
+    padding: 6px 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.photo-popup a.photo-link:hover::after {
+    opacity: 1;
+}
+
 .photo-popup .popup-info {
     padding: 8px 10px;
 }

@@ -32,11 +32,27 @@ Create `data/notes.yaml` to add captions and tags to your photos:
 IMG_1234.jpg:
   caption: Sunset over Santorini
   tags: [greece, sunset, travel]
+  google_photos_url: https://photos.app.goo.gl/example123
 
 DSC_5678.jpg:
   caption: Street food in Bangkok
   tags: [thailand, food]
 ```
+
+If a `google_photos_url` is provided, clicking the popup image will open the full-resolution photo on Google Photos in a new tab.
+
+## Map Layers
+
+The map includes a layer switcher (top-right corner) with four base map styles:
+
+| Layer | Provider | Description |
+|-------|----------|-------------|
+| Street Map | OpenStreetMap | Standard street map (default) |
+| Terrain | OpenTopoMap | Topographic map with contour lines |
+| Satellite | Esri World Imagery | Satellite/aerial photography |
+| CartoDB Voyager | CartoDB | Clean, modern cartographic style |
+
+All tile providers are free and require no API key.
 
 ## Script Options
 

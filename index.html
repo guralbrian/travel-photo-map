@@ -20,14 +20,45 @@
         (function () {
             var map = L.map('map').setView([20, 0], 2);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 19
+            });
+
+            var terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 17
+            });
+
+            var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri, DigitalGlobe, Earthstar Geographics',
+                maxZoom: 18
+            });
+
+            var cartoDB = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastered_voyager/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CartoDB</a>',
+                maxZoom: 20
+            });
+
+            streetMap.addTo(map);
+
+            L.control.layers({
+                'Street Map': streetMap,
+                'Terrain': terrain,
+                'Satellite': satellite,
+                'CartoDB Voyager': cartoDB
             }).addTo(map);
 
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
-                html += '<img src="' + photo.url + '" alt="' + (photo.caption || 'Photo') + '">';
+                var imgTag = '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
+                if (photo.google_photos_url) {
+                    html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link" title="View full resolution on Google Photos">';
+                    html += imgTag;
+                    html += '</a>';
+                } else {
+                    html += imgTag;
+                }
                 html += '<div class="popup-info">';
                 if (photo.caption) {
                     html += '<p class="popup-caption">' + photo.caption + '</p>';
