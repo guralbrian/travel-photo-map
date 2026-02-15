@@ -95,8 +95,11 @@
 
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
-                var imgTag = '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
-                html += imgTag;
+                if (photo.type === 'video') {
+                    html += '<video controls preload="metadata"><source src="' + photo.url + '"></video>';
+                } else {
+                    html += '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
+                }
                 if (photo.google_photos_url) {
                     html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link">View on Google Photos</a>';
                 }
@@ -129,14 +132,14 @@
             var photoLayer = null;
             var allPhotos = [];
             var currentClusterRadius = 30;
-            var currentIconSize = 60;
+            var currentIconSize = 90;
 
             function onPhotoClick(e) {
                 var photo = e.layer.photo;
                 L.popup({
                     className: 'leaflet-popup-photo',
-                    maxWidth: 320,
-                    minWidth: 200
+                    maxWidth: 480,
+                    minWidth: 300
                 })
                 .setLatLng(e.latlng)
                 .setContent(buildPopupHTML(photo))
@@ -169,7 +172,7 @@
                         '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
                         '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
                         '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
-                        '<input type="range" id="size-slider" min="30" max="120" value="' + currentIconSize + '">';
+                        '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">';
 
                     return container;
                 }

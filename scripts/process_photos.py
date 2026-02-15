@@ -6,6 +6,9 @@ from datetime import datetime
 import json
 import math
 import os
+import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +19,7 @@ from pillow_heif import register_heif_opener
 register_heif_opener()
 
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff', '.heic', '.heif'}
+VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm'}
 
 
 def dms_to_decimal(dms, ref):
@@ -192,6 +196,161 @@ def create_thumbnail(image, thumb_path, thumb_width):
     image.save(thumb_path, 'JPEG', quality=85)
 
 
+def is_video(filepath):
+    """Check if a file is a video based on extension."""
+    return Path(filepath).suffix.lower() in VIDEO_EXTENSIONS
+
+
+def parse_iso6709(location_str):
+    """Parse GPS coordinates from ISO 6709 format.
+
+    Handles formats like '+48.8584+002.2945/' or '+48.8584+002.2945+035.000/'.
+
+    Args:
+        location_str: ISO 6709 location string.
+
+    Returns:
+        Tuple of (lat, lng) or None if parsing fails.
+    """
+    if not location_str:
+        return None
+    # Match signed decimal lat/lng, optional altitude
+    m = re.match(r'([+-]\d+\.?\d*)\s*([+-]\d+\.?\d*)', location_str)
+    if not m:
+        return None
+    try:
+        lat = float(m.group(1))
+        lng = float(m.group(2))
+    except ValueError:
+        return None
+    if abs(lat) < 0.001 and abs(lng) < 0.001:
+        return None
+    return (lat, lng)
+
+
+def extract_video_gps(filepath):
+    """Extract GPS coordinates from video metadata using ffprobe.
+
+    Looks for com.apple.quicktime.location.ISO6709 or location tags.
+
+    Args:
+        filepath: Path to the video file.
+
+    Returns:
+        Tuple of (lat, lng) or None.
+    """
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', str(filepath)],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return None
+        meta = json.loads(result.stdout)
+        tags = meta.get('format', {}).get('tags', {})
+        # Try Apple QuickTime location tag first
+        loc = tags.get('com.apple.quicktime.location.ISO6709', '')
+        if loc:
+            return parse_iso6709(loc)
+        # Try generic location tag
+        loc = tags.get('location', '')
+        if loc:
+            return parse_iso6709(loc)
+    except Exception:
+        pass
+    return None
+
+
+def extract_video_date(filepath):
+    """Extract creation date from video metadata as YYYY-MM-DD string.
+
+    Args:
+        filepath: Path to the video file.
+
+    Returns:
+        Date string or empty string.
+    """
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', str(filepath)],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return ''
+        meta = json.loads(result.stdout)
+        tags = meta.get('format', {}).get('tags', {})
+        creation = tags.get('creation_time', '')
+        if creation:
+            # Typical format: 2026-01-29T19:14:19.000000Z
+            return creation[:10]
+    except Exception:
+        pass
+    return ''
+
+
+def extract_video_datetime(filepath):
+    """Extract creation datetime from video metadata as a datetime object.
+
+    Args:
+        filepath: Path to the video file.
+
+    Returns:
+        datetime object or None.
+    """
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', str(filepath)],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return None
+        meta = json.loads(result.stdout)
+        tags = meta.get('format', {}).get('tags', {})
+        creation = tags.get('creation_time', '')
+        if creation:
+            # Try parsing ISO format
+            for fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S'):
+                try:
+                    return datetime.strptime(creation, fmt)
+                except ValueError:
+                    continue
+    except Exception:
+        pass
+    return None
+
+
+def create_video_thumbnail(filepath, thumb_path, thumb_width):
+    """Extract a frame from a video to use as thumbnail.
+
+    Uses ffmpeg to grab a frame at 1 second into the video.
+
+    Args:
+        filepath: Path to the video file.
+        thumb_path: Output path for the thumbnail JPEG.
+        thumb_width: Desired width in pixels.
+    """
+    subprocess.run(
+        [
+            'ffmpeg', '-y', '-ss', '1', '-i', str(filepath),
+            '-vframes', '1',
+            '-vf', f'scale={thumb_width}:-1',
+            str(thumb_path)
+        ],
+        capture_output=True, timeout=60
+    )
+    if not Path(thumb_path).exists():
+        # Fallback: try frame at 0s for very short videos
+        subprocess.run(
+            [
+                'ffmpeg', '-y', '-ss', '0', '-i', str(filepath),
+                '-vframes', '1',
+                '-vf', f'scale={thumb_width}:-1',
+                str(thumb_path)
+            ],
+            capture_output=True, timeout=60
+        )
+
+
 def load_notes(data_dir):
     """Load optional notes.yaml for captions, tags, and annotations.
 
@@ -323,20 +482,26 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     notes, annotations = load_notes(data_dir)
     manifest = []
 
+    # Check ffmpeg availability for video support
+    has_ffmpeg = shutil.which('ffmpeg') is not None and shutil.which('ffprobe') is not None
+    if not has_ffmpeg:
+        print("Warning: ffmpeg/ffprobe not found. Videos will be skipped.", file=sys.stderr)
+
     # Cache setup
     cache_path = data_dir / '.process_cache.json'
     cache = {} if force else load_cache(cache_path)
     existing_manifest = {} if force else load_existing_manifest(output_path)
     new_cache = {}
 
-    # Collect image files
+    # Collect media files (images + videos)
+    all_extensions = SUPPORTED_EXTENSIONS | VIDEO_EXTENSIONS
     files = sorted([
         f for f in photo_dir.iterdir()
-        if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+        if f.is_file() and f.suffix.lower() in all_extensions
     ])
 
     if not files:
-        print("No supported image files found in", photo_dir)
+        print("No supported media files found in", photo_dir)
         # Write empty manifest
         with open(output_path, 'w') as f:
             json.dump([], f, indent=2)
@@ -346,13 +511,20 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     skipped = 0
     processed = 0
     interpolated = 0
-    no_gps_files = []  # (filepath, image, exif_data) for second pass
+    no_gps_files = []  # (filepath, image_or_none, exif_or_none, is_vid) for second pass
 
     # Pass 1: Process files with native GPS, collect GPS references for interpolation
     gps_references = []  # (datetime, lat, lng) sorted later
 
     for filepath in files:
         filename = filepath.name
+        file_is_video = is_video(filepath)
+
+        # Skip videos if ffmpeg not available
+        if file_is_video and not has_ffmpeg:
+            print(f"  Skipping video (no ffmpeg): {filename}")
+            continue
+
         stat = filepath.stat()
         file_mtime = stat.st_mtime
         file_size = stat.st_size
@@ -371,104 +543,178 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             manifest.append(entry)
             new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
             # Still add to GPS references for interpolation
-            try:
-                image = Image.open(filepath)
-                exif_data = image.getexif()
-                coords = extract_gps(exif_data)
-                dt = extract_datetime(exif_data)
-                if coords and dt:
-                    gps_references.append((dt, coords[0], coords[1]))
-            except Exception:
-                pass
+            if file_is_video:
+                coords = extract_video_gps(filepath)
+                dt = extract_video_datetime(filepath)
+            else:
+                try:
+                    image = Image.open(filepath)
+                    exif_data = image.getexif()
+                    coords = extract_gps(exif_data)
+                    dt = extract_datetime(exif_data)
+                except Exception:
+                    coords = None
+                    dt = None
+            if coords and dt:
+                gps_references.append((dt, coords[0], coords[1]))
             skipped += 1
             continue
 
         print(f"Processing: {filename}")
 
-        try:
-            image = Image.open(filepath)
-        except Exception as e:
-            print(f"  Skipping (cannot open): {e}", file=sys.stderr)
-            continue
+        if file_is_video:
+            # Video processing path
+            coords = extract_video_gps(filepath)
+            if coords is None:
+                # Defer to pass 2 for GPS interpolation
+                no_gps_files.append((filepath, None, None, True))
+                continue
 
-        # Extract EXIF
-        try:
-            exif_data = image.getexif()
-        except Exception:
-            print(f"  Skipping (no EXIF data)")
-            continue
+            lat, lng = coords
+            date = extract_video_date(filepath)
 
-        # Extract GPS
-        coords = extract_gps(exif_data)
-        if coords is None:
-            # Defer to pass 2 for GPS interpolation
-            no_gps_files.append((filepath, image, exif_data))
-            continue
+            # Collect GPS reference for interpolation
+            dt = extract_video_datetime(filepath)
+            if dt:
+                gps_references.append((dt, lat, lng))
 
-        lat, lng = coords
-        date = extract_date(exif_data)
+            # Generate thumbnail from video frame
+            thumb_filename = filepath.stem + '.jpg'
+            thumb_path = thumb_dir / thumb_filename
+            try:
+                create_video_thumbnail(filepath, thumb_path, thumb_width)
+                if not thumb_path.exists():
+                    print(f"  Warning: video thumbnail generation failed for {filename}", file=sys.stderr)
+                    continue
+            except Exception as e:
+                print(f"  Warning: video thumbnail generation failed: {e}", file=sys.stderr)
+                continue
 
-        # Collect GPS reference for interpolation
-        dt = extract_datetime(exif_data)
-        if dt:
-            gps_references.append((dt, lat, lng))
+            # Merge notes
+            file_notes = notes.get(filename, {})
+            caption = file_notes.get('caption', '')
+            tags = file_notes.get('tags', [])
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(',')]
+            google_photos_url = file_notes.get('google_photos_url', '')
 
-        # Generate thumbnail
-        thumb_filename = filepath.stem + '.jpg'
-        thumb_path = thumb_dir / thumb_filename
-        try:
-            create_thumbnail(image.copy(), thumb_path, thumb_width)
-        except Exception as e:
-            print(f"  Warning: thumbnail generation failed: {e}", file=sys.stderr)
-            continue
+            entry = {
+                'lat': round(lat, 6),
+                'lng': round(lng, 6),
+                'url': photo_url,
+                'thumbnail': f'thumbs/{thumb_filename}',
+                'caption': caption,
+                'date': date,
+                'tags': tags,
+                'google_photos_url': google_photos_url,
+                'type': 'video',
+            }
+            manifest.append(entry)
+            new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            processed += 1
+            print(f"  OK (video): ({lat:.4f}, {lng:.4f}) {date}")
+        else:
+            # Image processing path
+            try:
+                image = Image.open(filepath)
+            except Exception as e:
+                print(f"  Skipping (cannot open): {e}", file=sys.stderr)
+                continue
 
-        # Merge notes
-        file_notes = notes.get(filename, {})
-        caption = file_notes.get('caption', '')
-        tags = file_notes.get('tags', [])
-        if isinstance(tags, str):
-            tags = [t.strip() for t in tags.split(',')]
-        google_photos_url = file_notes.get('google_photos_url', '')
+            # Extract EXIF
+            try:
+                exif_data = image.getexif()
+            except Exception:
+                print(f"  Skipping (no EXIF data)")
+                continue
 
-        entry = {
-            'lat': round(lat, 6),
-            'lng': round(lng, 6),
-            'url': photo_url,
-            'thumbnail': f'thumbs/{thumb_filename}',
-            'caption': caption,
-            'date': date,
-            'tags': tags,
-            'google_photos_url': google_photos_url,
-        }
-        manifest.append(entry)
-        new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
-        processed += 1
-        print(f"  OK: ({lat:.4f}, {lng:.4f}) {date}")
+            # Extract GPS
+            coords = extract_gps(exif_data)
+            if coords is None:
+                # Defer to pass 2 for GPS interpolation
+                no_gps_files.append((filepath, image, exif_data, False))
+                continue
 
-    # Pass 2: Interpolate GPS for photos without native coordinates
+            lat, lng = coords
+            date = extract_date(exif_data)
+
+            # Collect GPS reference for interpolation
+            dt = extract_datetime(exif_data)
+            if dt:
+                gps_references.append((dt, lat, lng))
+
+            # Generate thumbnail
+            thumb_filename = filepath.stem + '.jpg'
+            thumb_path = thumb_dir / thumb_filename
+            try:
+                create_thumbnail(image.copy(), thumb_path, thumb_width)
+            except Exception as e:
+                print(f"  Warning: thumbnail generation failed: {e}", file=sys.stderr)
+                continue
+
+            # Merge notes
+            file_notes = notes.get(filename, {})
+            caption = file_notes.get('caption', '')
+            tags = file_notes.get('tags', [])
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(',')]
+            google_photos_url = file_notes.get('google_photos_url', '')
+
+            entry = {
+                'lat': round(lat, 6),
+                'lng': round(lng, 6),
+                'url': photo_url,
+                'thumbnail': f'thumbs/{thumb_filename}',
+                'caption': caption,
+                'date': date,
+                'tags': tags,
+                'google_photos_url': google_photos_url,
+                'type': 'photo',
+            }
+            manifest.append(entry)
+            new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            processed += 1
+            print(f"  OK: ({lat:.4f}, {lng:.4f}) {date}")
+
+    # Pass 2: Interpolate GPS for media without native coordinates
     gps_references.sort(key=lambda x: x[0])
 
-    for filepath, image, exif_data in no_gps_files:
+    for filepath, image, exif_data, file_is_video in no_gps_files:
         filename = filepath.name
         photo_url = f'photos/{filename}'
-        dt = extract_datetime(exif_data)
+
+        if file_is_video:
+            dt = extract_video_datetime(filepath)
+        else:
+            dt = extract_datetime(exif_data)
+
         if dt is None:
             print(f"  Skipping {filename} (no GPS, no timestamp for interpolation)")
             continue
 
         match = find_nearest_gps(dt, gps_references)
         if match is None:
-            print(f"  Skipping {filename} (no GPS, no nearby reference photo)")
+            print(f"  Skipping {filename} (no GPS, no nearby reference)")
             continue
 
         lat, lng, gap = match
-        date = extract_date(exif_data)
+
+        if file_is_video:
+            date = extract_video_date(filepath)
+        else:
+            date = extract_date(exif_data)
 
         # Generate thumbnail
         thumb_filename = filepath.stem + '.jpg'
         thumb_path = thumb_dir / thumb_filename
         try:
-            create_thumbnail(image.copy(), thumb_path, thumb_width)
+            if file_is_video:
+                create_video_thumbnail(filepath, thumb_path, thumb_width)
+                if not thumb_path.exists():
+                    print(f"  Warning: video thumbnail generation failed for {filename}", file=sys.stderr)
+                    continue
+            else:
+                create_thumbnail(image.copy(), thumb_path, thumb_width)
         except Exception as e:
             print(f"  Warning: thumbnail generation failed for {filename}: {e}", file=sys.stderr)
             continue
@@ -490,13 +736,15 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             'date': date,
             'tags': tags,
             'google_photos_url': google_photos_url,
+            'type': 'video' if file_is_video else 'photo',
         }
         manifest.append(entry)
         stat = filepath.stat()
         new_cache[filename] = {'mtime': stat.st_mtime, 'size': stat.st_size}
         interpolated += 1
         gap_min = int(gap // 60)
-        print(f"  OK (interpolated, {gap_min}m gap): ({lat:.4f}, {lng:.4f}) {date}")
+        label = 'video, ' if file_is_video else ''
+        print(f"  OK (interpolated, {label}{gap_min}m gap): ({lat:.4f}, {lng:.4f}) {date}")
 
     # Write manifest
     with open(output_path, 'w') as f:
@@ -510,7 +758,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     with open(annotations_path, 'w') as f:
         json.dump(annotations, f, indent=2)
 
-    print(f"\nDone: {len(manifest)} photos in manifest ({processed} processed, {interpolated} interpolated, {skipped} cached)")
+    print(f"\nDone: {len(manifest)} entries in manifest ({processed} processed, {interpolated} interpolated, {skipped} cached)")
     if annotations:
         print(f"  {len(annotations)} annotations written to {annotations_path}")
 

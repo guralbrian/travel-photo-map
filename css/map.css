@@ -15,6 +15,12 @@ html, body {
     display: block;
 }
 
+.photo-popup video {
+    width: 100%;
+    display: block;
+    max-height: 360px;
+}
+
 .photo-popup a.photo-link {
     display: block;
     text-align: center;

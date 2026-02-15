@@ -6,7 +6,7 @@
 */
 (function () {
 
-var DEFAULT_ICON_SIZE = [60, 60];
+var DEFAULT_ICON_SIZE = [90, 90];
 
 L.Photo = L.FeatureGroup.extend({
     options: {
@@ -42,7 +42,8 @@ L.Photo = L.FeatureGroup.extend({
     _getMarker: function (photo) {
         var icon = new L.Photo.Icon(
             L.extend(this.options.icon, {
-                thumbnail: photo.thumbnail
+                thumbnail: photo.thumbnail,
+                isVideo: photo.type === 'video'
             })
         );
         var marker = L.marker(L.latLng(photo.lat, photo.lng), {
@@ -76,6 +77,13 @@ L.Photo.Icon = L.Icon.extend({
         img.src = this.options.thumbnail || '';
         img.style.width = this.options.iconSize[0] + 'px';
         img.style.height = this.options.iconSize[1] + 'px';
+
+        if (this.options.isVideo) {
+            var badge = document.createElement('span');
+            badge.className = 'photo-video-badge';
+            badge.textContent = '\u25B6';
+            el.appendChild(badge);
+        }
 
         return el;
     },
@@ -137,7 +145,8 @@ if (L.MarkerClusterGroup) {
                 var icon = new L.Photo.Icon(
                     L.extend({}, this.options.icon || {}, {
                         iconSize: size,
-                        thumbnail: photo.thumbnail
+                        thumbnail: photo.thumbnail,
+                        isVideo: photo.type === 'video'
                     })
                 );
                 var marker = L.marker(L.latLng(photo.lat, photo.lng), {

@@ -24,6 +24,11 @@ IMAGE_MIMETYPES = {
     'image/jpeg', 'image/png', 'image/tiff', 'image/heic', 'image/heif',
     'image/webp', 'image/bmp',
 }
+VIDEO_MIMETYPES = {
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+    'video/x-matroska',
+}
+MEDIA_MIMETYPES = IMAGE_MIMETYPES | VIDEO_MIMETYPES
 # Drive API also uses these for Google-native formats
 EXPORT_MIMETYPES = {
     'image/jpeg',
@@ -79,8 +84,8 @@ def build_service(creds):
     return build('drive', 'v3', credentials=creds)
 
 
-def list_drive_images(service, folder_id):
-    """List all image files in a Google Drive folder.
+def list_drive_media(service, folder_id):
+    """List all image and video files in a Google Drive folder.
 
     Args:
         service: Drive API service.
@@ -89,7 +94,7 @@ def list_drive_images(service, folder_id):
     Returns:
         List of dicts with id, name, mimeType, modifiedTime, size, webContentLink.
     """
-    images = []
+    media = []
     page_token = None
     query = f"'{folder_id}' in parents and trashed = false"
 
@@ -103,14 +108,14 @@ def list_drive_images(service, folder_id):
         ).execute()
 
         for f in response.get('files', []):
-            if f.get('mimeType') in IMAGE_MIMETYPES:
-                images.append(f)
+            if f.get('mimeType') in MEDIA_MIMETYPES:
+                media.append(f)
 
         page_token = response.get('nextPageToken')
         if not page_token:
             break
 
-    return images
+    return media
 
 
 def load_sync_cache(cache_path):
@@ -277,12 +282,12 @@ def sync(folder_id, photo_dir, notes_file, credentials_file, token_file,
     creds = authenticate(credentials_file, token_file)
     service = build_service(creds)
 
-    print(f"Listing images in folder {folder_id}...")
-    drive_images = list_drive_images(service, folder_id)
-    print(f"Found {len(drive_images)} images on Drive.")
+    print(f"Listing media in folder {folder_id}...")
+    drive_images = list_drive_media(service, folder_id)
+    print(f"Found {len(drive_images)} media files on Drive.")
 
     if not drive_images:
-        print("No images found. Check the folder ID and sharing permissions.")
+        print("No media found. Check the folder ID and sharing permissions.")
         return
 
     cache = {} if force else load_sync_cache(cache_path)

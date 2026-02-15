@@ -37,3 +37,15 @@
     margin: 0;
     width: 300px !important;
 }
+
+.photo-video-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+    z-index: 1;
+}
