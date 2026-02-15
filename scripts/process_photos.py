@@ -2,6 +2,7 @@
 """Process geotagged photos: extract EXIF GPS data, generate thumbnails, write manifest."""
 
 import argparse
+from datetime import datetime
 import json
 import math
 import os
@@ -101,6 +102,50 @@ def extract_date(exif_data):
         except (AttributeError, IndexError):
             return ''
     return ''
+
+
+def extract_datetime(exif_data):
+    """Extract full DateTimeOriginal as a datetime object.
+
+    Args:
+        exif_data: PIL Image EXIF object.
+
+    Returns:
+        datetime object or None if not found/parseable.
+    """
+    exif_ifd = exif_data.get_ifd(0x8769)
+    date_str = exif_ifd.get(36867, '')
+    if not date_str:
+        date_str = exif_data.get(306, '')
+    if date_str:
+        try:
+            return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        except (ValueError, AttributeError):
+            pass
+    return None
+
+
+def find_nearest_gps(dt, gps_references, max_gap_seconds=7200):
+    """Find the nearest geotagged photo by timestamp.
+
+    Args:
+        dt: datetime of the photo without GPS.
+        gps_references: List of (datetime, lat, lng) sorted by datetime.
+        max_gap_seconds: Maximum time gap to allow interpolation (default 2h).
+
+    Returns:
+        Tuple of (lat, lng, gap_seconds) or None if no match within threshold.
+    """
+    best = None
+    best_gap = float('inf')
+    for ref_dt, lat, lng in gps_references:
+        gap = abs((ref_dt - dt).total_seconds())
+        if gap < best_gap:
+            best_gap = gap
+            best = (lat, lng, gap)
+    if best and best_gap <= max_gap_seconds:
+        return best
+    return None
 
 
 def create_thumbnail(image, thumb_path, thumb_width):
@@ -300,6 +345,11 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
 
     skipped = 0
     processed = 0
+    interpolated = 0
+    no_gps_files = []  # (filepath, image, exif_data) for second pass
+
+    # Pass 1: Process files with native GPS, collect GPS references for interpolation
+    gps_references = []  # (datetime, lat, lng) sorted later
 
     for filepath in files:
         filename = filepath.name
@@ -308,18 +358,28 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
         file_size = stat.st_size
 
         # Check cache: skip if file unchanged and already in manifest
-        cached = cache.get(filename)
+        cached_entry = cache.get(filename)
         photo_url = f'photos/{filename}'
         if (not force
-                and cached
-                and cached.get('mtime') == file_mtime
-                and cached.get('size') == file_size
+                and cached_entry
+                and cached_entry.get('mtime') == file_mtime
+                and cached_entry.get('size') == file_size
                 and photo_url in existing_manifest):
             # Reuse cached entry but re-merge notes for caption/tag changes
             entry = existing_manifest[photo_url].copy()
             entry = merge_notes_into_entry(entry, notes, filename)
             manifest.append(entry)
             new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            # Still add to GPS references for interpolation
+            try:
+                image = Image.open(filepath)
+                exif_data = image.getexif()
+                coords = extract_gps(exif_data)
+                dt = extract_datetime(exif_data)
+                if coords and dt:
+                    gps_references.append((dt, coords[0], coords[1]))
+            except Exception:
+                pass
             skipped += 1
             continue
 
@@ -341,13 +401,17 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
         # Extract GPS
         coords = extract_gps(exif_data)
         if coords is None:
-            print(f"  Skipping (no GPS data)")
+            # Defer to pass 2 for GPS interpolation
+            no_gps_files.append((filepath, image, exif_data))
             continue
 
         lat, lng = coords
-
-        # Extract date
         date = extract_date(exif_data)
+
+        # Collect GPS reference for interpolation
+        dt = extract_datetime(exif_data)
+        if dt:
+            gps_references.append((dt, lat, lng))
 
         # Generate thumbnail
         thumb_filename = filepath.stem + '.jpg'
@@ -381,6 +445,59 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
         processed += 1
         print(f"  OK: ({lat:.4f}, {lng:.4f}) {date}")
 
+    # Pass 2: Interpolate GPS for photos without native coordinates
+    gps_references.sort(key=lambda x: x[0])
+
+    for filepath, image, exif_data in no_gps_files:
+        filename = filepath.name
+        photo_url = f'photos/{filename}'
+        dt = extract_datetime(exif_data)
+        if dt is None:
+            print(f"  Skipping {filename} (no GPS, no timestamp for interpolation)")
+            continue
+
+        match = find_nearest_gps(dt, gps_references)
+        if match is None:
+            print(f"  Skipping {filename} (no GPS, no nearby reference photo)")
+            continue
+
+        lat, lng, gap = match
+        date = extract_date(exif_data)
+
+        # Generate thumbnail
+        thumb_filename = filepath.stem + '.jpg'
+        thumb_path = thumb_dir / thumb_filename
+        try:
+            create_thumbnail(image.copy(), thumb_path, thumb_width)
+        except Exception as e:
+            print(f"  Warning: thumbnail generation failed for {filename}: {e}", file=sys.stderr)
+            continue
+
+        # Merge notes
+        file_notes = notes.get(filename, {})
+        caption = file_notes.get('caption', '')
+        tags = file_notes.get('tags', [])
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(',')]
+        google_photos_url = file_notes.get('google_photos_url', '')
+
+        entry = {
+            'lat': round(lat, 6),
+            'lng': round(lng, 6),
+            'url': photo_url,
+            'thumbnail': f'thumbs/{thumb_filename}',
+            'caption': caption,
+            'date': date,
+            'tags': tags,
+            'google_photos_url': google_photos_url,
+        }
+        manifest.append(entry)
+        stat = filepath.stat()
+        new_cache[filename] = {'mtime': stat.st_mtime, 'size': stat.st_size}
+        interpolated += 1
+        gap_min = int(gap // 60)
+        print(f"  OK (interpolated, {gap_min}m gap): ({lat:.4f}, {lng:.4f}) {date}")
+
     # Write manifest
     with open(output_path, 'w') as f:
         json.dump(manifest, f, indent=2)
@@ -393,7 +510,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     with open(annotations_path, 'w') as f:
         json.dump(annotations, f, indent=2)
 
-    print(f"\nDone: {len(manifest)} photos in manifest ({processed} processed, {skipped} cached)")
+    print(f"\nDone: {len(manifest)} photos in manifest ({processed} processed, {interpolated} interpolated, {skipped} cached)")
     if annotations:
         print(f"  {len(annotations)} annotations written to {annotations_path}")
 
