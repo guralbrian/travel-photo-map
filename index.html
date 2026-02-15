@@ -123,6 +123,100 @@
                 document.body.appendChild(el);
             }
 
+            // Hoisted state for slider rebuilds
+            var photoLayer = null;
+            var allPhotos = [];
+            var currentClusterRadius = 30;
+            var currentIconSize = 60;
+
+            function onPhotoClick(e) {
+                var photo = e.layer.photo;
+                L.popup({
+                    className: 'leaflet-popup-photo',
+                    maxWidth: 320,
+                    minWidth: 200
+                })
+                .setLatLng(e.latlng)
+                .setContent(buildPopupHTML(photo))
+                .openOn(map);
+            }
+
+            function rebuildPhotoLayer() {
+                if (photoLayer) {
+                    photoLayer.off('click', onPhotoClick);
+                    map.removeLayer(photoLayer);
+                }
+                photoLayer = L.photo.cluster({
+                    maxClusterRadius: currentClusterRadius,
+                    spiderfyDistanceMultiplier: 2,
+                    iconSize: [currentIconSize, currentIconSize]
+                });
+                photoLayer.on('click', onPhotoClick);
+                photoLayer.add(allPhotos).addTo(map);
+            }
+
+            // Slider control
+            var SliderControl = L.Control.extend({
+                options: { position: 'bottomleft' },
+                onAdd: function () {
+                    var container = L.DomUtil.create('div', 'slider-control');
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.disableScrollPropagation(container);
+
+                    container.innerHTML =
+                        '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
+                        '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
+                        '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
+                        '<input type="range" id="size-slider" min="30" max="120" value="' + currentIconSize + '">';
+
+                    return container;
+                }
+            });
+
+            new SliderControl().addTo(map);
+
+            document.getElementById('cluster-slider').addEventListener('input', function () {
+                currentClusterRadius = parseInt(this.value, 10);
+                document.getElementById('cluster-val').textContent = currentClusterRadius;
+                if (allPhotos.length > 0) rebuildPhotoLayer();
+            });
+
+            document.getElementById('size-slider').addEventListener('input', function () {
+                currentIconSize = parseInt(this.value, 10);
+                document.getElementById('size-val').textContent = currentIconSize + 'px';
+                if (allPhotos.length > 0) rebuildPhotoLayer();
+            });
+
+            // Load annotations (graceful failure if missing)
+            fetch('data/annotations.json')
+                .then(function (response) {
+                    if (!response.ok) return [];
+                    return response.json();
+                })
+                .then(function (annotations) {
+                    if (!annotations || annotations.length === 0) return;
+                    for (var i = 0; i < annotations.length; i++) {
+                        var ann = annotations[i];
+                        var icon = L.divIcon({
+                            className: 'annotation-marker',
+                            html: '<span class="annotation-pin">&#128204;</span>',
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 28]
+                        });
+                        var marker = L.marker([ann.lat, ann.lng], { icon: icon });
+                        var popupHTML = '<div class="annotation-popup">';
+                        if (ann.title) popupHTML += '<strong>' + ann.title + '</strong>';
+                        if (ann.date) popupHTML += '<br><span class="annotation-date">' + ann.date + '</span>';
+                        if (ann.text) popupHTML += '<p>' + ann.text + '</p>';
+                        popupHTML += '</div>';
+                        marker.bindPopup(popupHTML);
+                        marker.addTo(map);
+                    }
+                })
+                .catch(function () {
+                    // annotations.json missing is fine
+                });
+
             fetch('data/manifest.json')
                 .then(function (response) {
                     if (!response.ok) throw new Error('Failed to load manifest');
@@ -134,24 +228,8 @@
                         return;
                     }
 
-                    var photoLayer = L.photo.cluster({
-                        maxClusterRadius: 30,
-                        spiderfyDistanceMultiplier: 2
-                    });
-
-                    photoLayer.on('click', function (e) {
-                        var photo = e.layer.photo;
-                        var popup = L.popup({
-                            className: 'leaflet-popup-photo',
-                            maxWidth: 320,
-                            minWidth: 200
-                        })
-                        .setLatLng(e.latlng)
-                        .setContent(buildPopupHTML(photo))
-                        .openOn(map);
-                    });
-
-                    photoLayer.add(photos).addTo(map);
+                    allPhotos = photos;
+                    rebuildPhotoLayer();
 
                     try {
                         map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });

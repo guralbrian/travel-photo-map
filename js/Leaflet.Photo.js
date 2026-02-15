@@ -6,10 +6,12 @@
 */
 (function () {
 
+var DEFAULT_ICON_SIZE = [60, 60];
+
 L.Photo = L.FeatureGroup.extend({
     options: {
         icon: {
-            iconSize: [40, 40]
+            iconSize: DEFAULT_ICON_SIZE
         }
     },
 
@@ -54,7 +56,7 @@ L.Photo = L.FeatureGroup.extend({
 
 L.Photo.Icon = L.Icon.extend({
     options: {
-        iconSize: [40, 40],
+        iconSize: DEFAULT_ICON_SIZE,
         className: 'leaflet-marker-photo'
     },
 
@@ -93,15 +95,15 @@ if (L.MarkerClusterGroup) {
             featureGroup: L.photo,
             maxClusterRadius: 100,
             showCoverageOnHover: false,
+            iconSize: DEFAULT_ICON_SIZE,
             iconCreateFunction: function (cluster) {
                 var markers = cluster.getAllChildMarkers();
-                // Use the first marker's thumbnail as the cluster icon
                 var firstThumb = '';
                 if (markers.length > 0 && markers[0].photo) {
                     firstThumb = markers[0].photo.thumbnail;
                 }
                 return new L.Photo.Icon({
-                    iconSize: [40, 40],
+                    iconSize: this._group.options.iconSize || DEFAULT_ICON_SIZE,
                     thumbnail: firstThumb
                 });
             },
@@ -116,12 +118,13 @@ if (L.MarkerClusterGroup) {
 
         add: function (photos) {
             this._photos = photos;
+            var size = this.options.iconSize || DEFAULT_ICON_SIZE;
             var markers = [];
             for (var i = 0, len = photos.length; i < len; i++) {
                 var photo = photos[i];
                 var icon = new L.Photo.Icon(
                     L.extend({}, this.options.icon || {}, {
-                        iconSize: [40, 40],
+                        iconSize: size,
                         thumbnail: photo.thumbnail
                     })
                 );

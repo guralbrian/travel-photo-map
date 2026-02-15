@@ -2,6 +2,9 @@
 photos/*
 !photos/.gitkeep
 
+# Processing cache
+data/.process_cache.json
+
 # Python
 __pycache__/
 *.pyc

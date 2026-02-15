@@ -148,29 +148,115 @@ def create_thumbnail(image, thumb_path, thumb_width):
 
 
 def load_notes(data_dir):
-    """Load optional notes.yaml for captions and tags.
+    """Load optional notes.yaml for captions, tags, and annotations.
+
+    Supports both old flat format (filename -> metadata) and new format
+    with 'photos' and 'annotations' top-level keys.
 
     Args:
         data_dir: Path to the data directory.
 
     Returns:
-        Dict mapping filename to {caption, tags} or empty dict.
+        Tuple of (photo_notes_dict, annotations_list).
     """
     notes_path = data_dir / 'notes.yaml'
     if not notes_path.exists():
-        return {}
+        return {}, []
 
     try:
         import yaml
         with open(notes_path, 'r') as f:
             notes = yaml.safe_load(f)
-        return notes if isinstance(notes, dict) else {}
+        if not isinstance(notes, dict):
+            return {}, []
+
+        # New format: has 'photos' and/or 'annotations' top-level keys
+        if 'photos' in notes or 'annotations' in notes:
+            photo_notes = notes.get('photos', {})
+            if not isinstance(photo_notes, dict):
+                photo_notes = {}
+            annotations = notes.get('annotations', [])
+            if not isinstance(annotations, list):
+                annotations = []
+            return photo_notes, annotations
+
+        # Old flat format: entire dict is filename -> metadata
+        return notes, []
     except Exception as e:
         print(f"Warning: Could not parse notes.yaml: {e}", file=sys.stderr)
+        return {}, []
+
+
+def load_cache(cache_path):
+    """Load the processing cache file.
+
+    Args:
+        cache_path: Path to .process_cache.json.
+
+    Returns:
+        Dict mapping filename to {mtime, size}.
+    """
+    if not cache_path.exists():
+        return {}
+    try:
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+    except Exception:
         return {}
 
 
-def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
+def save_cache(cache_path, cache):
+    """Write the processing cache file.
+
+    Args:
+        cache_path: Path to .process_cache.json.
+        cache: Dict mapping filename to {mtime, size}.
+    """
+    with open(cache_path, 'w') as f:
+        json.dump(cache, f, indent=2)
+
+
+def load_existing_manifest(output_path):
+    """Load existing manifest.json into a dict keyed by url.
+
+    Args:
+        output_path: Path to manifest.json.
+
+    Returns:
+        Dict mapping photo url (e.g. 'photos/IMG_001.HEIC') to manifest entry.
+    """
+    if not output_path.exists():
+        return {}
+    try:
+        with open(output_path, 'r') as f:
+            entries = json.load(f)
+        return {e['url']: e for e in entries}
+    except Exception:
+        return {}
+
+
+def merge_notes_into_entry(entry, notes, filename):
+    """Re-apply notes.yaml fields onto a cached manifest entry.
+
+    Args:
+        entry: Existing manifest entry dict (will be mutated).
+        notes: Photo notes dict from notes.yaml.
+        filename: The photo filename key.
+
+    Returns:
+        Updated entry.
+    """
+    file_notes = notes.get(filename, {})
+    entry['caption'] = file_notes.get('caption', '')
+    tags = file_notes.get('tags', [])
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(',')]
+    entry['tags'] = tags
+    entry['google_photos_url'] = file_notes.get('google_photos_url', '')
+    return entry
+
+
+def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     """Process all photos and generate manifest.
 
     Args:
@@ -178,6 +264,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
         thumb_dir: Path to directory for generated thumbnails.
         thumb_width: Thumbnail width in pixels.
         output_path: Path for the output manifest JSON.
+        force: If True, bypass cache and reprocess everything.
     """
     photo_dir = Path(photo_dir)
     thumb_dir = Path(thumb_dir)
@@ -188,8 +275,14 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
     thumb_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    notes = load_notes(data_dir)
+    notes, annotations = load_notes(data_dir)
     manifest = []
+
+    # Cache setup
+    cache_path = data_dir / '.process_cache.json'
+    cache = {} if force else load_cache(cache_path)
+    existing_manifest = {} if force else load_existing_manifest(output_path)
+    new_cache = {}
 
     # Collect image files
     files = sorted([
@@ -202,10 +295,34 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
         # Write empty manifest
         with open(output_path, 'w') as f:
             json.dump([], f, indent=2)
+        save_cache(cache_path, {})
         return
+
+    skipped = 0
+    processed = 0
 
     for filepath in files:
         filename = filepath.name
+        stat = filepath.stat()
+        file_mtime = stat.st_mtime
+        file_size = stat.st_size
+
+        # Check cache: skip if file unchanged and already in manifest
+        cached = cache.get(filename)
+        photo_url = f'photos/{filename}'
+        if (not force
+                and cached
+                and cached.get('mtime') == file_mtime
+                and cached.get('size') == file_size
+                and photo_url in existing_manifest):
+            # Reuse cached entry but re-merge notes for caption/tag changes
+            entry = existing_manifest[photo_url].copy()
+            entry = merge_notes_into_entry(entry, notes, filename)
+            manifest.append(entry)
+            new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            skipped += 1
+            continue
+
         print(f"Processing: {filename}")
 
         try:
@@ -252,7 +369,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
         entry = {
             'lat': round(lat, 6),
             'lng': round(lng, 6),
-            'url': f'photos/{filename}',
+            'url': photo_url,
             'thumbnail': f'thumbs/{thumb_filename}',
             'caption': caption,
             'date': date,
@@ -260,13 +377,25 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path):
             'google_photos_url': google_photos_url,
         }
         manifest.append(entry)
+        new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+        processed += 1
         print(f"  OK: ({lat:.4f}, {lng:.4f}) {date}")
 
     # Write manifest
     with open(output_path, 'w') as f:
         json.dump(manifest, f, indent=2)
 
-    print(f"\nDone: {len(manifest)} photos written to {output_path}")
+    # Save cache
+    save_cache(cache_path, new_cache)
+
+    # Write annotations
+    annotations_path = data_dir / 'annotations.json'
+    with open(annotations_path, 'w') as f:
+        json.dump(annotations, f, indent=2)
+
+    print(f"\nDone: {len(manifest)} photos in manifest ({processed} processed, {skipped} cached)")
+    if annotations:
+        print(f"  {len(annotations)} annotations written to {annotations_path}")
 
 
 def main():
@@ -289,9 +418,13 @@ def main():
         '--output', default='data/manifest.json',
         help='Output manifest JSON path (default: data/manifest.json)'
     )
+    parser.add_argument(
+        '--force', action='store_true',
+        help='Bypass cache and reprocess all photos'
+    )
     args = parser.parse_args()
 
-    process_photos(args.photo_dir, args.thumb_dir, args.thumb_width, args.output)
+    process_photos(args.photo_dir, args.thumb_dir, args.thumb_width, args.output, args.force)
 
 
 if __name__ == '__main__':
