@@ -119,6 +119,33 @@ html, body {
     font-size: 13px;
 }
 
+/* Timeline overlay popups */
+.timeline-popup {
+    font-family: sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.timeline-popup strong {
+    font-size: 14px;
+    text-transform: capitalize;
+}
+
+.timeline-popup .timeline-duration {
+    color: #333;
+    font-weight: 600;
+}
+
+.timeline-popup .timeline-time {
+    color: #666;
+    font-size: 12px;
+}
+
+.timeline-popup .timeline-address {
+    color: #666;
+    font-size: 12px;
+}
+
 /* Empty state */
 .empty-state {
     position: absolute;

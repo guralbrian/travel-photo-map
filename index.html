@@ -78,7 +78,7 @@
 
             streetMap.addTo(map);
 
-            L.control.layers({
+            var baseLayers = {
                 'Street Map': streetMap,
                 'Humanitarian': humanitarian,
                 'Terrain': terrain,
@@ -89,7 +89,9 @@
                 'CartoDB Voyager': voyager,
                 'USGS Topo': usgsTopo,
                 'USGS Imagery': usgsImagery
-            }).addTo(map);
+            };
+            var overlayLayers = {};
+            var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
 
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
@@ -215,6 +217,120 @@
                 })
                 .catch(function () {
                     // annotations.json missing is fine
+                });
+
+            // Load timeline overlay (graceful failure if missing)
+            var activityColors = {
+                'WALKING': '#4CAF50',
+                'RUNNING': '#8BC34A',
+                'CYCLING': '#FF9800',
+                'DRIVING': '#2196F3',
+                'TRANSIT': '#9C27B0',
+                'FLYING': '#F44336',
+                'SKIING': '#00BCD4',
+                'SAILING': '#3F51B5',
+                'UNKNOWN': '#9E9E9E'
+            };
+
+            function formatDuration(startStr, endStr) {
+                if (!startStr || !endStr) return '';
+                try {
+                    var start = new Date(startStr);
+                    var end = new Date(endStr);
+                    var mins = Math.round((end - start) / 60000);
+                    if (mins < 60) return mins + ' min';
+                    var hours = Math.floor(mins / 60);
+                    var remMins = mins % 60;
+                    return hours + 'h ' + (remMins > 0 ? remMins + 'm' : '');
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function formatTime(isoStr) {
+                if (!isoStr) return '';
+                try {
+                    var d = new Date(isoStr);
+                    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            fetch('data/timeline.json')
+                .then(function (response) {
+                    if (!response.ok) return null;
+                    return response.json();
+                })
+                .then(function (timeline) {
+                    if (!timeline) return;
+
+                    var pathsGroup = L.layerGroup();
+                    var placesGroup = L.layerGroup();
+
+                    // Render activity segments as colored polylines
+                    var segments = timeline.segments || [];
+                    for (var i = 0; i < segments.length; i++) {
+                        var seg = segments[i];
+                        if (!seg.points || seg.points.length < 2) continue;
+
+                        var color = activityColors[seg.activity] || activityColors['UNKNOWN'];
+                        var polyline = L.polyline(seg.points, {
+                            color: color,
+                            weight: 3,
+                            opacity: 0.7
+                        });
+
+                        var popupHtml = '<div class="timeline-popup">';
+                        popupHtml += '<strong>' + (seg.activity || 'Unknown') + '</strong>';
+                        var dur = formatDuration(seg.start, seg.end);
+                        if (dur) popupHtml += '<br><span class="timeline-duration">' + dur + '</span>';
+                        if (seg.start) popupHtml += '<br><span class="timeline-time">' + formatTime(seg.start) + '</span>';
+                        popupHtml += '</div>';
+                        polyline.bindPopup(popupHtml);
+
+                        pathsGroup.addLayer(polyline);
+                    }
+
+                    // Render place visits as circle markers
+                    var places = timeline.places || [];
+                    for (var j = 0; j < places.length; j++) {
+                        var place = places[j];
+                        if (place.lat == null || place.lng == null) continue;
+
+                        var circle = L.circleMarker([place.lat, place.lng], {
+                            radius: 6,
+                            fillColor: '#E91E63',
+                            color: '#C2185B',
+                            weight: 2,
+                            opacity: 0.9,
+                            fillOpacity: 0.7
+                        });
+
+                        var placeHtml = '<div class="timeline-popup">';
+                        if (place.name) placeHtml += '<strong>' + place.name + '</strong>';
+                        if (place.address) placeHtml += '<br><span class="timeline-address">' + place.address + '</span>';
+                        var placeDur = formatDuration(place.start, place.end);
+                        if (placeDur) placeHtml += '<br><span class="timeline-duration">' + placeDur + '</span>';
+                        if (place.start) placeHtml += '<br><span class="timeline-time">' + formatTime(place.start) + '</span>';
+                        placeHtml += '</div>';
+                        circle.bindPopup(placeHtml);
+
+                        placesGroup.addLayer(circle);
+                    }
+
+                    // Add overlays to layer control
+                    if (pathsGroup.getLayers().length > 0) {
+                        layerControl.addOverlay(pathsGroup, 'Travel Paths');
+                        pathsGroup.addTo(map);
+                    }
+                    if (placesGroup.getLayers().length > 0) {
+                        layerControl.addOverlay(placesGroup, 'Visited Places');
+                        placesGroup.addTo(map);
+                    }
+                })
+                .catch(function () {
+                    // timeline.json missing is fine
                 });
 
             fetch('data/manifest.json')

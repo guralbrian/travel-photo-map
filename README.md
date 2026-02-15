@@ -24,6 +24,77 @@ python3 -m http.server 8000
 # Open http://localhost:8000
 ```
 
+## Google Drive Photo Sync
+
+Instead of manually copying photos, you can sync from a shared Google Drive folder. This is useful when multiple people upload to a shared folder.
+
+### One-Time Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com), create a project
+2. Enable the **Google Drive API**
+3. Create OAuth 2.0 credentials (Application type: **Desktop app**)
+4. Download `credentials.json` to the project root
+5. Run the setup flow:
+
+```bash
+python scripts/sync_google_drive.py --setup
+```
+
+This opens a browser for OAuth consent and saves `token.json` locally. Both files are gitignored.
+
+### Syncing Photos
+
+```bash
+# Sync from a shared Drive folder (find the folder ID in the Drive URL)
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID
+
+# Preview what would be downloaded
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --dry-run
+
+# Force re-download everything
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --force
+
+# Then process as usual
+python scripts/process_photos.py
+```
+
+The sync script downloads new photos to `photos/` and records Drive shareable links in `data/notes.yaml` under `google_photos_url`.
+
+## Google Timeline Overlay
+
+Display your travel paths and visited places on the map using Google Timeline data.
+
+### Export from Google Takeout
+
+1. Go to [Google Takeout](https://takeout.google.com)
+2. Select **Location History** only
+3. Choose JSON format
+4. Download and extract the archive
+
+### Parse and Display
+
+```bash
+# Parse all timeline data
+python scripts/parse_timeline.py \
+    --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History
+
+# Filter by date range
+python scripts/parse_timeline.py \
+    --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History \
+    --start 2026-01-28 --end 2026-02-08
+
+# Simplify paths for smoother rendering
+python scripts/parse_timeline.py \
+    --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History \
+    --simplify 0.0001
+```
+
+This creates `data/timeline.json`. The map automatically renders:
+- **Travel Paths**: Colored polylines by activity type (green=walking, blue=driving, orange=cycling, purple=transit)
+- **Visited Places**: Pink circle markers with name, address, and duration
+
+Both overlays can be toggled on/off via the layer control (top-right corner). If `timeline.json` is missing, the map works normally without timeline data.
+
 ## Adding Captions and Tags
 
 Create `data/notes.yaml` to add captions and tags to your photos:
@@ -80,7 +151,9 @@ travel-photo-map/
 ├── thumbs/                    # Generated thumbnails
 ├── data/
 │   ├── manifest.json          # Photo metadata (auto-generated)
-│   └── notes.yaml             # Optional captions/tags
+│   ├── annotations.json       # Annotation markers (auto-generated)
+│   ├── notes.yaml             # Optional captions/tags
+│   └── timeline.json          # Timeline overlay (auto-generated, gitignored)
 ├── js/                        # Vendored JS libraries
 │   ├── leaflet.js
 │   ├── leaflet.markercluster.js
@@ -93,7 +166,9 @@ travel-photo-map/
 │   ├── map.css
 │   └── images/                # Leaflet marker icons
 ├── scripts/
-│   └── process_photos.py      # Photo processing script
+│   ├── process_photos.py      # Photo processing script
+│   ├── sync_google_drive.py   # Google Drive sync script
+│   └── parse_timeline.py      # Google Timeline parser
 ├── requirements.txt
 └── .gitignore
 ```

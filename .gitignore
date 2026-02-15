@@ -4,6 +4,16 @@ photos/*
 
 # Processing cache
 data/.process_cache.json
+data/.drive_sync_cache.json
+
+# Google OAuth credentials (sensitive)
+credentials.json
+client_secret*.json
+token.json
+*.json:Zone.Identifier
+
+# Generated timeline data (user-specific)
+data/timeline.json
 
 # Python
 __pycache__/
