@@ -103,7 +103,7 @@ if (L.MarkerClusterGroup) {
                     firstThumb = markers[0].photo.thumbnail;
                 }
                 return new L.Photo.Icon({
-                    iconSize: this._group.options.iconSize || DEFAULT_ICON_SIZE,
+                    iconSize: cluster._group.options.iconSize || DEFAULT_ICON_SIZE,
                     thumbnail: firstThumb
                 });
             },
