@@ -98,14 +98,26 @@ if (L.MarkerClusterGroup) {
             iconSize: DEFAULT_ICON_SIZE,
             iconCreateFunction: function (cluster) {
                 var markers = cluster.getAllChildMarkers();
+                var count = cluster.getChildCount();
                 var firstThumb = '';
                 if (markers.length > 0 && markers[0].photo) {
                     firstThumb = markers[0].photo.thumbnail;
                 }
-                return new L.Photo.Icon({
-                    iconSize: cluster._group.options.iconSize || DEFAULT_ICON_SIZE,
+                var size = cluster._group.options.iconSize || DEFAULT_ICON_SIZE;
+                var icon = new L.Photo.Icon({
+                    iconSize: size,
                     thumbnail: firstThumb
                 });
+                var origCreate = icon.createIcon;
+                icon.createIcon = function (oldIcon) {
+                    var div = origCreate.call(this, oldIcon);
+                    var badge = document.createElement('span');
+                    badge.className = 'photo-cluster-count';
+                    badge.textContent = count;
+                    div.appendChild(badge);
+                    return div;
+                };
+                return icon;
             },
             spiderfyDistanceMultiplier: 1.2
         },

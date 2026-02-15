@@ -1,8 +1,8 @@
 .leaflet-marker-photo {
-    border: 2px solid #fff;
+    border: none;
     border-radius: 3px;
     box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
-    background-color: #fff;
+    background-color: transparent;
     cursor: pointer;
     overflow: hidden;
 }
@@ -10,6 +10,21 @@
 .leaflet-marker-photo img {
     display: block;
     object-fit: cover;
+}
+
+.photo-cluster-count {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font: bold 11px/1 "Helvetica Neue", Arial, sans-serif;
+    padding: 3px 5px;
+    border-radius: 8px;
+    min-width: 14px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .leaflet-popup-photo .leaflet-popup-content-wrapper {
