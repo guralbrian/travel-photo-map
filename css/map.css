@@ -177,3 +177,134 @@ html, body {
     color: #666;
     font-size: 14px;
 }
+
+/* Date filter bar */
+.date-filter-control {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-family: sans-serif;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    max-width: calc(100vw - 120px);
+}
+
+.date-filter-control button {
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #333;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.date-filter-control button:hover {
+    background: #e8e8e8;
+}
+
+.date-filter-control button.active {
+    background: #1a73e8;
+    color: white;
+    border-color: #1a73e8;
+}
+
+/* Lightbox overlay */
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-overlay img,
+.lightbox-overlay video {
+    max-width: 90vw;
+    max-height: 75vh;
+    object-fit: contain;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    z-index: 2001;
+    line-height: 1;
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 28px;
+    padding: 16px 12px;
+    cursor: pointer;
+    z-index: 2001;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.lightbox-prev { left: 12px; }
+.lightbox-next { right: 12px; }
+
+.lightbox-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 24px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    color: white;
+    font-family: sans-serif;
+}
+
+.lightbox-info .lightbox-caption {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0 0 4px 0;
+}
+
+.lightbox-info .lightbox-date {
+    font-size: 13px;
+    opacity: 0.8;
+    margin: 0 0 6px 0;
+}
+
+.lightbox-info .lightbox-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.lightbox-info .lightbox-tag {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.lightbox-info a {
+    color: #8ab4f8;
+    font-size: 13px;
+}

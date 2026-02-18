@@ -131,22 +131,134 @@
             // Hoisted state for slider rebuilds
             var photoLayer = null;
             var allPhotos = [];
+            var filteredPhotos = [];
             var currentClusterRadius = 30;
             var currentIconSize = 90;
 
-            function onPhotoClick(e) {
-                var photo = e.layer.photo;
-                L.popup({
-                    className: 'leaflet-popup-photo',
-                    maxWidth: 480,
-                    minWidth: 300
-                })
-                .setLatLng(e.latlng)
-                .setContent(buildPopupHTML(photo))
-                .openOn(map);
+            var lightboxIndex = -1;
+            var lightboxOverlay = null;
+
+            function openLightbox(index) {
+                if (filteredPhotos.length === 0) return;
+                if (index < 0) index = 0;
+                if (index >= filteredPhotos.length) index = filteredPhotos.length - 1;
+                lightboxIndex = index;
+                var photo = filteredPhotos[index];
+
+                if (!lightboxOverlay) {
+                    lightboxOverlay = document.createElement('div');
+                    lightboxOverlay.className = 'lightbox-overlay';
+                    lightboxOverlay.innerHTML =
+                        '<button class="lightbox-close">&times;</button>' +
+                        '<button class="lightbox-nav lightbox-prev">&#8249;</button>' +
+                        '<div class="lightbox-media"></div>' +
+                        '<button class="lightbox-nav lightbox-next">&#8250;</button>' +
+                        '<div class="lightbox-info">' +
+                            '<p class="lightbox-caption"></p>' +
+                            '<p class="lightbox-date"></p>' +
+                            '<div class="lightbox-tags"></div>' +
+                            '<a class="lightbox-link" target="_blank" rel="noopener noreferrer">View on Google Photos</a>' +
+                        '</div>';
+                    document.body.appendChild(lightboxOverlay);
+
+                    lightboxOverlay.querySelector('.lightbox-close').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        closeLightbox();
+                    });
+                    lightboxOverlay.querySelector('.lightbox-prev').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        openLightbox(lightboxIndex - 1);
+                    });
+                    lightboxOverlay.querySelector('.lightbox-next').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        openLightbox(lightboxIndex + 1);
+                    });
+                    lightboxOverlay.addEventListener('click', function (evt) {
+                        if (evt.target === lightboxOverlay) closeLightbox();
+                    });
+                }
+
+                // Populate media
+                var mediaContainer = lightboxOverlay.querySelector('.lightbox-media');
+                if (photo.type === 'video') {
+                    mediaContainer.innerHTML = '<video controls autoplay><source src="' + photo.url + '"></video>';
+                } else {
+                    mediaContainer.innerHTML = '<img src="' + photo.url + '" alt="' + (photo.caption || 'Photo') + '">';
+                }
+
+                // Populate info
+                var captionEl = lightboxOverlay.querySelector('.lightbox-caption');
+                captionEl.textContent = photo.caption || '';
+                captionEl.style.display = photo.caption ? '' : 'none';
+
+                var dateEl = lightboxOverlay.querySelector('.lightbox-date');
+                dateEl.textContent = photo.date || '';
+                dateEl.style.display = photo.date ? '' : 'none';
+
+                var tagsEl = lightboxOverlay.querySelector('.lightbox-tags');
+                if (photo.tags && photo.tags.length > 0) {
+                    var tagsHtml = '';
+                    for (var t = 0; t < photo.tags.length; t++) {
+                        tagsHtml += '<span class="lightbox-tag">' + photo.tags[t] + '</span>';
+                    }
+                    tagsEl.innerHTML = tagsHtml;
+                    tagsEl.style.display = '';
+                } else {
+                    tagsEl.innerHTML = '';
+                    tagsEl.style.display = 'none';
+                }
+
+                var linkEl = lightboxOverlay.querySelector('.lightbox-link');
+                if (photo.google_photos_url) {
+                    linkEl.href = photo.google_photos_url;
+                    linkEl.style.display = '';
+                } else {
+                    linkEl.style.display = 'none';
+                }
+
+                // Arrow visibility
+                lightboxOverlay.querySelector('.lightbox-prev').style.display = index <= 0 ? 'none' : '';
+                lightboxOverlay.querySelector('.lightbox-next').style.display = index >= filteredPhotos.length - 1 ? 'none' : '';
+
+                lightboxOverlay.style.display = 'flex';
+
+                // Preload adjacent images
+                if (index > 0 && filteredPhotos[index - 1].type !== 'video') {
+                    new Image().src = filteredPhotos[index - 1].url;
+                }
+                if (index < filteredPhotos.length - 1 && filteredPhotos[index + 1].type !== 'video') {
+                    new Image().src = filteredPhotos[index + 1].url;
+                }
             }
 
-            function rebuildPhotoLayer() {
+            function closeLightbox() {
+                if (lightboxOverlay) lightboxOverlay.style.display = 'none';
+                lightboxIndex = -1;
+            }
+
+            document.addEventListener('keydown', function (evt) {
+                if (lightboxIndex < 0) return;
+                if (evt.key === 'Escape') closeLightbox();
+                else if (evt.key === 'ArrowLeft') openLightbox(lightboxIndex - 1);
+                else if (evt.key === 'ArrowRight') openLightbox(lightboxIndex + 1);
+            });
+
+            function onPhotoClick(e) {
+                var photo = e.layer.photo;
+                var index = -1;
+                for (var i = 0; i < filteredPhotos.length; i++) {
+                    if (filteredPhotos[i].url === photo.url && filteredPhotos[i].lat === photo.lat && filteredPhotos[i].lng === photo.lng) {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index >= 0) {
+                    openLightbox(index);
+                }
+            }
+
+            function rebuildPhotoLayer(photos) {
+                var data = photos || filteredPhotos;
                 if (photoLayer) {
                     photoLayer.off('click', onPhotoClick);
                     map.removeLayer(photoLayer);
@@ -157,7 +269,7 @@
                     iconSize: [currentIconSize, currentIconSize]
                 });
                 photoLayer.on('click', onPhotoClick);
-                photoLayer.add(allPhotos).addTo(map);
+                photoLayer.add(data).addTo(map);
             }
 
             // Slider control
@@ -183,13 +295,13 @@
             document.getElementById('cluster-slider').addEventListener('input', function () {
                 currentClusterRadius = parseInt(this.value, 10);
                 document.getElementById('cluster-val').textContent = currentClusterRadius;
-                if (allPhotos.length > 0) rebuildPhotoLayer();
+                if (filteredPhotos.length > 0) rebuildPhotoLayer();
             });
 
             document.getElementById('size-slider').addEventListener('input', function () {
                 currentIconSize = parseInt(this.value, 10);
                 document.getElementById('size-val').textContent = currentIconSize + 'px';
-                if (allPhotos.length > 0) rebuildPhotoLayer();
+                if (filteredPhotos.length > 0) rebuildPhotoLayer();
             });
 
             // Load annotations (graceful failure if missing)
@@ -348,7 +460,62 @@
                     }
 
                     allPhotos = photos;
+                    filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
+
+                    // Build date filter pills
+                    var dateSet = {};
+                    for (var i = 0; i < allPhotos.length; i++) {
+                        if (allPhotos[i].date) dateSet[allPhotos[i].date] = true;
+                    }
+                    var uniqueDates = Object.keys(dateSet).sort();
+
+                    if (uniqueDates.length > 1) {
+                        var DateFilterControl = L.Control.extend({
+                            options: { position: 'topright' },
+                            onAdd: function () {
+                                var container = L.DomUtil.create('div', 'date-filter-control');
+                                L.DomEvent.disableClickPropagation(container);
+                                L.DomEvent.disableScrollPropagation(container);
+
+                                var html = '<button class="active" data-date="all">All</button>';
+                                for (var d = 0; d < uniqueDates.length; d++) {
+                                    html += '<button data-date="' + uniqueDates[d] + '">' + uniqueDates[d] + '</button>';
+                                }
+                                container.innerHTML = html;
+
+                                container.addEventListener('click', function (evt) {
+                                    var btn = evt.target;
+                                    if (!btn.dataset || !btn.dataset.date) return;
+
+                                    var buttons = container.querySelectorAll('button');
+                                    for (var b = 0; b < buttons.length; b++) {
+                                        buttons[b].classList.remove('active');
+                                    }
+                                    btn.classList.add('active');
+
+                                    if (btn.dataset.date === 'all') {
+                                        filteredPhotos = allPhotos;
+                                    } else {
+                                        filteredPhotos = [];
+                                        for (var f = 0; f < allPhotos.length; f++) {
+                                            if (allPhotos[f].date === btn.dataset.date) {
+                                                filteredPhotos.push(allPhotos[f]);
+                                            }
+                                        }
+                                    }
+
+                                    rebuildPhotoLayer();
+                                    try {
+                                        map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
+                                    } catch (e) {}
+                                });
+
+                                return container;
+                            }
+                        });
+                        new DateFilterControl().addTo(map);
+                    }
 
                     try {
                         map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
