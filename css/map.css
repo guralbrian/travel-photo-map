@@ -94,6 +94,8 @@ html, body {
     position: absolute;
     top: 0;
     height: 100%;
+    left: var(--seg-offset);
+    width: var(--seg-size);
     border-radius: 4px;
 }
 
@@ -374,4 +376,146 @@ html, body {
 .lightbox-info a {
     color: #8ab4f8;
     font-size: 13px;
+}
+
+/* Desktop: vertical timeline slider along left edge */
+@media (min-width: 769px) {
+    .unified-control {
+        position: fixed !important;
+        float: none !important;
+        clear: none !important;
+        left: 10px;
+        top: 60px;
+        bottom: 30px;
+        width: 60px;
+        min-width: unset;
+        max-width: unset;
+        padding: 10px 6px;
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+        z-index: 1000;
+    }
+
+    .timeline-bar {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: 18px 0;
+        position: relative;
+    }
+
+    .timeline-track {
+        width: 8px;
+        height: auto;
+        flex: 1;
+        margin: 0 auto;
+    }
+
+    .timeline-segment {
+        left: 0;
+        width: 100%;
+        top: var(--seg-offset);
+        height: var(--seg-size);
+    }
+
+    .segment-label {
+        top: 50%;
+        left: calc(100% + 8px);
+        transform: translateY(-50%);
+    }
+
+    .timeline-handle {
+        writing-mode: vertical-lr;
+        direction: ltr;
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 16px;
+        height: calc(100% - 36px);
+    }
+
+    .timeline-handle::-webkit-slider-thumb {
+        width: 18px;
+        height: 18px;
+    }
+
+    .timeline-handle::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+    }
+
+    .timeline-date-display {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0;
+        pointer-events: none;
+        font-size: 10px;
+    }
+
+    .settings-section {
+        margin-top: auto;
+        padding-top: 6px;
+        flex-shrink: 0;
+    }
+
+    .settings-section summary {
+        font-size: 10px;
+        text-align: center;
+    }
+
+    .settings-section[open] {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 240px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        padding: 8px 12px;
+        z-index: 10;
+    }
+
+    .settings-section input[type="range"] {
+        writing-mode: horizontal-tb;
+    }
+}
+
+/* Mobile: enhanced touch targets for horizontal layout */
+@media (max-width: 768px) {
+    .unified-control {
+        width: calc(100vw - 20px);
+        max-width: none;
+    }
+
+    .timeline-handle {
+        height: 32px;
+        top: -12px;
+    }
+
+    .timeline-handle::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .timeline-handle::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .timeline-track {
+        height: 10px;
+    }
+
+    .timeline-date-display {
+        font-size: 12px;
+    }
 }

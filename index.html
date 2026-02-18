@@ -602,7 +602,7 @@
                                 var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
                                 var widthPct = (seg.count / totalDates * 100).toFixed(2);
                                 var labelStyle = parseFloat(widthPct) < 8 ? ' style="display:none"' : '';
-                                segmentsHtml += '<div class="timeline-segment" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + seg.color + '">' +
+                                segmentsHtml += '<div class="timeline-segment" style="--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color + '">' +
                                     '<span class="segment-label"' + labelStyle + '>' + seg.cityName + '</span></div>';
                             }
 

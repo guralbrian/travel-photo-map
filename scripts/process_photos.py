@@ -23,7 +23,7 @@ VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm'}
 
 # Google Drive lh3 proxy base URL
 LH3_BASE = 'https://lh3.googleusercontent.com/d/'
-LH3_SUFFIX = '=w1600'
+LH3_SUFFIX = '=w2400'
 DRIVE_FILE_ID_RE = re.compile(r'/d/([a-zA-Z0-9_-]+)')
 
 
