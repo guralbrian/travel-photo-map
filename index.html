@@ -195,13 +195,17 @@
                     if (photo.web_url) {
                         var hiRes = new Image();
                         hiRes.onload = function () {
-                            // Only swap if this photo is still being viewed
                             if (img.parentNode) {
                                 img.src = hiRes.src;
                                 img.classList.remove('loading');
                             }
                         };
+                        hiRes.onerror = function () {
+                            img.classList.remove('loading');
+                        };
                         hiRes.src = photo.web_url;
+                    } else {
+                        img.classList.remove('loading');
                     }
                 }
 
