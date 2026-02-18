@@ -134,6 +134,7 @@
             var filteredPhotos = [];
             var currentClusterRadius = 30;
             var currentIconSize = 90;
+            var cityClusters = [];
 
             var lightboxIndex = -1;
             var lightboxOverlay = null;
@@ -183,7 +184,25 @@
                 if (photo.type === 'video') {
                     mediaContainer.innerHTML = '<video controls autoplay><source src="' + photo.url + '"></video>';
                 } else {
-                    mediaContainer.innerHTML = '<img src="' + photo.url + '" alt="' + (photo.caption || 'Photo') + '">';
+                    // Progressive loading: show thumbnail immediately, swap to high-res when loaded
+                    var img = document.createElement('img');
+                    img.src = photo.thumbnail;
+                    img.alt = photo.caption || 'Photo';
+                    img.className = 'lightbox-img loading';
+                    mediaContainer.innerHTML = '';
+                    mediaContainer.appendChild(img);
+
+                    if (photo.web_url) {
+                        var hiRes = new Image();
+                        hiRes.onload = function () {
+                            // Only swap if this photo is still being viewed
+                            if (img.parentNode) {
+                                img.src = hiRes.src;
+                                img.classList.remove('loading');
+                            }
+                        };
+                        hiRes.src = photo.web_url;
+                    }
                 }
 
                 // Populate info
@@ -222,12 +241,12 @@
 
                 lightboxOverlay.style.display = 'flex';
 
-                // Preload adjacent images
+                // Preload adjacent high-res images (fall back to thumbnail if no web_url)
                 if (index > 0 && filteredPhotos[index - 1].type !== 'video') {
-                    new Image().src = filteredPhotos[index - 1].url;
+                    new Image().src = filteredPhotos[index - 1].web_url || filteredPhotos[index - 1].thumbnail;
                 }
                 if (index < filteredPhotos.length - 1 && filteredPhotos[index + 1].type !== 'video') {
-                    new Image().src = filteredPhotos[index + 1].url;
+                    new Image().src = filteredPhotos[index + 1].web_url || filteredPhotos[index + 1].thumbnail;
                 }
             }
 
@@ -271,38 +290,6 @@
                 photoLayer.on('click', onPhotoClick);
                 photoLayer.add(data).addTo(map);
             }
-
-            // Slider control
-            var SliderControl = L.Control.extend({
-                options: { position: 'bottomleft' },
-                onAdd: function () {
-                    var container = L.DomUtil.create('div', 'slider-control');
-                    L.DomEvent.disableClickPropagation(container);
-                    L.DomEvent.disableScrollPropagation(container);
-
-                    container.innerHTML =
-                        '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
-                        '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
-                        '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
-                        '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">';
-
-                    return container;
-                }
-            });
-
-            new SliderControl().addTo(map);
-
-            document.getElementById('cluster-slider').addEventListener('input', function () {
-                currentClusterRadius = parseInt(this.value, 10);
-                document.getElementById('cluster-val').textContent = currentClusterRadius;
-                if (filteredPhotos.length > 0) rebuildPhotoLayer();
-            });
-
-            document.getElementById('size-slider').addEventListener('input', function () {
-                currentIconSize = parseInt(this.value, 10);
-                document.getElementById('size-val').textContent = currentIconSize + 'px';
-                if (filteredPhotos.length > 0) rebuildPhotoLayer();
-            });
 
             // Load annotations (graceful failure if missing)
             fetch('data/annotations.json')
@@ -448,6 +435,86 @@
                     // timeline.json missing is fine
                 });
 
+            function haversineKm(lat1, lng1, lat2, lng2) {
+                var R = 6371;
+                var dLat = (lat2 - lat1) * Math.PI / 180;
+                var dLng = (lng2 - lng1) * Math.PI / 180;
+                var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            }
+
+            function clusterPhotosIntoCities(photos) {
+                var sorted = photos.slice().sort(function (a, b) {
+                    return (a.date || '').localeCompare(b.date || '');
+                });
+
+                var clusters = [];
+                for (var i = 0; i < sorted.length; i++) {
+                    var p = sorted[i];
+                    if (clusters.length === 0) {
+                        clusters.push({ photos: [p], centroidLat: p.lat, centroidLng: p.lng });
+                    } else {
+                        var cur = clusters[clusters.length - 1];
+                        var dist = haversineKm(cur.centroidLat, cur.centroidLng, p.lat, p.lng);
+                        if (dist > 50) {
+                            clusters.push({ photos: [p], centroidLat: p.lat, centroidLng: p.lng });
+                        } else {
+                            cur.photos.push(p);
+                            var n = cur.photos.length;
+                            cur.centroidLat = cur.centroidLat + (p.lat - cur.centroidLat) / n;
+                            cur.centroidLng = cur.centroidLng + (p.lng - cur.centroidLng) / n;
+                        }
+                    }
+                }
+
+                var knownCities = [
+                    { name: 'London', lat: 51.5074, lng: -0.1278 },
+                    { name: 'Copenhagen', lat: 55.6761, lng: 12.5683 },
+                    { name: 'Hamburg', lat: 53.5511, lng: 9.9937 },
+                    { name: 'Heidelberg', lat: 49.3988, lng: 8.6724 },
+                    { name: 'Munich', lat: 48.1351, lng: 11.5820 },
+                    { name: 'Prague', lat: 50.0755, lng: 14.4378 }
+                ];
+                var palette = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
+
+                for (var c = 0; c < clusters.length; c++) {
+                    var cl = clusters[c];
+                    var bestCity = null;
+                    var bestDist = Infinity;
+                    for (var k = 0; k < knownCities.length; k++) {
+                        var d = haversineKm(cl.centroidLat, cl.centroidLng, knownCities[k].lat, knownCities[k].lng);
+                        if (d < bestDist) {
+                            bestDist = d;
+                            bestCity = knownCities[k];
+                        }
+                    }
+                    cl.cityName = bestDist <= 80 ? bestCity.name : 'Unknown';
+                    cl.color = palette[c % palette.length];
+
+                    var dates = cl.photos.map(function (p) { return p.date || ''; }).filter(function (d) { return d; }).sort();
+                    cl.startDate = dates[0] || '';
+                    cl.endDate = dates[dates.length - 1] || '';
+
+                    for (var j = 0; j < cl.photos.length; j++) {
+                        cl.photos[j].cityIndex = c;
+                        cl.photos[j].cityName = cl.cityName;
+                        cl.photos[j].cityColor = cl.color;
+                    }
+                }
+
+                return clusters;
+            }
+
+            function formatDateShort(isoDate) {
+                if (!isoDate) return '';
+                var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                var parts = isoDate.split('-');
+                if (parts.length < 3) return isoDate;
+                return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
+            }
+
             fetch('data/manifest.json')
                 .then(function (response) {
                     if (!response.ok) throw new Error('Failed to load manifest');
@@ -460,62 +527,158 @@
                     }
 
                     allPhotos = photos;
+                    cityClusters = clusterPhotosIntoCities(allPhotos);
                     filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
 
-                    // Build date filter pills
+                    // Build unique sorted dates
                     var dateSet = {};
                     for (var i = 0; i < allPhotos.length; i++) {
                         if (allPhotos[i].date) dateSet[allPhotos[i].date] = true;
                     }
                     var uniqueDates = Object.keys(dateSet).sort();
 
-                    if (uniqueDates.length > 1) {
-                        var DateFilterControl = L.Control.extend({
-                            options: { position: 'topright' },
-                            onAdd: function () {
-                                var container = L.DomUtil.create('div', 'date-filter-control');
-                                L.DomEvent.disableClickPropagation(container);
-                                L.DomEvent.disableScrollPropagation(container);
-
-                                var html = '<button class="active" data-date="all">All</button>';
-                                for (var d = 0; d < uniqueDates.length; d++) {
-                                    html += '<button data-date="' + uniqueDates[d] + '">' + uniqueDates[d] + '</button>';
-                                }
-                                container.innerHTML = html;
-
-                                container.addEventListener('click', function (evt) {
-                                    var btn = evt.target;
-                                    if (!btn.dataset || !btn.dataset.date) return;
-
-                                    var buttons = container.querySelectorAll('button');
-                                    for (var b = 0; b < buttons.length; b++) {
-                                        buttons[b].classList.remove('active');
-                                    }
-                                    btn.classList.add('active');
-
-                                    if (btn.dataset.date === 'all') {
-                                        filteredPhotos = allPhotos;
-                                    } else {
-                                        filteredPhotos = [];
-                                        for (var f = 0; f < allPhotos.length; f++) {
-                                            if (allPhotos[f].date === btn.dataset.date) {
-                                                filteredPhotos.push(allPhotos[f]);
-                                            }
-                                        }
-                                    }
-
-                                    rebuildPhotoLayer();
-                                    try {
-                                        map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
-                                    } catch (e) {}
-                                });
-
-                                return container;
+                    // Build timeline segments: assign each date to the cluster with the most photos on that date
+                    var dateClusterMap = {};
+                    for (var di = 0; di < uniqueDates.length; di++) {
+                        var dStr = uniqueDates[di];
+                        var countPerCluster = {};
+                        for (var pi = 0; pi < allPhotos.length; pi++) {
+                            if (allPhotos[pi].date === dStr && allPhotos[pi].cityIndex !== undefined) {
+                                var ci = allPhotos[pi].cityIndex;
+                                countPerCluster[ci] = (countPerCluster[ci] || 0) + 1;
                             }
-                        });
-                        new DateFilterControl().addTo(map);
+                        }
+                        var bestCluster = 0;
+                        var bestCount = 0;
+                        for (var key in countPerCluster) {
+                            if (countPerCluster[key] > bestCount) {
+                                bestCount = countPerCluster[key];
+                                bestCluster = parseInt(key, 10);
+                            }
+                        }
+                        dateClusterMap[dStr] = bestCluster;
                     }
+
+                    // Build contiguous runs for timeline segments
+                    var timelineSegments = [];
+                    if (uniqueDates.length > 0) {
+                        var runStart = 0;
+                        var runCluster = dateClusterMap[uniqueDates[0]];
+                        for (var ri = 1; ri <= uniqueDates.length; ri++) {
+                            var curCluster = ri < uniqueDates.length ? dateClusterMap[uniqueDates[ri]] : -1;
+                            if (curCluster !== runCluster) {
+                                timelineSegments.push({
+                                    clusterIndex: runCluster,
+                                    startIdx: runStart,
+                                    count: ri - runStart,
+                                    color: cityClusters[runCluster] ? cityClusters[runCluster].color : '#999',
+                                    cityName: cityClusters[runCluster] ? cityClusters[runCluster].cityName : 'Unknown'
+                                });
+                                runStart = ri;
+                                runCluster = curCluster;
+                            }
+                        }
+                    }
+
+                    // Unified control
+                    var UnifiedControl = L.Control.extend({
+                        options: { position: 'bottomleft' },
+                        onAdd: function () {
+                            var container = L.DomUtil.create('div', 'unified-control');
+                            L.DomEvent.disableClickPropagation(container);
+                            L.DomEvent.disableScrollPropagation(container);
+
+                            var totalDates = uniqueDates.length || 1;
+
+                            // Build timeline track segments HTML
+                            var segmentsHtml = '';
+                            for (var s = 0; s < timelineSegments.length; s++) {
+                                var seg = timelineSegments[s];
+                                var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
+                                var widthPct = (seg.count / totalDates * 100).toFixed(2);
+                                var labelStyle = parseFloat(widthPct) < 8 ? ' style="display:none"' : '';
+                                segmentsHtml += '<div class="timeline-segment" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + seg.color + '">' +
+                                    '<span class="segment-label"' + labelStyle + '>' + seg.cityName + '</span></div>';
+                            }
+
+                            var maxIdx = uniqueDates.length > 0 ? uniqueDates.length - 1 : 0;
+                            var startLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[0]) : '';
+                            var endLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[maxIdx]) : '';
+
+                            container.innerHTML =
+                                '<div class="timeline-bar">' +
+                                    '<div class="timeline-track">' + segmentsHtml + '</div>' +
+                                    '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
+                                    '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
+                                    '<div class="timeline-date-display">' +
+                                        '<span class="timeline-date-start">' + startLabel + '</span>' +
+                                        '<span class="timeline-date-end">' + endLabel + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<details class="settings-section">' +
+                                    '<summary>Settings</summary>' +
+                                    '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
+                                    '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
+                                    '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
+                                    '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">' +
+                                '</details>';
+
+                            return container;
+                        }
+                    });
+                    new UnifiedControl().addTo(map);
+
+                    // Timeline slider handlers
+                    var handleMin = document.querySelector('.timeline-handle-min');
+                    var handleMax = document.querySelector('.timeline-handle-max');
+                    var dateStartLabel = document.querySelector('.timeline-date-start');
+                    var dateEndLabel = document.querySelector('.timeline-date-end');
+
+                    function onTimelineChange() {
+                        var minIdx = parseInt(handleMin.value, 10);
+                        var maxIdx = parseInt(handleMax.value, 10);
+                        if (minIdx > maxIdx) {
+                            if (this === handleMin) { handleMin.value = maxIdx; minIdx = maxIdx; }
+                            else { handleMax.value = minIdx; maxIdx = minIdx; }
+                        }
+
+                        dateStartLabel.textContent = formatDateShort(uniqueDates[minIdx]);
+                        dateEndLabel.textContent = formatDateShort(uniqueDates[maxIdx]);
+
+                        var minDate = uniqueDates[minIdx];
+                        var maxDate = uniqueDates[maxIdx];
+                        filteredPhotos = [];
+                        for (var f = 0; f < allPhotos.length; f++) {
+                            var pd = allPhotos[f].date || '';
+                            if (pd >= minDate && pd <= maxDate) {
+                                filteredPhotos.push(allPhotos[f]);
+                            }
+                        }
+
+                        rebuildPhotoLayer();
+                        try {
+                            map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
+                        } catch (e) {}
+                    }
+
+                    if (handleMin && handleMax) {
+                        handleMin.addEventListener('input', onTimelineChange);
+                        handleMax.addEventListener('input', onTimelineChange);
+                    }
+
+                    // Settings slider handlers
+                    document.getElementById('cluster-slider').addEventListener('input', function () {
+                        currentClusterRadius = parseInt(this.value, 10);
+                        document.getElementById('cluster-val').textContent = currentClusterRadius;
+                        if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                    });
+
+                    document.getElementById('size-slider').addEventListener('input', function () {
+                        currentIconSize = parseInt(this.value, 10);
+                        document.getElementById('size-val').textContent = currentIconSize + 'px';
+                        if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                    });
 
                     try {
                         map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });

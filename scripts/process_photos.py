@@ -21,6 +21,29 @@ register_heif_opener()
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff', '.heic', '.heif'}
 VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm'}
 
+# Google Drive lh3 proxy base URL
+LH3_BASE = 'https://lh3.googleusercontent.com/d/'
+LH3_SUFFIX = '=w1600'
+DRIVE_FILE_ID_RE = re.compile(r'/d/([a-zA-Z0-9_-]+)')
+
+
+def derive_web_url(google_photos_url):
+    """Derive an lh3.googleusercontent.com URL from a Google Drive share URL.
+
+    Args:
+        google_photos_url: A Google Drive URL like
+            https://drive.google.com/file/d/FILE_ID/view?usp=drivesdk
+
+    Returns:
+        lh3 proxy URL string, or empty string if extraction fails.
+    """
+    if not google_photos_url:
+        return ''
+    m = DRIVE_FILE_ID_RE.search(google_photos_url)
+    if not m:
+        return ''
+    return LH3_BASE + m.group(1) + LH3_SUFFIX
+
 
 def dms_to_decimal(dms, ref):
     """Convert GPS DMS (degrees, minutes, seconds) to decimal degrees.
@@ -457,6 +480,7 @@ def merge_notes_into_entry(entry, notes, filename):
         tags = [t.strip() for t in tags.split(',')]
     entry['tags'] = tags
     entry['google_photos_url'] = file_notes.get('google_photos_url', '')
+    entry['web_url'] = derive_web_url(entry['google_photos_url'])
     return entry
 
 
@@ -607,6 +631,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'date': date,
                 'tags': tags,
                 'google_photos_url': google_photos_url,
+                'web_url': derive_web_url(google_photos_url),
                 'type': 'video',
             }
             manifest.append(entry)
@@ -669,6 +694,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'date': date,
                 'tags': tags,
                 'google_photos_url': google_photos_url,
+                'web_url': derive_web_url(google_photos_url),
                 'type': 'photo',
             }
             manifest.append(entry)
@@ -736,6 +762,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             'date': date,
             'tags': tags,
             'google_photos_url': google_photos_url,
+            'web_url': derive_web_url(google_photos_url),
             'type': 'video' if file_is_video else 'photo',
         }
         manifest.append(entry)
