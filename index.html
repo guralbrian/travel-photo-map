@@ -337,190 +337,8 @@
                     // annotations.json missing is fine
                 });
 
-            // Load timeline overlay (graceful failure if missing)
-            var activityStyles = {
-                'WALKING': { color: '#4CAF50', weight: 3, dashArray: null, opacity: 0.8 },
-                'RUNNING': { color: '#8BC34A', weight: 3, dashArray: null, opacity: 0.8 },
-                'CYCLING': { color: '#FF9800', weight: 3, dashArray: '8, 4', opacity: 0.8 },
-                'DRIVING': { color: '#2196F3', weight: 4, dashArray: null, opacity: 0.7 },
-                'TRANSIT': { color: '#9C27B0', weight: 4, dashArray: '12, 6', opacity: 0.7 },
-                'FLYING': { color: '#F44336', weight: 2, dashArray: '4, 8', opacity: 0.6 },
-                'SKIING': { color: '#00BCD4', weight: 3, dashArray: '6, 3', opacity: 0.8 },
-                'SAILING': { color: '#3F51B5', weight: 3, dashArray: '10, 5', opacity: 0.7 },
-                'UNKNOWN': { color: '#9E9E9E', weight: 2, dashArray: '2, 4', opacity: 0.5 }
-            };
-            var activityColors = {};
-            for (var k in activityStyles) { activityColors[k] = activityStyles[k].color; }
-
-            function formatDuration(startStr, endStr) {
-                if (!startStr || !endStr) return '';
-                try {
-                    var start = new Date(startStr);
-                    var end = new Date(endStr);
-                    var mins = Math.round((end - start) / 60000);
-                    if (mins < 60) return mins + ' min';
-                    var hours = Math.floor(mins / 60);
-                    var remMins = mins % 60;
-                    return hours + 'h ' + (remMins > 0 ? remMins + 'm' : '');
-                } catch (e) {
-                    return '';
-                }
-            }
-
-            function formatTime(isoStr) {
-                if (!isoStr) return '';
-                try {
-                    var d = new Date(isoStr);
-                    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                } catch (e) {
-                    return '';
-                }
-            }
-
-            fetch('data/timeline.json')
-                .then(function (response) {
-                    if (!response.ok) return null;
-                    return response.json();
-                })
-                .then(function (timeline) {
-                    if (!timeline) return;
-
-                    var pathsGroup = L.layerGroup();
-                    var placesGroup = L.layerGroup();
-
-                    // Render activity segments as colored polylines
-                    var segments = timeline.segments || [];
-                    for (var i = 0; i < segments.length; i++) {
-                        var seg = segments[i];
-                        if (!seg.points || seg.points.length < 2) continue;
-
-                        var style = activityStyles[seg.activity] || activityStyles['UNKNOWN'];
-                        var polylineOpts = {
-                            color: style.color,
-                            weight: style.weight,
-                            opacity: style.opacity
-                        };
-                        if (style.dashArray) {
-                            polylineOpts.dashArray = style.dashArray;
-                        }
-                        var polyline = L.polyline(seg.points, polylineOpts);
-
-                        var popupHtml = '<div class="timeline-popup">';
-                        popupHtml += '<strong>' + (seg.activity || 'Unknown') + '</strong>';
-                        var dur = formatDuration(seg.start, seg.end);
-                        if (dur) popupHtml += '<br><span class="timeline-duration">' + dur + '</span>';
-                        if (seg.distance_m) popupHtml += '<br><span class="timeline-distance">' + (seg.distance_m / 1000).toFixed(1) + ' km</span>';
-                        if (seg.start) popupHtml += '<br><span class="timeline-time">' + formatTime(seg.start) + '</span>';
-                        popupHtml += '</div>';
-                        polyline.bindPopup(popupHtml);
-
-                        pathsGroup.addLayer(polyline);
-                    }
-
-                    // Render place visits as circle markers
-                    var places = timeline.places || [];
-                    for (var j = 0; j < places.length; j++) {
-                        var place = places[j];
-                        if (place.lat == null || place.lng == null) continue;
-
-                        var circle = L.circleMarker([place.lat, place.lng], {
-                            radius: 6,
-                            fillColor: '#E91E63',
-                            color: '#C2185B',
-                            weight: 2,
-                            opacity: 0.9,
-                            fillOpacity: 0.7
-                        });
-
-                        var placeHtml = '<div class="timeline-popup">';
-                        if (place.name) placeHtml += '<strong>' + place.name + '</strong>';
-                        if (place.address) placeHtml += '<br><span class="timeline-address">' + place.address + '</span>';
-                        var placeDur = formatDuration(place.start, place.end);
-                        if (placeDur) placeHtml += '<br><span class="timeline-duration">' + placeDur + '</span>';
-                        if (place.start) placeHtml += '<br><span class="timeline-time">' + formatTime(place.start) + '</span>';
-                        placeHtml += '</div>';
-                        circle.bindPopup(placeHtml);
-
-                        placesGroup.addLayer(circle);
-                    }
-
-                    // Add overlays to layer control
-                    if (pathsGroup.getLayers().length > 0) {
-                        layerControl.addOverlay(pathsGroup, 'Travel Paths');
-                        pathsGroup.addTo(map);
-                    }
-                    if (placesGroup.getLayers().length > 0) {
-                        layerControl.addOverlay(placesGroup, 'Visited Places');
-                        placesGroup.addTo(map);
-                    }
-                })
-                .catch(function () {
-                    // timeline.json missing is fine
-                });
-
-            // Load Google Takeout location overlay (graceful failure if missing)
-            var takeoutLocationsLayer = null;
-            var takeoutPoints = [];
-
-            fetch('data/takeout_locations.json')
-                .then(function (response) {
-                    if (!response.ok) return null;
-                    return response.json();
-                })
-                .then(function (data) {
-                    if (!data || !data.points || data.points.length === 0) return;
-
-                    takeoutPoints = data.points;
-                    var pointsGroup = L.layerGroup();
-
-                    // Create a polyline connecting all points in order
-                    var linePoints = takeoutPoints.map(function (p) {
-                        return [p.lat, p.lng];
-                    });
-
-                    if (linePoints.length > 1) {
-                        var trailLine = L.polyline(linePoints, {
-                            color: '#FF5722',
-                            weight: 2,
-                            opacity: 0.5,
-                            dashArray: '5, 5'
-                        });
-                        pointsGroup.addLayer(trailLine);
-                    }
-
-                    // Add small circle markers for each photo location
-                    for (var i = 0; i < takeoutPoints.length; i++) {
-                        var pt = takeoutPoints[i];
-                        var circle = L.circleMarker([pt.lat, pt.lng], {
-                            radius: 3,
-                            fillColor: '#FF5722',
-                            color: '#BF360C',
-                            weight: 1,
-                            opacity: 0.7,
-                            fillOpacity: 0.5
-                        });
-
-                        var popupHtml = '<div class="takeout-popup">';
-                        popupHtml += '<strong>' + pt.source + '</strong>';
-                        if (pt.timestamp) {
-                            var dt = new Date(pt.timestamp);
-                            popupHtml += '<br><span class="takeout-time">' + dt.toLocaleString() + '</span>';
-                        }
-                        popupHtml += '</div>';
-                        circle.bindPopup(popupHtml);
-
-                        pointsGroup.addLayer(circle);
-                    }
-
-                    if (pointsGroup.getLayers().length > 0) {
-                        takeoutLocationsLayer = pointsGroup;
-                        layerControl.addOverlay(pointsGroup, 'Photo Trail (Takeout)');
-                        pointsGroup.addTo(map);
-                    }
-                })
-                .catch(function () {
-                    // takeout_locations.json missing is fine
-                });
+            // Intercity travel route (drawn after trip segments load)
+            var travelRouteLayer = null;
 
             function haversineKm(lat1, lng1, lat2, lng2) {
                 var R = 6371;
@@ -642,6 +460,24 @@
                     filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
                     buildPhotoIndex();
+
+                    // Draw intercity travel route
+                    if (tripSegments.length > 1) {
+                        var routeGroup = L.layerGroup();
+                        for (var ri = 0; ri < tripSegments.length - 1; ri++) {
+                            var from = tripSegments[ri];
+                            var to = tripSegments[ri + 1];
+                            var line = L.polyline(
+                                [[from.lat, from.lng], [to.lat, to.lng]],
+                                { color: from.color, weight: 2, opacity: 0.5, dashArray: '6, 4' }
+                            );
+                            line.bindPopup(from.name + ' → ' + to.name);
+                            routeGroup.addLayer(line);
+                        }
+                        travelRouteLayer = routeGroup;
+                        layerControl.addOverlay(routeGroup, 'Travel Route');
+                        routeGroup.addTo(map);
+                    }
 
                     // Build unique sorted dates
                     var dateSet = {};
@@ -809,50 +645,6 @@
 
                         rebuildPhotoLayer();
                         buildPhotoIndex();
-
-                        // Update takeout locations layer if visible
-                        if (takeoutLocationsLayer && map.hasLayer(takeoutLocationsLayer)) {
-                            map.removeLayer(takeoutLocationsLayer);
-                            layerControl.removeLayer(takeoutLocationsLayer);
-
-                            var filteredPointsGroup = L.layerGroup();
-                            var filteredTakeoutPts = takeoutPoints.filter(function (pt) {
-                                if (!pt.timestamp) return false;
-                                var ptDate = pt.timestamp.split('T')[0];
-                                return ptDate >= minDate && ptDate <= maxDate;
-                            });
-
-                            var linePoints = filteredTakeoutPts.map(function (p) {
-                                return [p.lat, p.lng];
-                            });
-
-                            if (linePoints.length > 1) {
-                                var trailLine = L.polyline(linePoints, {
-                                    color: '#FF5722',
-                                    weight: 2,
-                                    opacity: 0.5,
-                                    dashArray: '5, 5'
-                                });
-                                filteredPointsGroup.addLayer(trailLine);
-                            }
-
-                            for (var ti = 0; ti < filteredTakeoutPts.length; ti++) {
-                                var pt = filteredTakeoutPts[ti];
-                                var circle = L.circleMarker([pt.lat, pt.lng], {
-                                    radius: 3,
-                                    fillColor: '#FF5722',
-                                    color: '#BF360C',
-                                    weight: 1,
-                                    opacity: 0.7,
-                                    fillOpacity: 0.5
-                                });
-                                filteredPointsGroup.addLayer(circle);
-                            }
-
-                            takeoutLocationsLayer = filteredPointsGroup;
-                            layerControl.addOverlay(filteredPointsGroup, 'Photo Trail (Takeout)');
-                            filteredPointsGroup.addTo(map);
-                        }
                     }
 
                     function onTimelineRelease() {
