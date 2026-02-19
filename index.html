@@ -326,17 +326,19 @@
                 });
 
             // Load timeline overlay (graceful failure if missing)
-            var activityColors = {
-                'WALKING': '#4CAF50',
-                'RUNNING': '#8BC34A',
-                'CYCLING': '#FF9800',
-                'DRIVING': '#2196F3',
-                'TRANSIT': '#9C27B0',
-                'FLYING': '#F44336',
-                'SKIING': '#00BCD4',
-                'SAILING': '#3F51B5',
-                'UNKNOWN': '#9E9E9E'
+            var activityStyles = {
+                'WALKING': { color: '#4CAF50', weight: 3, dashArray: null, opacity: 0.8 },
+                'RUNNING': { color: '#8BC34A', weight: 3, dashArray: null, opacity: 0.8 },
+                'CYCLING': { color: '#FF9800', weight: 3, dashArray: '8, 4', opacity: 0.8 },
+                'DRIVING': { color: '#2196F3', weight: 4, dashArray: null, opacity: 0.7 },
+                'TRANSIT': { color: '#9C27B0', weight: 4, dashArray: '12, 6', opacity: 0.7 },
+                'FLYING': { color: '#F44336', weight: 2, dashArray: '4, 8', opacity: 0.6 },
+                'SKIING': { color: '#00BCD4', weight: 3, dashArray: '6, 3', opacity: 0.8 },
+                'SAILING': { color: '#3F51B5', weight: 3, dashArray: '10, 5', opacity: 0.7 },
+                'UNKNOWN': { color: '#9E9E9E', weight: 2, dashArray: '2, 4', opacity: 0.5 }
             };
+            var activityColors = {};
+            for (var k in activityStyles) { activityColors[k] = activityStyles[k].color; }
 
             function formatDuration(startStr, endStr) {
                 if (!startStr || !endStr) return '';
@@ -380,17 +382,22 @@
                         var seg = segments[i];
                         if (!seg.points || seg.points.length < 2) continue;
 
-                        var color = activityColors[seg.activity] || activityColors['UNKNOWN'];
-                        var polyline = L.polyline(seg.points, {
-                            color: color,
-                            weight: 3,
-                            opacity: 0.7
-                        });
+                        var style = activityStyles[seg.activity] || activityStyles['UNKNOWN'];
+                        var polylineOpts = {
+                            color: style.color,
+                            weight: style.weight,
+                            opacity: style.opacity
+                        };
+                        if (style.dashArray) {
+                            polylineOpts.dashArray = style.dashArray;
+                        }
+                        var polyline = L.polyline(seg.points, polylineOpts);
 
                         var popupHtml = '<div class="timeline-popup">';
                         popupHtml += '<strong>' + (seg.activity || 'Unknown') + '</strong>';
                         var dur = formatDuration(seg.start, seg.end);
                         if (dur) popupHtml += '<br><span class="timeline-duration">' + dur + '</span>';
+                        if (seg.distance_m) popupHtml += '<br><span class="timeline-distance">' + (seg.distance_m / 1000).toFixed(1) + ' km</span>';
                         if (seg.start) popupHtml += '<br><span class="timeline-time">' + formatTime(seg.start) + '</span>';
                         popupHtml += '</div>';
                         polyline.bindPopup(popupHtml);
@@ -439,6 +446,70 @@
                     // timeline.json missing is fine
                 });
 
+            // Load Google Takeout location overlay (graceful failure if missing)
+            var takeoutLocationsLayer = null;
+            var takeoutPoints = [];
+
+            fetch('data/takeout_locations.json')
+                .then(function (response) {
+                    if (!response.ok) return null;
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (!data || !data.points || data.points.length === 0) return;
+
+                    takeoutPoints = data.points;
+                    var pointsGroup = L.layerGroup();
+
+                    // Create a polyline connecting all points in order
+                    var linePoints = takeoutPoints.map(function (p) {
+                        return [p.lat, p.lng];
+                    });
+
+                    if (linePoints.length > 1) {
+                        var trailLine = L.polyline(linePoints, {
+                            color: '#FF5722',
+                            weight: 2,
+                            opacity: 0.5,
+                            dashArray: '5, 5'
+                        });
+                        pointsGroup.addLayer(trailLine);
+                    }
+
+                    // Add small circle markers for each photo location
+                    for (var i = 0; i < takeoutPoints.length; i++) {
+                        var pt = takeoutPoints[i];
+                        var circle = L.circleMarker([pt.lat, pt.lng], {
+                            radius: 3,
+                            fillColor: '#FF5722',
+                            color: '#BF360C',
+                            weight: 1,
+                            opacity: 0.7,
+                            fillOpacity: 0.5
+                        });
+
+                        var popupHtml = '<div class="takeout-popup">';
+                        popupHtml += '<strong>' + pt.source + '</strong>';
+                        if (pt.timestamp) {
+                            var dt = new Date(pt.timestamp);
+                            popupHtml += '<br><span class="takeout-time">' + dt.toLocaleString() + '</span>';
+                        }
+                        popupHtml += '</div>';
+                        circle.bindPopup(popupHtml);
+
+                        pointsGroup.addLayer(circle);
+                    }
+
+                    if (pointsGroup.getLayers().length > 0) {
+                        takeoutLocationsLayer = pointsGroup;
+                        layerControl.addOverlay(pointsGroup, 'Photo Trail (Takeout)');
+                        // Don't add to map by default - user can enable via layer control
+                    }
+                })
+                .catch(function () {
+                    // takeout_locations.json missing is fine
+                });
+
             function haversineKm(lat1, lng1, lat2, lng2) {
                 var R = 6371;
                 var dLat = (lat2 - lat1) * Math.PI / 180;
@@ -449,64 +520,85 @@
                 return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             }
 
-            function clusterPhotosIntoCities(photos) {
+            var tripSegments = [];
+
+            function assignPhotosToTripSegments(photos, segments) {
+                // Sort photos by datetime or date
                 var sorted = photos.slice().sort(function (a, b) {
-                    return (a.date || '').localeCompare(b.date || '');
+                    var aTime = a.datetime || a.date || '';
+                    var bTime = b.datetime || b.date || '';
+                    return aTime.localeCompare(bTime);
                 });
 
-                var clusters = [];
+                // Parse segment boundaries
+                var parsedSegments = segments.map(function (seg, idx) {
+                    return {
+                        index: idx,
+                        name: seg.name,
+                        start: new Date(seg.start),
+                        end: new Date(seg.end),
+                        color: seg.color,
+                        lat: seg.lat,
+                        lng: seg.lng,
+                        photos: []
+                    };
+                });
+
+                // Assign each photo to a segment
                 for (var i = 0; i < sorted.length; i++) {
-                    var p = sorted[i];
-                    if (clusters.length === 0) {
-                        clusters.push({ photos: [p], centroidLat: p.lat, centroidLng: p.lng });
-                    } else {
-                        var cur = clusters[clusters.length - 1];
-                        var dist = haversineKm(cur.centroidLat, cur.centroidLng, p.lat, p.lng);
-                        if (dist > 50) {
-                            clusters.push({ photos: [p], centroidLat: p.lat, centroidLng: p.lng });
-                        } else {
-                            cur.photos.push(p);
-                            var n = cur.photos.length;
-                            cur.centroidLat = cur.centroidLat + (p.lat - cur.centroidLat) / n;
-                            cur.centroidLng = cur.centroidLng + (p.lng - cur.centroidLng) / n;
+                    var photo = sorted[i];
+                    var photoTime = null;
+
+                    // Try to parse datetime first, fall back to date
+                    if (photo.datetime) {
+                        photoTime = new Date(photo.datetime);
+                    } else if (photo.date) {
+                        // Date-only: assume noon for comparison
+                        photoTime = new Date(photo.date + 'T12:00:00');
+                    }
+
+                    if (!photoTime || isNaN(photoTime.getTime())) {
+                        // No valid time, skip assignment
+                        photo.cityIndex = -1;
+                        photo.cityName = 'Unknown';
+                        photo.cityColor = '#999';
+                        continue;
+                    }
+
+                    // Find matching segment
+                    var matched = false;
+                    for (var s = 0; s < parsedSegments.length; s++) {
+                        var seg = parsedSegments[s];
+                        if (photoTime >= seg.start && photoTime < seg.end) {
+                            photo.cityIndex = s;
+                            photo.cityName = seg.name;
+                            photo.cityColor = seg.color;
+                            seg.photos.push(photo);
+                            matched = true;
+                            break;
                         }
+                    }
+
+                    if (!matched) {
+                        photo.cityIndex = -1;
+                        photo.cityName = 'Unknown';
+                        photo.cityColor = '#999';
                     }
                 }
 
-                var knownCities = [
-                    { name: 'London', lat: 51.5074, lng: -0.1278 },
-                    { name: 'Copenhagen', lat: 55.6761, lng: 12.5683 },
-                    { name: 'Hamburg', lat: 53.5511, lng: 9.9937 },
-                    { name: 'Heidelberg', lat: 49.3988, lng: 8.6724 },
-                    { name: 'Munich', lat: 48.1351, lng: 11.5820 },
-                    { name: 'Prague', lat: 50.0755, lng: 14.4378 }
-                ];
-                var palette = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
-
-                for (var c = 0; c < clusters.length; c++) {
-                    var cl = clusters[c];
-                    var bestCity = null;
-                    var bestDist = Infinity;
-                    for (var k = 0; k < knownCities.length; k++) {
-                        var d = haversineKm(cl.centroidLat, cl.centroidLng, knownCities[k].lat, knownCities[k].lng);
-                        if (d < bestDist) {
-                            bestDist = d;
-                            bestCity = knownCities[k];
-                        }
-                    }
-                    cl.cityName = bestDist <= 80 ? bestCity.name : 'Unknown';
-                    cl.color = palette[c % palette.length];
-
-                    var dates = cl.photos.map(function (p) { return p.date || ''; }).filter(function (d) { return d; }).sort();
-                    cl.startDate = dates[0] || '';
-                    cl.endDate = dates[dates.length - 1] || '';
-
-                    for (var j = 0; j < cl.photos.length; j++) {
-                        cl.photos[j].cityIndex = c;
-                        cl.photos[j].cityName = cl.cityName;
-                        cl.photos[j].cityColor = cl.color;
-                    }
-                }
+                // Build cluster-like structure for compatibility
+                var clusters = parsedSegments.map(function (seg) {
+                    var dates = seg.photos.map(function (p) { return p.date || ''; }).filter(function (d) { return d; }).sort();
+                    return {
+                        photos: seg.photos,
+                        centroidLat: seg.lat,
+                        centroidLng: seg.lng,
+                        cityName: seg.name,
+                        color: seg.color,
+                        startDate: dates[0] || '',
+                        endDate: dates[dates.length - 1] || ''
+                    };
+                });
 
                 return clusters;
             }
@@ -519,19 +611,22 @@
                 return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
             }
 
-            fetch('data/manifest.json')
-                .then(function (response) {
-                    if (!response.ok) throw new Error('Failed to load manifest');
-                    return response.json();
-                })
-                .then(function (photos) {
+            // Load trip segments and manifest together
+            Promise.all([
+                fetch('data/trip_segments.json').then(function (r) { return r.ok ? r.json() : []; }),
+                fetch('data/manifest.json').then(function (r) { if (!r.ok) throw new Error('Failed to load manifest'); return r.json(); })
+            ])
+                .then(function (results) {
+                    tripSegments = results[0] || [];
+                    var photos = results[1];
+
                     if (!photos || photos.length === 0) {
                         showEmptyState();
                         return;
                     }
 
                     allPhotos = photos;
-                    cityClusters = clusterPhotosIntoCities(allPhotos);
+                    cityClusters = assignPhotosToTripSegments(allPhotos, tripSegments);
                     filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
 
@@ -542,45 +637,42 @@
                     }
                     var uniqueDates = Object.keys(dateSet).sort();
 
-                    // Build timeline segments: assign each date to the cluster with the most photos on that date
-                    var dateClusterMap = {};
+                    // Build timeline segments directly from trip segments
+                    // Map each date to a segment based on segment boundaries
+                    var dateSegmentMap = {};
                     for (var di = 0; di < uniqueDates.length; di++) {
                         var dStr = uniqueDates[di];
-                        var countPerCluster = {};
-                        for (var pi = 0; pi < allPhotos.length; pi++) {
-                            if (allPhotos[pi].date === dStr && allPhotos[pi].cityIndex !== undefined) {
-                                var ci = allPhotos[pi].cityIndex;
-                                countPerCluster[ci] = (countPerCluster[ci] || 0) + 1;
+                        var dateTime = new Date(dStr + 'T12:00:00'); // Use noon for date-only comparison
+                        var bestSeg = -1;
+                        for (var si = 0; si < tripSegments.length; si++) {
+                            var segStart = new Date(tripSegments[si].start);
+                            var segEnd = new Date(tripSegments[si].end);
+                            if (dateTime >= segStart && dateTime < segEnd) {
+                                bestSeg = si;
+                                break;
                             }
                         }
-                        var bestCluster = 0;
-                        var bestCount = 0;
-                        for (var key in countPerCluster) {
-                            if (countPerCluster[key] > bestCount) {
-                                bestCount = countPerCluster[key];
-                                bestCluster = parseInt(key, 10);
-                            }
-                        }
-                        dateClusterMap[dStr] = bestCluster;
+                        dateSegmentMap[dStr] = bestSeg >= 0 ? bestSeg : 0;
                     }
 
                     // Build contiguous runs for timeline segments
                     var timelineSegments = [];
                     if (uniqueDates.length > 0) {
                         var runStart = 0;
-                        var runCluster = dateClusterMap[uniqueDates[0]];
+                        var runSegment = dateSegmentMap[uniqueDates[0]];
                         for (var ri = 1; ri <= uniqueDates.length; ri++) {
-                            var curCluster = ri < uniqueDates.length ? dateClusterMap[uniqueDates[ri]] : -1;
-                            if (curCluster !== runCluster) {
+                            var curSegment = ri < uniqueDates.length ? dateSegmentMap[uniqueDates[ri]] : -1;
+                            if (curSegment !== runSegment) {
+                                var seg = tripSegments[runSegment] || {};
                                 timelineSegments.push({
-                                    clusterIndex: runCluster,
+                                    clusterIndex: runSegment,
                                     startIdx: runStart,
                                     count: ri - runStart,
-                                    color: cityClusters[runCluster] ? cityClusters[runCluster].color : '#999',
-                                    cityName: cityClusters[runCluster] ? cityClusters[runCluster].cityName : 'Unknown'
+                                    color: seg.color || '#999',
+                                    cityName: seg.name || 'Unknown'
                                 });
                                 runStart = ri;
-                                runCluster = curCluster;
+                                runSegment = curSegment;
                             }
                         }
                     }
@@ -661,6 +753,52 @@
                         }
 
                         rebuildPhotoLayer();
+
+                        // Update takeout locations layer if visible
+                        if (takeoutLocationsLayer && map.hasLayer(takeoutLocationsLayer)) {
+                            // Rebuild filtered takeout layer
+                            map.removeLayer(takeoutLocationsLayer);
+                            layerControl.removeLayer(takeoutLocationsLayer);
+
+                            var filteredPointsGroup = L.layerGroup();
+                            var filteredTakeoutPts = takeoutPoints.filter(function (pt) {
+                                if (!pt.timestamp) return false;
+                                var ptDate = pt.timestamp.split('T')[0];
+                                return ptDate >= minDate && ptDate <= maxDate;
+                            });
+
+                            var linePoints = filteredTakeoutPts.map(function (p) {
+                                return [p.lat, p.lng];
+                            });
+
+                            if (linePoints.length > 1) {
+                                var trailLine = L.polyline(linePoints, {
+                                    color: '#FF5722',
+                                    weight: 2,
+                                    opacity: 0.5,
+                                    dashArray: '5, 5'
+                                });
+                                filteredPointsGroup.addLayer(trailLine);
+                            }
+
+                            for (var ti = 0; ti < filteredTakeoutPts.length; ti++) {
+                                var pt = filteredTakeoutPts[ti];
+                                var circle = L.circleMarker([pt.lat, pt.lng], {
+                                    radius: 3,
+                                    fillColor: '#FF5722',
+                                    color: '#BF360C',
+                                    weight: 1,
+                                    opacity: 0.7,
+                                    fillOpacity: 0.5
+                                });
+                                filteredPointsGroup.addLayer(circle);
+                            }
+
+                            takeoutLocationsLayer = filteredPointsGroup;
+                            layerControl.addOverlay(filteredPointsGroup, 'Photo Trail (Takeout)');
+                            filteredPointsGroup.addTo(map);
+                        }
+
                         try {
                             map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
                         } catch (e) {}

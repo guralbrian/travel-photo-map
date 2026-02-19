@@ -471,9 +471,12 @@ def merge_notes_into_entry(entry, notes, filename):
         filename: The photo filename key.
 
     Returns:
-        Updated entry.
+        Updated entry, or None if photo should be excluded.
     """
     file_notes = notes.get(filename, {})
+    # Check exclude flag
+    if file_notes.get('exclude', False):
+        return None
     entry['caption'] = file_notes.get('caption', '')
     tags = file_notes.get('tags', [])
     if isinstance(tags, str):
@@ -564,8 +567,13 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             # Reuse cached entry but re-merge notes for caption/tag changes
             entry = existing_manifest[photo_url].copy()
             entry = merge_notes_into_entry(entry, notes, filename)
-            manifest.append(entry)
             new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            # Check if photo was excluded
+            if entry is None:
+                print(f"  Skipping (excluded): {filename}")
+                skipped += 1
+                continue
+            manifest.append(entry)
             # Still add to GPS references for interpolation
             if file_is_video:
                 coords = extract_video_gps(filepath)
@@ -622,6 +630,12 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 tags = [t.strip() for t in tags.split(',')]
             google_photos_url = file_notes.get('google_photos_url', '')
 
+            # Check exclude flag
+            if file_notes.get('exclude', False):
+                print(f"  Skipping (excluded): {filename}")
+                new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+                continue
+
             entry = {
                 'lat': round(lat, 6),
                 'lng': round(lng, 6),
@@ -629,6 +643,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'thumbnail': f'thumbs/{thumb_filename}',
                 'caption': caption,
                 'date': date,
+                'datetime': dt.isoformat() if dt else '',
                 'tags': tags,
                 'google_photos_url': google_photos_url,
                 'web_url': derive_web_url(google_photos_url),
@@ -685,6 +700,12 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 tags = [t.strip() for t in tags.split(',')]
             google_photos_url = file_notes.get('google_photos_url', '')
 
+            # Check exclude flag
+            if file_notes.get('exclude', False):
+                print(f"  Skipping (excluded): {filename}")
+                new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+                continue
+
             entry = {
                 'lat': round(lat, 6),
                 'lng': round(lng, 6),
@@ -692,6 +713,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'thumbnail': f'thumbs/{thumb_filename}',
                 'caption': caption,
                 'date': date,
+                'datetime': dt.isoformat() if dt else '',
                 'tags': tags,
                 'google_photos_url': google_photos_url,
                 'web_url': derive_web_url(google_photos_url),
@@ -753,6 +775,13 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             tags = [t.strip() for t in tags.split(',')]
         google_photos_url = file_notes.get('google_photos_url', '')
 
+        # Check exclude flag
+        if file_notes.get('exclude', False):
+            print(f"  Skipping (excluded): {filename}")
+            stat = filepath.stat()
+            new_cache[filename] = {'mtime': stat.st_mtime, 'size': stat.st_size}
+            continue
+
         entry = {
             'lat': round(lat, 6),
             'lng': round(lng, 6),
@@ -760,6 +789,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             'thumbnail': f'thumbs/{thumb_filename}',
             'caption': caption,
             'date': date,
+            'datetime': dt.isoformat() if dt else '',
             'tags': tags,
             'google_photos_url': google_photos_url,
             'web_url': derive_web_url(google_photos_url),

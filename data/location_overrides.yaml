@@ -1,0 +1,33 @@
+# Location History Overrides
+# Use this file to correct inaccuracies in the parsed location data.
+
+# Exclude entries by start time or time range
+exclude:
+  # - id: "2026-01-28T10:00:00"  # Exclude entry starting at this time
+  # - start: "2026-01-29T08:00:00"
+  #   end: "2026-01-29T09:00:00"  # Exclude all entries in this range
+
+# Modify entries (change activity type, etc.)
+modify:
+  # - match:
+  #     start: "2026-01-28T14:30"  # Prefix match on start time
+  #   set:
+  #     activity: "WALKING"  # Override to: WALKING, DRIVING, CYCLING, TRANSIT, FLYING, etc.
+
+# Manually add segments (e.g., flights not detected)
+add_segments:
+  # - start: "2026-01-30T10:00:00"
+  #   end: "2026-01-30T11:30:00"
+  #   activity: "FLYING"
+  #   points: [[51.5074, -0.1278], [55.6761, 12.5683]]  # London to Copenhagen
+
+# Activity type reference:
+# WALKING  - green (#4CAF50)
+# RUNNING  - light green (#8BC34A)
+# CYCLING  - orange (#FF9800)
+# DRIVING  - blue (#2196F3)
+# TRANSIT  - purple (#9C27B0) - bus, train, subway, tram, ferry
+# FLYING   - red (#F44336)
+# SKIING   - cyan (#00BCD4)
+# SAILING  - indigo (#3F51B5)
+# UNKNOWN  - gray (#9E9E9E)

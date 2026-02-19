@@ -14,6 +14,10 @@ token.json
 
 # Generated timeline data (user-specific)
 data/timeline.json
+data/takeout_locations.json
+
+# Raw location data (personal/sensitive)
+data/location-history.json
 
 # Python
 __pycache__/
