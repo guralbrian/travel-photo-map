@@ -43,7 +43,9 @@ L.Photo = L.FeatureGroup.extend({
         var icon = new L.Photo.Icon(
             L.extend(this.options.icon, {
                 thumbnail: photo.thumbnail,
-                isVideo: photo.type === 'video'
+                isVideo: photo.type === 'video',
+                isFavorite: photo._isFavorite || false,
+                hasCaption: !!(photo.caption)
             })
         );
         var marker = L.marker(L.latLng(photo.lat, photo.lng), {
@@ -58,7 +60,9 @@ L.Photo = L.FeatureGroup.extend({
 L.Photo.Icon = L.Icon.extend({
     options: {
         iconSize: DEFAULT_ICON_SIZE,
-        className: 'leaflet-marker-photo'
+        className: 'leaflet-marker-photo',
+        isFavorite: false,
+        hasCaption: false
     },
 
     initialize: function (options) {
@@ -85,6 +89,21 @@ L.Photo.Icon = L.Icon.extend({
             el.appendChild(badge);
         }
 
+        if (this.options.isFavorite) {
+            el.classList.add('photo-marker-favorite');
+            var favBadge = document.createElement('span');
+            favBadge.className = 'photo-favorite-badge';
+            favBadge.textContent = '\u2605';
+            el.appendChild(favBadge);
+        }
+
+        if (this.options.hasCaption) {
+            var notesBadge = document.createElement('span');
+            notesBadge.className = 'photo-notes-badge';
+            notesBadge.textContent = '\uD83D\uDCAC';
+            el.appendChild(notesBadge);
+        }
+
         return el;
     },
 
@@ -107,25 +126,45 @@ if (L.MarkerClusterGroup) {
             iconCreateFunction: function (cluster) {
                 var markers = cluster.getAllChildMarkers();
                 var count = cluster.getChildCount();
-                var firstThumb = '';
-                if (markers.length > 0 && markers[0].photo) {
-                    firstThumb = markers[0].photo.thumbnail;
-                }
                 var size = cluster._group.options.iconSize || DEFAULT_ICON_SIZE;
-                var icon = new L.Photo.Icon({
-                    iconSize: size,
-                    thumbnail: firstThumb
+                var w = size[0], h = size[1];
+
+                // Collect unique thumbnails
+                var thumbs = [];
+                var seen = {};
+                for (var i = 0; i < markers.length; i++) {
+                    if (markers[i].photo && markers[i].photo.thumbnail) {
+                        var t = markers[i].photo.thumbnail;
+                        if (!seen[t]) {
+                            seen[t] = true;
+                            thumbs.push(t);
+                        }
+                    }
+                    if (thumbs.length >= 9) break;
+                }
+
+                // Determine grid: 2-4 photos = 2x2, 5+ = 3x3
+                var cols = thumbs.length >= 5 ? 3 : 2;
+                var maxCells = cols * cols;
+                var usedThumbs = thumbs.slice(0, maxCells);
+
+                // Build grid HTML
+                var cellW = Math.floor(w / cols);
+                var cellH = Math.floor(h / cols);
+                var gridHtml = '<div class="photo-cluster-grid" style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);width:' + w + 'px;height:' + h + 'px;">';
+                for (var g = 0; g < maxCells; g++) {
+                    var src = usedThumbs[g] || usedThumbs[usedThumbs.length - 1];
+                    gridHtml += '<img src="' + src + '" style="width:' + cellW + 'px;height:' + cellH + 'px;">';
+                }
+                gridHtml += '</div>';
+                gridHtml += '<span class="photo-cluster-count">' + count + '</span>';
+
+                return L.divIcon({
+                    html: gridHtml,
+                    className: 'leaflet-marker-photo',
+                    iconSize: [w, h],
+                    iconAnchor: [w / 2, h / 2]
                 });
-                var origCreate = icon.createIcon;
-                icon.createIcon = function (oldIcon) {
-                    var div = origCreate.call(this, oldIcon);
-                    var badge = document.createElement('span');
-                    badge.className = 'photo-cluster-count';
-                    badge.textContent = count;
-                    div.appendChild(badge);
-                    return div;
-                };
-                return icon;
             },
             spiderfyDistanceMultiplier: 1.2
         },
@@ -146,7 +185,9 @@ if (L.MarkerClusterGroup) {
                     L.extend({}, this.options.icon || {}, {
                         iconSize: size,
                         thumbnail: photo.thumbnail,
-                        isVideo: photo.type === 'video'
+                        isVideo: photo.type === 'video',
+                        isFavorite: photo._isFavorite || false,
+                        hasCaption: !!(photo.caption)
                     })
                 );
                 var marker = L.marker(L.latLng(photo.lat, photo.lng), {

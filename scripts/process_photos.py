@@ -45,6 +45,24 @@ def derive_web_url(google_photos_url):
     return LH3_BASE + m.group(1) + LH3_SUFFIX
 
 
+def derive_video_web_url(google_photos_url):
+    """Derive a Google Drive preview/embed URL for video streaming.
+
+    Args:
+        google_photos_url: A Google Drive URL like
+            https://drive.google.com/file/d/FILE_ID/view?usp=drivesdk
+
+    Returns:
+        Google Drive preview URL string, or empty string if extraction fails.
+    """
+    if not google_photos_url:
+        return ''
+    m = DRIVE_FILE_ID_RE.search(google_photos_url)
+    if not m:
+        return ''
+    return 'https://drive.google.com/file/d/' + m.group(1) + '/preview'
+
+
 def dms_to_decimal(dms, ref):
     """Convert GPS DMS (degrees, minutes, seconds) to decimal degrees.
 
@@ -483,7 +501,10 @@ def merge_notes_into_entry(entry, notes, filename):
         tags = [t.strip() for t in tags.split(',')]
     entry['tags'] = tags
     entry['google_photos_url'] = file_notes.get('google_photos_url', '')
-    entry['web_url'] = derive_web_url(entry['google_photos_url'])
+    if entry.get('type') == 'video':
+        entry['web_url'] = derive_video_web_url(entry['google_photos_url'])
+    else:
+        entry['web_url'] = derive_web_url(entry['google_photos_url'])
     return entry
 
 
@@ -646,7 +667,7 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'datetime': dt.isoformat() if dt else '',
                 'tags': tags,
                 'google_photos_url': google_photos_url,
-                'web_url': derive_web_url(google_photos_url),
+                'web_url': derive_video_web_url(google_photos_url),
                 'type': 'video',
             }
             manifest.append(entry)

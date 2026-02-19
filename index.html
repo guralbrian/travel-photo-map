@@ -16,6 +16,7 @@
     <script src="js/leaflet.js"></script>
     <script src="js/leaflet.markercluster.js"></script>
     <script src="js/Leaflet.Photo.js"></script>
+    <!-- <script src="js/ForceLayout.js"></script> -->
     <script>
         (function () {
             var map = L.map('map').setView([20, 0], 2);
@@ -76,7 +77,7 @@
                 maxZoom: 20
             });
 
-            streetMap.addTo(map);
+            humanitarian.addTo(map);
 
             var baseLayers = {
                 'Street Map': streetMap,
@@ -90,12 +91,16 @@
                 'USGS Topo': usgsTopo,
                 'USGS Imagery': usgsImagery
             };
-            var currentBaseLayer = streetMap;
+            var currentBaseLayer = humanitarian;
 
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
                 if (photo.type === 'video') {
-                    html += '<video controls preload="metadata"><source src="' + photo.url + '"></video>';
+                    if (photo.web_url) {
+                        html += '<iframe class="popup-video-iframe" src="' + photo.web_url + '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+                    } else {
+                        html += '<video controls preload="metadata"><source src="' + photo.url + '"></video>';
+                    }
                 } else {
                     html += '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
                 }
@@ -129,6 +134,7 @@
 
             // Hoisted state for slider rebuilds
             var photoLayer = null;
+            var favoritesLayer = null;
             var allPhotos = [];
             var filteredPhotos = [];
             var currentClusterRadius = 30;
@@ -136,14 +142,57 @@
             var cityClusters = [];
             var photoIndex = {};
 
+            // Favorites helpers (localStorage)
+            function getFavorites() {
+                try { return JSON.parse(localStorage.getItem('photomap_favorites') || '{}'); }
+                catch (e) { return {}; }
+            }
+            function setFavorites(favs) {
+                localStorage.setItem('photomap_favorites', JSON.stringify(favs));
+            }
+            function getFavKey(photo) {
+                return photo.url + '|' + photo.lat + '|' + photo.lng;
+            }
+            function isFavorite(photo) {
+                return !!getFavorites()[getFavKey(photo)];
+            }
+            function toggleFavorite(photo) {
+                var favs = getFavorites();
+                var key = getFavKey(photo);
+                if (favs[key]) { delete favs[key]; } else { favs[key] = true; }
+                setFavorites(favs);
+            }
+
             var lightboxIndex = -1;
             var lightboxOverlay = null;
+            var lbZoom = { scale: 1, translateX: 0, translateY: 0, isPanning: false, isPinching: false, _didDrag: false };
+
+            function resetZoom() {
+                lbZoom.scale = 1;
+                lbZoom.translateX = 0;
+                lbZoom.translateY = 0;
+                lbZoom.isPanning = false;
+                lbZoom.isPinching = false;
+                lbZoom._didDrag = false;
+                if (lightboxOverlay) {
+                    var content = lightboxOverlay.querySelector('.lightbox-media img, .lightbox-media video');
+                    if (content) {
+                        content.style.transform = '';
+                        content.style.transformOrigin = '';
+                    }
+                    var mc = lightboxOverlay.querySelector('.lightbox-media');
+                    if (mc) mc.classList.remove('zoomed');
+                    var zc = lightboxOverlay.querySelector('.lightbox-zoom-controls');
+                    if (zc) zc.classList.remove('visible');
+                }
+            }
 
             function openLightbox(index) {
                 if (filteredPhotos.length === 0) return;
                 if (index < 0) index = 0;
                 if (index >= filteredPhotos.length) index = filteredPhotos.length - 1;
                 lightboxIndex = index;
+                resetZoom();
                 var photo = filteredPhotos[index];
 
                 if (!lightboxOverlay) {
@@ -151,9 +200,15 @@
                     lightboxOverlay.className = 'lightbox-overlay';
                     lightboxOverlay.innerHTML =
                         '<button class="lightbox-close">&times;</button>' +
+                        '<button class="lightbox-favorite">&#9734;</button>' +
                         '<button class="lightbox-nav lightbox-prev">&#8249;</button>' +
                         '<div class="lightbox-media"></div>' +
                         '<button class="lightbox-nav lightbox-next">&#8250;</button>' +
+                        '<div class="lightbox-zoom-controls">' +
+                            '<button class="zoom-btn zoom-out">&minus;</button>' +
+                            '<span class="zoom-level">1x</span>' +
+                            '<button class="zoom-btn zoom-in">+</button>' +
+                        '</div>' +
                         '<div class="lightbox-info">' +
                             '<p class="lightbox-caption"></p>' +
                             '<p class="lightbox-date"></p>' +
@@ -174,15 +229,165 @@
                         evt.stopPropagation();
                         openLightbox(lightboxIndex + 1);
                     });
+                    lightboxOverlay.querySelector('.lightbox-favorite').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        if (lightboxIndex < 0 || lightboxIndex >= filteredPhotos.length) return;
+                        var photo = filteredPhotos[lightboxIndex];
+                        toggleFavorite(photo);
+                        var btn = lightboxOverlay.querySelector('.lightbox-favorite');
+                        var fav = isFavorite(photo);
+                        btn.innerHTML = fav ? '&#9733;' : '&#9734;';
+                        btn.classList.toggle('is-favorite', fav);
+                        rebuildPhotoLayer();
+                        buildPhotoIndex();
+                    });
                     lightboxOverlay.addEventListener('click', function (evt) {
-                        if (evt.target === lightboxOverlay) closeLightbox();
+                        if (evt.target === lightboxOverlay && !lbZoom._didDrag) closeLightbox();
+                        lbZoom._didDrag = false;
+                    });
+
+                    // ── Lightbox zoom/pan logic ──
+                    var mediaEl = lightboxOverlay.querySelector('.lightbox-media');
+                    var zoomControls = lightboxOverlay.querySelector('.lightbox-zoom-controls');
+                    var zoomLevelEl = lightboxOverlay.querySelector('.zoom-level');
+
+                    lbZoom._fadeTimer = null;
+                    function showZoomControls() {
+                        zoomControls.classList.add('visible');
+                        if (lbZoom._fadeTimer) clearTimeout(lbZoom._fadeTimer);
+                        lbZoom._fadeTimer = setTimeout(function () {
+                            if (lbZoom.scale <= 1) zoomControls.classList.remove('visible');
+                        }, 2000);
+                    }
+
+                    function applyTransform() {
+                        var content = mediaEl.querySelector('img, video');
+                        if (!content) return;
+                        content.style.transform = 'translate(' + lbZoom.translateX + 'px, ' + lbZoom.translateY + 'px) scale(' + lbZoom.scale + ')';
+                        content.style.transformOrigin = '0 0';
+                        zoomLevelEl.textContent = lbZoom.scale.toFixed(1) + 'x';
+                        mediaEl.classList.toggle('zoomed', lbZoom.scale > 1);
+                        showZoomControls();
+                    }
+
+                    function zoomAt(newScale, clientX, clientY) {
+                        var rect = mediaEl.getBoundingClientRect();
+                        var mx = clientX - rect.left;
+                        var my = clientY - rect.top;
+                        var prevScale = lbZoom.scale;
+                        newScale = Math.max(1, Math.min(5, newScale));
+                        var ratio = newScale / prevScale;
+                        lbZoom.translateX = mx - ratio * (mx - lbZoom.translateX);
+                        lbZoom.translateY = my - ratio * (my - lbZoom.translateY);
+                        lbZoom.scale = newScale;
+                        if (lbZoom.scale <= 1) { lbZoom.translateX = 0; lbZoom.translateY = 0; lbZoom.scale = 1; }
+                        applyTransform();
+                    }
+
+                    // Wheel zoom
+                    mediaEl.addEventListener('wheel', function (evt) {
+                        evt.preventDefault();
+                        var factor = evt.deltaY < 0 ? 1.15 : 1 / 1.15;
+                        zoomAt(lbZoom.scale * factor, evt.clientX, evt.clientY);
+                    }, { passive: false });
+
+                    // Double-click zoom toggle
+                    mediaEl.addEventListener('dblclick', function (evt) {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        if (lbZoom.scale > 1.05) {
+                            lbZoom.scale = 1; lbZoom.translateX = 0; lbZoom.translateY = 0;
+                            applyTransform();
+                        } else {
+                            zoomAt(2.5, evt.clientX, evt.clientY);
+                        }
+                    });
+
+                    // Mouse drag pan
+                    var _dragStartX, _dragStartY, _dragTxStart, _dragTyStart;
+                    mediaEl.addEventListener('mousedown', function (evt) {
+                        if (lbZoom.scale <= 1 || evt.button !== 0) return;
+                        evt.preventDefault();
+                        lbZoom.isPanning = true;
+                        _dragStartX = evt.clientX; _dragStartY = evt.clientY;
+                        _dragTxStart = lbZoom.translateX; _dragTyStart = lbZoom.translateY;
+                    });
+                    document.addEventListener('mousemove', function (evt) {
+                        if (!lbZoom.isPanning) return;
+                        var dx = evt.clientX - _dragStartX;
+                        var dy = evt.clientY - _dragStartY;
+                        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) lbZoom._didDrag = true;
+                        lbZoom.translateX = _dragTxStart + dx;
+                        lbZoom.translateY = _dragTyStart + dy;
+                        applyTransform();
+                    });
+                    document.addEventListener('mouseup', function () {
+                        lbZoom.isPanning = false;
+                    });
+
+                    // Touch pinch-to-zoom and pan
+                    var _touchDist0, _touchScale0, _touchMid;
+                    mediaEl.addEventListener('touchstart', function (evt) {
+                        if (evt.touches.length === 2) {
+                            evt.preventDefault();
+                            lbZoom.isPinching = true;
+                            var dx = evt.touches[0].clientX - evt.touches[1].clientX;
+                            var dy = evt.touches[0].clientY - evt.touches[1].clientY;
+                            _touchDist0 = Math.sqrt(dx * dx + dy * dy);
+                            _touchScale0 = lbZoom.scale;
+                            _touchMid = {
+                                x: (evt.touches[0].clientX + evt.touches[1].clientX) / 2,
+                                y: (evt.touches[0].clientY + evt.touches[1].clientY) / 2
+                            };
+                        } else if (evt.touches.length === 1 && lbZoom.scale > 1) {
+                            lbZoom.isPanning = true;
+                            _dragStartX = evt.touches[0].clientX;
+                            _dragStartY = evt.touches[0].clientY;
+                            _dragTxStart = lbZoom.translateX;
+                            _dragTyStart = lbZoom.translateY;
+                        }
+                    }, { passive: false });
+                    mediaEl.addEventListener('touchmove', function (evt) {
+                        if (lbZoom.isPinching && evt.touches.length === 2) {
+                            evt.preventDefault();
+                            var dx = evt.touches[0].clientX - evt.touches[1].clientX;
+                            var dy = evt.touches[0].clientY - evt.touches[1].clientY;
+                            var dist = Math.sqrt(dx * dx + dy * dy);
+                            var newScale = _touchScale0 * (dist / _touchDist0);
+                            zoomAt(newScale, _touchMid.x, _touchMid.y);
+                        } else if (lbZoom.isPanning && evt.touches.length === 1 && lbZoom.scale > 1) {
+                            evt.preventDefault();
+                            lbZoom.translateX = _dragTxStart + (evt.touches[0].clientX - _dragStartX);
+                            lbZoom.translateY = _dragTyStart + (evt.touches[0].clientY - _dragStartY);
+                            applyTransform();
+                        }
+                    }, { passive: false });
+                    mediaEl.addEventListener('touchend', function () {
+                        lbZoom.isPinching = false;
+                        lbZoom.isPanning = false;
+                    });
+
+                    // Zoom button handlers
+                    lightboxOverlay.querySelector('.zoom-in').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        var rect = mediaEl.getBoundingClientRect();
+                        zoomAt(lbZoom.scale * 1.4, rect.left + rect.width / 2, rect.top + rect.height / 2);
+                    });
+                    lightboxOverlay.querySelector('.zoom-out').addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        var rect = mediaEl.getBoundingClientRect();
+                        zoomAt(lbZoom.scale / 1.4, rect.left + rect.width / 2, rect.top + rect.height / 2);
                     });
                 }
 
                 // Populate media
                 var mediaContainer = lightboxOverlay.querySelector('.lightbox-media');
                 if (photo.type === 'video') {
-                    mediaContainer.innerHTML = '<video controls autoplay><source src="' + photo.url + '"></video>';
+                    if (photo.web_url) {
+                        mediaContainer.innerHTML = '<iframe class="lightbox-video-iframe" src="' + photo.web_url + '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+                    } else {
+                        mediaContainer.innerHTML = '<video controls autoplay><source src="' + photo.url + '"></video>';
+                    }
                 } else {
                     // Progressive loading: show thumbnail immediately, swap to high-res when loaded
                     var img = document.createElement('img');
@@ -245,6 +450,14 @@
 
                 lightboxOverlay.style.display = 'flex';
 
+                // Update favorite star state
+                var favBtn = lightboxOverlay.querySelector('.lightbox-favorite');
+                if (favBtn) {
+                    var fav = isFavorite(photo);
+                    favBtn.innerHTML = fav ? '&#9733;' : '&#9734;';
+                    favBtn.classList.toggle('is-favorite', fav);
+                }
+
                 // Preload adjacent high-res images (fall back to thumbnail if no web_url)
                 if (index > 0 && filteredPhotos[index - 1].type !== 'video') {
                     new Image().src = filteredPhotos[index - 1].web_url || filteredPhotos[index - 1].thumbnail;
@@ -285,25 +498,61 @@
 
             function rebuildPhotoLayer(photos) {
                 var data = photos || filteredPhotos;
-                // Reuse existing cluster if only data changed (radius and icon size same)
+
+                // Stop force layout before rebuilding
+                if (typeof ForceLayout !== 'undefined') ForceLayout.stop();
+
+                // Stamp _isFavorite on each photo and partition
+                var favs = getFavorites();
+                var regularPhotos = [];
+                var favoritePhotos = [];
+                for (var i = 0; i < data.length; i++) {
+                    var key = getFavKey(data[i]);
+                    data[i]._isFavorite = !!favs[key];
+                    if (data[i]._isFavorite) {
+                        favoritePhotos.push(data[i]);
+                    } else {
+                        regularPhotos.push(data[i]);
+                    }
+                }
+
+                // Remove old favorites layer
+                if (favoritesLayer) {
+                    favoritesLayer.off('click', onPhotoClick);
+                    map.removeLayer(favoritesLayer);
+                    favoritesLayer = null;
+                }
+
+                // Rebuild clustered layer for regular photos
                 if (photoLayer && currentClusterRadius === photoLayer._lastClusterRadius && currentIconSize === photoLayer._lastIconSize) {
                     photoLayer.clear();
-                    photoLayer.add(data);
-                    return;
+                    photoLayer.add(regularPhotos);
+                } else {
+                    if (photoLayer) {
+                        photoLayer.off('click', onPhotoClick);
+                        map.removeLayer(photoLayer);
+                    }
+                    photoLayer = L.photo.cluster({
+                        maxClusterRadius: currentClusterRadius,
+                        spiderfyDistanceMultiplier: 2,
+                        iconSize: [currentIconSize, currentIconSize]
+                    });
+                    photoLayer._lastClusterRadius = currentClusterRadius;
+                    photoLayer._lastIconSize = currentIconSize;
+                    photoLayer.on('click', onPhotoClick);
+                    photoLayer.add(regularPhotos).addTo(map);
                 }
-                if (photoLayer) {
-                    photoLayer.off('click', onPhotoClick);
-                    map.removeLayer(photoLayer);
+
+                // Favorites: separate non-clustered layer (always visible, slightly larger)
+                if (favoritePhotos.length > 0) {
+                    var favSize = currentIconSize + 10;
+                    favoritesLayer = L.photo(null, {
+                        icon: { iconSize: [favSize, favSize] }
+                    });
+                    favoritesLayer.add(favoritePhotos);
+                    favoritesLayer.on('click', onPhotoClick);
+                    favoritesLayer.addTo(map);
                 }
-                photoLayer = L.photo.cluster({
-                    maxClusterRadius: currentClusterRadius,
-                    spiderfyDistanceMultiplier: 2,
-                    iconSize: [currentIconSize, currentIconSize]
-                });
-                photoLayer._lastClusterRadius = currentClusterRadius;
-                photoLayer._lastIconSize = currentIconSize;
-                photoLayer.on('click', onPhotoClick);
-                photoLayer.add(data).addTo(map);
             }
 
             // Load annotations (graceful failure if missing)
@@ -615,7 +864,7 @@
                         var layerNames = Object.keys(baseLayers);
                         var layerHtml = '<div class="layer-group-title">Base Map</div>';
                         for (var li = 0; li < layerNames.length; li++) {
-                            var checked = layerNames[li] === 'Street Map' ? ' checked' : '';
+                            var checked = layerNames[li] === 'Humanitarian' ? ' checked' : '';
                             layerHtml += '<label class="layer-option"><input type="radio" name="base-layer" value="' + layerNames[li] + '"' + checked + '> ' + layerNames[li] + '</label>';
                         }
                         layerHtml += '<hr class="layer-separator">';
@@ -831,6 +1080,21 @@
                     } catch (e) {
                         // getBounds can fail if all markers are at the same point
                     }
+
+                    // Force-directed layout: disabled for now
+                    // var _forceDebounce = null;
+                    // function scheduleForceLayout() {
+                    //     if (_forceDebounce) clearTimeout(_forceDebounce);
+                    //     _forceDebounce = setTimeout(function () {
+                    //         if (photoLayer && !photoLayer._spiderfied) {
+                    //             ForceLayout.run(map, photoLayer, currentIconSize);
+                    //         }
+                    //     }, 200);
+                    // }
+                    // photoLayer.on('animationend', function () {
+                    //     setTimeout(scheduleForceLayout, 100);
+                    // });
+                    // map.on('moveend', scheduleForceLayout);
                 })
                 .catch(function (err) {
                     console.error('Error loading photo manifest:', err);

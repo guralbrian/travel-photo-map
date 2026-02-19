@@ -21,6 +21,19 @@ html, body {
     max-height: 360px;
 }
 
+.popup-video-iframe {
+    width: 100%;
+    height: 200px;
+    border: none;
+}
+
+.lightbox-video-iframe {
+    width: 90vw;
+    max-width: 1200px;
+    height: 70vh;
+    border: none;
+}
+
 .photo-popup a.photo-link {
     display: block;
     text-align: center;
@@ -668,6 +681,29 @@ html, body {
     line-height: 1;
 }
 
+.lightbox-favorite {
+    position: absolute;
+    top: 16px;
+    right: 60px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 2001;
+    line-height: 1;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.lightbox-favorite:hover {
+    color: #d4a853;
+    transform: scale(1.15);
+}
+
+.lightbox-favorite.is-favorite {
+    color: #d4a853;
+}
+
 .lightbox-nav {
     position: absolute;
     top: 50%;
@@ -730,6 +766,73 @@ html, body {
 .lightbox-info a {
     color: #d4a853;
     font-size: 13px;
+}
+
+/* Lightbox zoom/pan */
+.lightbox-media {
+    overflow: hidden;
+    position: relative;
+    max-width: 90vw;
+    max-height: 75vh;
+}
+
+.lightbox-media.zoomed {
+    cursor: grab;
+}
+
+.lightbox-media.zoomed:active {
+    cursor: grabbing;
+}
+
+.lightbox-zoom-controls {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2002;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 4px 10px;
+    border-radius: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.lightbox-zoom-controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.zoom-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s ease;
+}
+
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.zoom-level {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-width: 30px;
+    text-align: center;
 }
 
 /* ──── Mobile: bottom sheet ──── */
