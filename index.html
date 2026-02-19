@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Photo Map</title>
     <link rel="stylesheet" href="css/leaflet.css">
-    <link rel="stylesheet" href="css/MarkerCluster.css">
-    <link rel="stylesheet" href="css/MarkerCluster.Default.css">
     <link rel="stylesheet" href="css/Leaflet.Photo.css">
     <link rel="stylesheet" href="css/map.css">
 </head>
@@ -14,9 +12,9 @@
     <div id="map"></div>
 
     <script src="js/leaflet.js"></script>
-    <script src="js/leaflet.markercluster.js"></script>
     <script src="js/Leaflet.Photo.js"></script>
     <!-- <script src="js/ForceLayout.js"></script> -->
+    <script src="js/ViewportSampler.js"></script>
     <script>
         (function () {
             var map = L.map('map').setView([20, 0], 2);
@@ -137,7 +135,7 @@
             var favoritesLayer = null;
             var allPhotos = [];
             var filteredPhotos = [];
-            var currentClusterRadius = 30;
+            var currentDensityCellSize = 150;
             var currentIconSize = 90;
             var cityClusters = [];
             var photoIndex = {};
@@ -499,9 +497,6 @@
             function rebuildPhotoLayer(photos) {
                 var data = photos || filteredPhotos;
 
-                // Stop force layout before rebuilding
-                if (typeof ForceLayout !== 'undefined') ForceLayout.stop();
-
                 // Stamp _isFavorite on each photo and partition
                 var favs = getFavorites();
                 var regularPhotos = [];
@@ -523,24 +518,17 @@
                     favoritesLayer = null;
                 }
 
-                // Rebuild clustered layer for regular photos
-                if (photoLayer && currentClusterRadius === photoLayer._lastClusterRadius && currentIconSize === photoLayer._lastIconSize) {
-                    photoLayer.clear();
-                    photoLayer.add(regularPhotos);
-                } else {
-                    if (photoLayer) {
-                        photoLayer.off('click', onPhotoClick);
-                        map.removeLayer(photoLayer);
-                    }
-                    photoLayer = L.photo.cluster({
-                        maxClusterRadius: currentClusterRadius,
-                        spiderfyDistanceMultiplier: 2,
-                        iconSize: [currentIconSize, currentIconSize]
+                // Initialize ViewportSampler for regular photos
+                ViewportSampler.setPhotos(regularPhotos);
+                if (!photoLayer) {
+                    ViewportSampler.init(map, regularPhotos, {
+                        iconSize: currentIconSize,
+                        cellSize: currentDensityCellSize,
+                        onClick: onPhotoClick
                     });
-                    photoLayer._lastClusterRadius = currentClusterRadius;
-                    photoLayer._lastIconSize = currentIconSize;
-                    photoLayer.on('click', onPhotoClick);
-                    photoLayer.add(regularPhotos).addTo(map);
+                    photoLayer = true; // flag that sampler is initialized
+                } else {
+                    ViewportSampler.update();
                 }
 
                 // Favorites: separate non-clustered layer (always visible, slightly larger)
@@ -553,6 +541,19 @@
                     favoritesLayer.on('click', onPhotoClick);
                     favoritesLayer.addTo(map);
                 }
+            }
+
+            function getFilteredBounds() {
+                if (filteredPhotos.length === 0) return null;
+                var lats = [], lngs = [];
+                for (var i = 0; i < filteredPhotos.length; i++) {
+                    lats.push(filteredPhotos[i].lat);
+                    lngs.push(filteredPhotos[i].lng);
+                }
+                return L.latLngBounds(
+                    L.latLng(Math.min.apply(null, lats), Math.min.apply(null, lngs)),
+                    L.latLng(Math.max.apply(null, lats), Math.max.apply(null, lngs))
+                );
             }
 
             // Load annotations (graceful failure if missing)
@@ -905,8 +906,8 @@
                             '<details class="panel-section">' +
                                 '<summary>Settings</summary>' +
                                 '<div class="panel-section-content">' +
-                                    '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
-                                    '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
+                                    '<label>Photo Density <span class="slider-value" id="density-val"></span></label>' +
+                                    '<input type="range" id="density-slider" min="80" max="300" value="' + currentDensityCellSize + '" style="direction:rtl">' +
                                     '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
                                     '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">' +
                                 '</div>' +
@@ -1042,7 +1043,8 @@
                             applyTimelineFilter();
                         }
                         try {
-                            map.flyToBounds(photoLayer.getBounds(), { padding: [50, 50], duration: 0.8, maxZoom: 14 });
+                            var bounds = getFilteredBounds();
+                            if (bounds) map.flyToBounds(bounds, { padding: [50, 50], duration: 0.8, maxZoom: 14 });
                         } catch (e) {}
                     }
 
@@ -1054,15 +1056,14 @@
                     }
 
                     // Settings slider handlers (debounced)
-                    var _clusterTimeout = null;
+                    var _densityTimeout = null;
                     var _sizeTimeout = null;
 
-                    document.getElementById('cluster-slider').addEventListener('input', function () {
-                        currentClusterRadius = parseInt(this.value, 10);
-                        document.getElementById('cluster-val').textContent = currentClusterRadius;
-                        if (_clusterTimeout) clearTimeout(_clusterTimeout);
-                        _clusterTimeout = setTimeout(function () {
-                            if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                    document.getElementById('density-slider').addEventListener('input', function () {
+                        currentDensityCellSize = parseInt(this.value, 10);
+                        if (_densityTimeout) clearTimeout(_densityTimeout);
+                        _densityTimeout = setTimeout(function () {
+                            ViewportSampler.setCellSize(currentDensityCellSize);
                         }, 100);
                     });
 
@@ -1071,30 +1072,23 @@
                         document.getElementById('size-val').textContent = currentIconSize + 'px';
                         if (_sizeTimeout) clearTimeout(_sizeTimeout);
                         _sizeTimeout = setTimeout(function () {
+                            ViewportSampler.updateIconSize(currentIconSize);
+                            // Also update favorites layer
                             if (filteredPhotos.length > 0) rebuildPhotoLayer();
                         }, 100);
                     });
 
                     try {
-                        map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
+                        var initBounds = getFilteredBounds();
+                        if (initBounds) map.fitBounds(initBounds, { padding: [50, 50] });
                     } catch (e) {
                         // getBounds can fail if all markers are at the same point
                     }
 
-                    // Force-directed layout: disabled for now
-                    // var _forceDebounce = null;
-                    // function scheduleForceLayout() {
-                    //     if (_forceDebounce) clearTimeout(_forceDebounce);
-                    //     _forceDebounce = setTimeout(function () {
-                    //         if (photoLayer && !photoLayer._spiderfied) {
-                    //             ForceLayout.run(map, photoLayer, currentIconSize);
-                    //         }
-                    //     }, 200);
-                    // }
-                    // photoLayer.on('animationend', function () {
-                    //     setTimeout(scheduleForceLayout, 100);
-                    // });
-                    // map.on('moveend', scheduleForceLayout);
+                    // Wire viewport sampler to map movement
+                    map.on('moveend', function () {
+                        ViewportSampler.update();
+                    });
                 })
                 .catch(function (err) {
                     console.error('Error loading photo manifest:', err);

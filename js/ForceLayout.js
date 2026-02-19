@@ -1,6 +1,6 @@
 /*
   ForceLayout - Force-directed layout for photo markers
-  Repels overlapping unclustered markers and draws anchor lines to true GPS positions.
+  Repels overlapping markers and optionally draws anchor lines to true GPS positions.
 */
 var ForceLayout = (function () {
     var REPULSION_STRENGTH = 1.5;
@@ -38,30 +38,37 @@ var ForceLayout = (function () {
         _iteration = 0;
     }
 
-    function run(map, clusterGroup, iconSize) {
+    function run(map, markers, iconSize, options) {
         stop();
         _map = map;
 
-        // Skip if spiderfied
-        if (clusterGroup._spiderfied) return;
+        var opts = options || {};
+        var showAnchorLines = opts.showAnchorLines !== undefined ? opts.showAnchorLines : true;
 
-        var bounds = map.getBounds();
-        var markers = [];
+        // Accept either an array of markers or a clusterGroup (backward compat)
+        var markerList;
+        if (Array.isArray(markers)) {
+            markerList = markers;
+        } else if (markers && typeof markers.eachLayer === 'function') {
+            // Legacy: clusterGroup passed — collect visible unclustered markers
+            var bounds = map.getBounds();
+            markerList = [];
+            markers.eachLayer(function (layer) {
+                if (!(layer instanceof L.Marker)) return;
+                if (!layer._icon) return;
+                if (!bounds.contains(layer.getLatLng())) return;
+                markerList.push(layer);
+            });
+        } else {
+            return;
+        }
 
-        // Collect visible unclustered markers
-        clusterGroup.eachLayer(function (layer) {
-            if (!(layer instanceof L.Marker)) return;
-            if (!layer._icon) return;
-            if (!bounds.contains(layer.getLatLng())) return;
-            markers.push(layer);
-        });
-
-        if (markers.length < 2 || markers.length > 50) return;
+        if (markerList.length < 2) return;
 
         // Build nodes
         _nodes = [];
-        for (var i = 0; i < markers.length; i++) {
-            var m = markers[i];
+        for (var i = 0; i < markerList.length; i++) {
+            var m = markerList[i];
             var ll = m.getLatLng();
             var px = map.latLngToLayerPoint(ll);
             _nodes.push({
@@ -74,18 +81,20 @@ var ForceLayout = (function () {
             });
         }
 
-        // Draw anchor polylines
-        _lineGroup = L.layerGroup();
-        _lines = [];
-        for (var j = 0; j < _nodes.length; j++) {
-            var line = L.polyline(
-                [_nodes[j].origLatLng, _nodes[j].origLatLng],
-                { color: '#999', weight: 1, opacity: 0.5, dashArray: '4, 4', interactive: false }
-            );
-            _lines.push(line);
-            _lineGroup.addLayer(line);
+        // Draw anchor polylines (optional)
+        if (showAnchorLines) {
+            _lineGroup = L.layerGroup();
+            _lines = [];
+            for (var j = 0; j < _nodes.length; j++) {
+                var line = L.polyline(
+                    [_nodes[j].origLatLng, _nodes[j].origLatLng],
+                    { color: '#999', weight: 1, opacity: 0.5, dashArray: '4, 4', interactive: false }
+                );
+                _lines.push(line);
+                _lineGroup.addLayer(line);
+            }
+            _lineGroup.addTo(map);
         }
-        _lineGroup.addTo(map);
 
         _iteration = 0;
         var minDist = (iconSize || 90) * 1.1;
