@@ -26,7 +26,7 @@ html, body {
     text-align: center;
     padding: 6px 10px;
     font-size: 13px;
-    color: #1a73e8;
+    color: #d4a853;
     text-decoration: none;
 }
 
@@ -65,27 +65,233 @@ html, body {
     border-radius: 12px;
 }
 
-/* Unified control panel */
-.unified-control {
-    background: white;
-    padding: 14px 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    font-family: sans-serif;
-    font-size: 13px;
-    min-width: 320px;
-    max-width: 420px;
+/* ──── Toggle Button ──── */
+.panel-toggle {
+    position: fixed;
+    top: 80px;
+    left: 10px;
+    z-index: 1002;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #d4a853;
+    color: #18181c;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease-out, background 0.15s ease;
 }
 
+.panel-toggle:hover {
+    background: #e0b86a;
+}
+
+.panel-toggle svg {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.25s ease-out;
+}
+
+.panel-toggle.open svg {
+    transform: rotate(90deg);
+}
+
+/* ──── Control Panel (Desktop: left drawer) ──── */
+.control-panel {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    bottom: 10px;
+    width: 300px;
+    z-index: 1001;
+    background: rgba(24, 24, 28, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: #e8e6e3;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transform: translateX(0);
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+    animation: controlSlideIn 0.3s ease-out;
+}
+
+.control-panel.hidden {
+    transform: translateX(calc(-100% - 20px));
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Custom scrollbar for panel */
+.control-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.control-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.control-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.control-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Panel header */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e8e6e3;
+}
+
+.panel-close {
+    background: none;
+    border: none;
+    color: #9a9790;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.panel-close:hover {
+    color: #e8e6e3;
+}
+
+/* Panel sections */
+.panel-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0;
+    padding: 0;
+}
+
+.panel-section summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #9a9790;
+    font-size: 12px;
+    padding: 10px 16px;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.15s ease;
+}
+
+.panel-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.panel-section summary::before {
+    content: '\25B8';
+    display: inline-block;
+    transition: transform 0.15s ease;
+    font-size: 10px;
+}
+
+.panel-section[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.panel-section summary:hover {
+    color: #e8e6e3;
+}
+
+.panel-section-content {
+    padding: 0 16px 14px;
+}
+
+/* Panel section labels & sliders */
+.panel-section-content label {
+    display: block;
+    margin: 8px 0 4px;
+    font-weight: 600;
+    color: #e8e6e3;
+    font-size: 12px;
+}
+
+.panel-section-content .slider-value {
+    float: right;
+    font-weight: normal;
+    color: #9a9790;
+}
+
+.panel-section-content input[type="range"] {
+    width: 100%;
+    margin: 0 0 6px 0;
+    cursor: pointer;
+    accent-color: #d4a853;
+}
+
+/* Map layers section */
+.layer-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9a9790;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0 0 6px 0;
+}
+
+.layer-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+    font-size: 12px;
+    color: #e8e6e3;
+    transition: color 0.15s ease;
+}
+
+.layer-option:hover {
+    color: #d4a853;
+}
+
+.layer-option input[type="radio"],
+.layer-option input[type="checkbox"] {
+    accent-color: #d4a853;
+    margin: 0;
+}
+
+.layer-separator {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin: 8px 0;
+}
+
+/* ──── Timeline ──── */
 .timeline-bar {
     position: relative;
-    padding: 18px 0 4px;
+    padding: 24px 0 24px;
 }
 
 .timeline-track {
     position: relative;
     height: 8px;
-    background: #e0e0e0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     overflow: visible;
 }
@@ -99,21 +305,122 @@ html, body {
     border-radius: 4px;
 }
 
-.segment-label {
+/* Segment dot (always visible) */
+.segment-dot {
     position: absolute;
-    top: -16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Segment inline label (only on wide segments) */
+.segment-label-inline {
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
     font-size: 10px;
     font-weight: 600;
-    color: #333;
+    color: #e8e6e3;
     white-space: nowrap;
     pointer-events: none;
+    text-align: center;
 }
 
+.label-top .segment-label-inline {
+    bottom: calc(100% + 4px);
+}
+
+.label-bottom .segment-label-inline {
+    top: calc(100% + 4px);
+}
+
+/* Segment tooltip (on hover) */
+.segment-tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(24, 24, 28, 0.95);
+    color: #e8e6e3;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.label-top .segment-tooltip {
+    bottom: calc(100% + 8px);
+}
+
+.label-bottom .segment-tooltip {
+    top: calc(100% + 8px);
+}
+
+.segment-tooltip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+}
+
+.label-top .segment-tooltip::after {
+    top: 100%;
+    border-top-color: rgba(24, 24, 28, 0.95);
+}
+
+.label-bottom .segment-tooltip::after {
+    bottom: 100%;
+    border-bottom-color: rgba(24, 24, 28, 0.95);
+}
+
+.timeline-segment:hover .segment-tooltip,
+.timeline-segment.touched .segment-tooltip {
+    opacity: 1;
+}
+
+/* Timeline boundary markers */
+.timeline-boundary {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    left: var(--boundary-pos);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.timeline-boundary-week {
+    border-left: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.timeline-boundary-month {
+    border-left: 2px solid rgba(212, 168, 83, 0.6);
+}
+
+.boundary-label {
+    position: absolute;
+    top: -14px;
+    left: -1px;
+    font-size: 9px;
+    text-transform: uppercase;
+    color: rgba(212, 168, 83, 0.8);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Timeline handles */
 .timeline-handle {
     position: absolute;
-    top: -4px;
+    top: 20px;
     left: 0;
     width: 100%;
     margin: 0;
@@ -122,6 +429,11 @@ html, body {
     appearance: none;
     background: transparent;
     height: 16px;
+    z-index: 3;
+}
+
+.timeline-handle-min {
+    z-index: 4;
 }
 
 .timeline-handle::-webkit-slider-thumb {
@@ -130,35 +442,45 @@ html, body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: white;
-    border: 2px solid #1a73e8;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    background: #e8e6e3;
+    border: 2px solid #d4a853;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     pointer-events: auto;
+    transition: transform 0.1s ease;
+}
+
+.timeline-handle:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+
+.timeline-handle:active::-webkit-slider-thumb {
+    transform: scale(1.3);
 }
 
 .timeline-handle::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: white;
-    border: 2px solid #1a73e8;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    background: #e8e6e3;
+    border: 2px solid #d4a853;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     pointer-events: auto;
+    transition: transform 0.1s ease;
+}
+
+.timeline-handle:hover::-moz-range-thumb {
+    transform: scale(1.2);
+}
+
+.timeline-handle:active::-moz-range-thumb {
+    transform: scale(1.3);
 }
 
 .timeline-handle::-moz-range-track {
     background: transparent;
     border: none;
-}
-
-.timeline-date-display {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 6px;
-    font-size: 11px;
-    color: #666;
 }
 
 /* Range fill indicator */
@@ -168,47 +490,36 @@ html, body {
     left: var(--range-start, 0%);
     width: var(--range-size, 100%);
     height: 100%;
-    background: rgba(26, 115, 232, 0.18);
-    border-left: 2px solid rgba(26, 115, 232, 0.4);
-    border-right: 2px solid rgba(26, 115, 232, 0.4);
+    background: rgba(212, 168, 83, 0.18);
+    border-left: 2px solid rgba(212, 168, 83, 0.4);
+    border-right: 2px solid rgba(212, 168, 83, 0.4);
     border-radius: 4px;
     pointer-events: none;
     transition: left 0.05s ease, width 0.05s ease;
     z-index: 1;
 }
 
+/* Date display */
+.timeline-date-display {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #9a9790;
+}
+
 /* Photo count pill */
 .timeline-photo-count {
     text-align: center;
     font-size: 11px;
-    color: #888;
+    color: #9a9790;
     margin-top: 2px;
     font-variant-numeric: tabular-nums;
 }
 
 .timeline-photo-count .photo-count-number {
     font-weight: 600;
-    color: #1a73e8;
-}
-
-/* Slider thumb hover/active states */
-.timeline-handle::-webkit-slider-thumb {
-    transition: transform 0.1s ease;
-}
-.timeline-handle:hover::-webkit-slider-thumb {
-    transform: scale(1.2);
-}
-.timeline-handle:active::-webkit-slider-thumb {
-    transform: scale(1.3);
-}
-.timeline-handle::-moz-range-thumb {
-    transition: transform 0.1s ease;
-}
-.timeline-handle:hover::-moz-range-thumb {
-    transform: scale(1.2);
-}
-.timeline-handle:active::-moz-range-thumb {
-    transform: scale(1.3);
+    color: #d4a853;
 }
 
 /* Photo marker fade-in */
@@ -218,46 +529,24 @@ html, body {
 
 /* Control panel entrance */
 @keyframes controlSlideIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
-.unified-control {
-    animation: controlSlideIn 0.3s ease-out;
+/* Route line animation */
+.route-line-animated {
+    animation: routeFlow 1.5s linear infinite;
 }
 
-.settings-section {
-    border-top: 1px solid #e0e0e0;
-    margin-top: 10px;
-    padding-top: 8px;
+@keyframes routeFlow {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -20; }
 }
 
-.settings-section summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: #555;
-    font-size: 12px;
-    padding: 2px 0;
-    user-select: none;
-}
-
-.settings-section label {
-    display: block;
-    margin: 8px 0 4px;
-    font-weight: 600;
-    color: #333;
-}
-
-.settings-section input[type="range"] {
-    width: 100%;
-    margin: 0 0 6px 0;
-    cursor: pointer;
-}
-
-.settings-section .slider-value {
-    float: right;
-    font-weight: normal;
-    color: #666;
+/* Route direction arrows */
+.route-arrow-icon {
+    background: none !important;
+    border: none !important;
 }
 
 /* Annotation markers */
@@ -439,148 +728,44 @@ html, body {
 }
 
 .lightbox-info a {
-    color: #8ab4f8;
+    color: #d4a853;
     font-size: 13px;
 }
 
-/* Desktop: vertical timeline slider along left edge */
-@media (min-width: 769px) {
-    .unified-control {
-        position: fixed !important;
-        float: none !important;
-        clear: none !important;
-        left: 10px;
-        top: 60px;
-        bottom: 30px;
-        width: 60px;
-        min-width: unset;
-        max-width: unset;
-        padding: 10px 6px;
-        display: flex;
-        flex-direction: column;
-        overflow: visible;
-        z-index: 1000;
-    }
-
-    .timeline-bar {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        padding: 18px 0;
-        position: relative;
-    }
-
-    .timeline-track {
-        width: 8px;
-        height: auto;
-        flex: 1;
-        margin: 0 auto;
-    }
-
-    .timeline-segment {
-        left: 0;
-        width: 100%;
-        top: var(--seg-offset);
-        height: var(--seg-size);
-    }
-
-    .timeline-range-fill {
+/* ──── Mobile: bottom sheet ──── */
+@media (max-width: 768px) {
+    .panel-toggle {
+        top: auto;
         left: auto;
-        width: 100%;
-        top: var(--range-start, 0%);
-        height: var(--range-size, 100%);
-        border-left: none;
-        border-right: none;
-        border-top: 2px solid rgba(26, 115, 232, 0.4);
-        border-bottom: 2px solid rgba(26, 115, 232, 0.4);
-        transition: top 0.05s ease, height 0.05s ease;
+        bottom: 20px;
+        right: 20px;
     }
 
-    .timeline-photo-count {
-        font-size: 9px;
-        margin-top: 4px;
-    }
-
-    .segment-label {
-        top: 50%;
-        left: calc(100% + 8px);
-        transform: translateY(-50%);
-    }
-
-    .timeline-handle {
-        writing-mode: vertical-lr;
-        direction: ltr;
-        position: absolute;
-        top: 18px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 16px;
-        height: calc(100% - 36px);
-    }
-
-    .timeline-handle::-webkit-slider-thumb {
-        width: 18px;
-        height: 18px;
-    }
-
-    .timeline-handle::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-    }
-
-    .timeline-date-display {
-        position: absolute;
-        top: 0;
-        bottom: 0;
+    .control-panel {
+        top: auto;
         left: 0;
         right: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: center;
-        margin: 0;
-        pointer-events: none;
-        font-size: 10px;
-    }
-
-    .settings-section {
-        margin-top: auto;
-        padding-top: 6px;
-        flex-shrink: 0;
-    }
-
-    .settings-section summary {
-        font-size: 10px;
-        text-align: center;
-    }
-
-    .settings-section[open] {
-        position: absolute;
         bottom: 0;
-        left: 0;
-        width: 240px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        padding: 8px 12px;
-        z-index: 10;
+        width: 100%;
+        max-height: 70vh;
+        border-radius: 12px 12px 0 0;
+        transform: translateY(0);
+        animation: controlSlideUp 0.3s ease-out;
     }
 
-    .settings-section input[type="range"] {
-        writing-mode: horizontal-tb;
+    .control-panel.hidden {
+        transform: translateY(100%);
+        opacity: 1;
     }
-}
 
-/* Mobile: enhanced touch targets for horizontal layout */
-@media (max-width: 768px) {
-    .unified-control {
-        width: calc(100vw - 20px);
-        max-width: none;
+    @keyframes controlSlideUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
     }
 
     .timeline-handle {
         height: 32px;
-        top: -12px;
+        top: 13px;
     }
 
     .timeline-handle::-webkit-slider-thumb {

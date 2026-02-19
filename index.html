@@ -90,8 +90,7 @@
                 'USGS Topo': usgsTopo,
                 'USGS Imagery': usgsImagery
             };
-            var overlayLayers = {};
-            var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
+            var currentBaseLayer = streetMap;
 
             function buildPopupHTML(photo) {
                 var html = '<div class="photo-popup">';
@@ -461,23 +460,63 @@
                     rebuildPhotoLayer();
                     buildPhotoIndex();
 
-                    // Draw intercity travel route
+                    // Draw intercity travel route (two-layer polylines + arrows)
+                    var arrowMarkers = [];
                     if (tripSegments.length > 1) {
                         var routeGroup = L.layerGroup();
+
+                        function calcBearing(lat1, lng1, lat2, lng2) {
+                            var dLng = (lng2 - lng1) * Math.PI / 180;
+                            var lat1r = lat1 * Math.PI / 180;
+                            var lat2r = lat2 * Math.PI / 180;
+                            var y = Math.sin(dLng) * Math.cos(lat2r);
+                            var x = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
+                            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+                        }
+
                         for (var ri = 0; ri < tripSegments.length - 1; ri++) {
                             var from = tripSegments[ri];
                             var to = tripSegments[ri + 1];
-                            var line = L.polyline(
-                                [[from.lat, from.lng], [to.lat, to.lng]],
-                                { color: from.color, weight: 2, opacity: 0.5, dashArray: '6, 4' }
-                            );
-                            line.bindPopup(from.name + ' → ' + to.name);
-                            routeGroup.addLayer(line);
+                            var coords = [[from.lat, from.lng], [to.lat, to.lng]];
+
+                            // Background: solid, thick, subtle
+                            var bgLine = L.polyline(coords, { color: from.color, weight: 5, opacity: 0.3, lineCap: 'round' });
+                            bgLine.bindPopup(from.name + ' \u2192 ' + to.name);
+                            routeGroup.addLayer(bgLine);
+
+                            // Foreground: dashed, animated flow
+                            var fgLine = L.polyline(coords, { color: from.color, weight: 3, opacity: 0.7, dashArray: '8, 12', className: 'route-line-animated' });
+                            routeGroup.addLayer(fgLine);
+
+                            // Arrow marker at midpoint
+                            var midLat = (from.lat + to.lat) / 2;
+                            var midLng = (from.lng + to.lng) / 2;
+                            var bearing = calcBearing(from.lat, from.lng, to.lat, to.lng);
+                            var arrowIcon = L.divIcon({
+                                className: 'route-arrow-icon',
+                                html: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 L14 13 L8 9 L2 13 Z" fill="' + from.color + '" opacity="0.85" transform="rotate(' + bearing + ', 8, 8)"/></svg>',
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
+                            });
+                            var arrowMk = L.marker([midLat, midLng], { icon: arrowIcon, interactive: false });
+                            arrowMarkers.push(arrowMk);
+                            routeGroup.addLayer(arrowMk);
                         }
+
                         travelRouteLayer = routeGroup;
-                        layerControl.addOverlay(routeGroup, 'Travel Route');
                         routeGroup.addTo(map);
                     }
+
+                    // Show/hide arrow markers based on zoom level
+                    map.on('zoomend', function () {
+                        var zoom = map.getZoom();
+                        for (var ai = 0; ai < arrowMarkers.length; ai++) {
+                            var el = arrowMarkers[ai].getElement ? arrowMarkers[ai].getElement() : null;
+                            if (el) {
+                                el.style.display = zoom < 4 ? 'none' : '';
+                            }
+                        }
+                    });
 
                     // Build unique sorted dates
                     var dateSet = {};
@@ -485,6 +524,18 @@
                         if (allPhotos[i].date) dateSet[allPhotos[i].date] = true;
                     }
                     var uniqueDates = Object.keys(dateSet).sort();
+
+                    // Calculate week/month boundary markers
+                    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    var boundaryMarkers = [];
+                    for (var bi = 0; bi < uniqueDates.length; bi++) {
+                        var bd = new Date(uniqueDates[bi] + 'T12:00:00');
+                        if (bd.getDate() === 1) {
+                            boundaryMarkers.push({ index: bi, type: 'month', label: monthNames[bd.getMonth()] });
+                        } else if (bd.getDay() === 1) {
+                            boundaryMarkers.push({ index: bi, type: 'week', label: '' });
+                        }
+                    }
 
                     // Build timeline segments directly from trip segments
                     // Map each date to a segment based on segment boundaries
@@ -526,54 +577,141 @@
                         }
                     }
 
-                    // Unified control
-                    var UnifiedControl = L.Control.extend({
-                        options: { position: 'bottomleft' },
-                        onAdd: function () {
-                            var container = L.DomUtil.create('div', 'unified-control');
-                            L.DomEvent.disableClickPropagation(container);
-                            L.DomEvent.disableScrollPropagation(container);
+                    // Build control panel (replaces UnifiedControl and L.control.layers)
+                    function buildControlPanel() {
+                        var totalDates = uniqueDates.length || 1;
 
-                            var totalDates = uniqueDates.length || 1;
+                        // Build timeline track segments HTML (dot + conditional label + tooltip)
+                        var segmentsHtml = '';
+                        for (var s = 0; s < timelineSegments.length; s++) {
+                            var seg = timelineSegments[s];
+                            var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
+                            var widthPct = (seg.count / totalDates * 100).toFixed(2);
+                            var showInline = parseFloat(widthPct) >= 12 || s === 0 || s === timelineSegments.length - 1;
+                            var labelPos = (s % 2 === 0) ? 'label-top' : 'label-bottom';
+                            segmentsHtml += '<div class="timeline-segment ' + labelPos + '" data-city="' + seg.cityName + '" style="--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color + '">' +
+                                '<span class="segment-dot"></span>' +
+                                (showInline ? '<span class="segment-label-inline">' + seg.cityName + '</span>' : '') +
+                                '<span class="segment-tooltip">' + seg.cityName + '</span></div>';
+                        }
 
-                            // Build timeline track segments HTML
-                            var segmentsHtml = '';
-                            for (var s = 0; s < timelineSegments.length; s++) {
-                                var seg = timelineSegments[s];
-                                var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
-                                var widthPct = (seg.count / totalDates * 100).toFixed(2);
-                                var labelStyle = parseFloat(widthPct) < 8 ? ' style="display:none"' : '';
-                                segmentsHtml += '<div class="timeline-segment" style="--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color + '">' +
-                                    '<span class="segment-label"' + labelStyle + '>' + seg.cityName + '</span></div>';
+                        // Build boundary markers HTML
+                        var boundaryHtml = '';
+                        for (var bm = 0; bm < boundaryMarkers.length; bm++) {
+                            var marker = boundaryMarkers[bm];
+                            var pos = (marker.index / totalDates * 100).toFixed(2);
+                            if (marker.type === 'month') {
+                                boundaryHtml += '<div class="timeline-boundary timeline-boundary-month" style="--boundary-pos:' + pos + '%"><span class="boundary-label">' + marker.label + '</span></div>';
+                            } else {
+                                boundaryHtml += '<div class="timeline-boundary timeline-boundary-week" style="--boundary-pos:' + pos + '%"></div>';
                             }
+                        }
 
-                            var maxIdx = uniqueDates.length > 0 ? uniqueDates.length - 1 : 0;
-                            var startLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[0]) : '';
-                            var endLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[maxIdx]) : '';
+                        var maxIdx = uniqueDates.length > 0 ? uniqueDates.length - 1 : 0;
+                        var startLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[0]) : '';
+                        var endLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[maxIdx]) : '';
 
-                            container.innerHTML =
-                                '<div class="timeline-bar">' +
-                                    '<div class="timeline-track">' + segmentsHtml + '<div class="timeline-range-fill" style="--range-start:0%;--range-size:100%"></div></div>' +
-                                    '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
-                                    '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
-                                    '<div class="timeline-date-display">' +
-                                        '<span class="timeline-date-start">' + startLabel + '</span>' +
-                                        '<span class="timeline-date-end">' + endLabel + '</span>' +
+                        // Build layer radio buttons HTML
+                        var layerNames = Object.keys(baseLayers);
+                        var layerHtml = '<div class="layer-group-title">Base Map</div>';
+                        for (var li = 0; li < layerNames.length; li++) {
+                            var checked = layerNames[li] === 'Street Map' ? ' checked' : '';
+                            layerHtml += '<label class="layer-option"><input type="radio" name="base-layer" value="' + layerNames[li] + '"' + checked + '> ' + layerNames[li] + '</label>';
+                        }
+                        layerHtml += '<hr class="layer-separator">';
+                        layerHtml += '<div class="layer-group-title">Overlays</div>';
+                        layerHtml += '<label class="layer-option"><input type="checkbox" id="travel-route-toggle" checked> Travel Route</label>';
+
+                        // Toggle button
+                        var toggleBtn = document.createElement('button');
+                        toggleBtn.className = 'panel-toggle open';
+                        toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
+                        toggleBtn.style.display = 'none'; // hidden while panel is open
+                        document.body.appendChild(toggleBtn);
+
+                        // Panel
+                        var panel = document.createElement('div');
+                        panel.className = 'control-panel';
+                        panel.innerHTML =
+                            '<div class="panel-header"><h3>Controls</h3><button class="panel-close">&times;</button></div>' +
+                            '<details class="panel-section" open>' +
+                                '<summary>Timeline</summary>' +
+                                '<div class="panel-section-content">' +
+                                    '<div class="timeline-bar">' +
+                                        '<div class="timeline-track">' + segmentsHtml + boundaryHtml + '<div class="timeline-range-fill" style="--range-start:0%;--range-size:100%"></div></div>' +
+                                        '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
+                                        '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
+                                        '<div class="timeline-date-display">' +
+                                            '<span class="timeline-date-start">' + startLabel + '</span>' +
+                                            '<span class="timeline-date-end">' + endLabel + '</span>' +
+                                        '</div>' +
+                                        '<div class="timeline-photo-count"><span class="photo-count-number">' + allPhotos.length + '</span> / ' + allPhotos.length + ' photos</div>' +
                                     '</div>' +
-                                    '<div class="timeline-photo-count"><span class="photo-count-number">' + allPhotos.length + '</span> / ' + allPhotos.length + ' photos</div>' +
                                 '</div>' +
-                                '<details class="settings-section">' +
-                                    '<summary>Settings</summary>' +
+                            '</details>' +
+                            '<details class="panel-section">' +
+                                '<summary>Map Layers</summary>' +
+                                '<div class="panel-section-content">' + layerHtml + '</div>' +
+                            '</details>' +
+                            '<details class="panel-section">' +
+                                '<summary>Settings</summary>' +
+                                '<div class="panel-section-content">' +
                                     '<label>Cluster Radius <span class="slider-value" id="cluster-val">' + currentClusterRadius + '</span></label>' +
                                     '<input type="range" id="cluster-slider" min="10" max="100" value="' + currentClusterRadius + '">' +
                                     '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
                                     '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">' +
-                                '</details>';
+                                '</div>' +
+                            '</details>';
+                        document.body.appendChild(panel);
 
-                            return container;
+                        // Prevent map interaction when interacting with panel
+                        L.DomEvent.disableClickPropagation(panel);
+                        L.DomEvent.disableScrollPropagation(panel);
+                        L.DomEvent.disableClickPropagation(toggleBtn);
+
+                        // Toggle open/close
+                        function togglePanel() {
+                            var isHidden = panel.classList.toggle('hidden');
+                            toggleBtn.classList.toggle('open', !isHidden);
+                            toggleBtn.style.display = isHidden ? '' : 'none';
                         }
-                    });
-                    new UnifiedControl().addTo(map);
+                        toggleBtn.addEventListener('click', togglePanel);
+                        panel.querySelector('.panel-close').addEventListener('click', togglePanel);
+
+                        // Wire base layer switching
+                        var radios = panel.querySelectorAll('input[name="base-layer"]');
+                        for (var r = 0; r < radios.length; r++) {
+                            radios[r].addEventListener('change', function () {
+                                map.removeLayer(currentBaseLayer);
+                                currentBaseLayer = baseLayers[this.value];
+                                currentBaseLayer.addTo(map);
+                            });
+                        }
+
+                        // Wire travel route toggle
+                        var routeToggle = panel.querySelector('#travel-route-toggle');
+                        if (routeToggle) {
+                            routeToggle.addEventListener('change', function () {
+                                if (this.checked) {
+                                    if (travelRouteLayer) travelRouteLayer.addTo(map);
+                                } else {
+                                    if (travelRouteLayer) map.removeLayer(travelRouteLayer);
+                                }
+                            });
+                        }
+
+                        // Mobile touch handler for segment tooltips
+                        var segments = panel.querySelectorAll('.timeline-segment');
+                        for (var ts = 0; ts < segments.length; ts++) {
+                            segments[ts].addEventListener('touchstart', (function (allSegs) {
+                                return function () {
+                                    for (var c = 0; c < allSegs.length; c++) allSegs[c].classList.remove('touched');
+                                    this.classList.add('touched');
+                                };
+                            })(segments));
+                        }
+                    }
+                    buildControlPanel();
 
                     // Timeline slider handlers
                     var handleMin = document.querySelector('.timeline-handle-min');
