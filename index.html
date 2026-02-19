@@ -135,6 +135,7 @@
             var currentClusterRadius = 30;
             var currentIconSize = 90;
             var cityClusters = [];
+            var photoIndex = {};
 
             var lightboxIndex = -1;
             var lightboxOverlay = null;
@@ -266,15 +267,18 @@
                 else if (evt.key === 'ArrowRight') openLightbox(lightboxIndex + 1);
             });
 
+            function buildPhotoIndex() {
+                photoIndex = {};
+                for (var i = 0; i < filteredPhotos.length; i++) {
+                    var p = filteredPhotos[i];
+                    photoIndex[p.url + '|' + p.lat + '|' + p.lng] = i;
+                }
+            }
+
             function onPhotoClick(e) {
                 var photo = e.layer.photo;
-                var index = -1;
-                for (var i = 0; i < filteredPhotos.length; i++) {
-                    if (filteredPhotos[i].url === photo.url && filteredPhotos[i].lat === photo.lat && filteredPhotos[i].lng === photo.lng) {
-                        index = i;
-                        break;
-                    }
-                }
+                var key = photo.url + '|' + photo.lat + '|' + photo.lng;
+                var index = photoIndex.hasOwnProperty(key) ? photoIndex[key] : -1;
                 if (index >= 0) {
                     openLightbox(index);
                 }
@@ -282,6 +286,12 @@
 
             function rebuildPhotoLayer(photos) {
                 var data = photos || filteredPhotos;
+                // Reuse existing cluster if only data changed (radius and icon size same)
+                if (photoLayer && currentClusterRadius === photoLayer._lastClusterRadius && currentIconSize === photoLayer._lastIconSize) {
+                    photoLayer.clear();
+                    photoLayer.add(data);
+                    return;
+                }
                 if (photoLayer) {
                     photoLayer.off('click', onPhotoClick);
                     map.removeLayer(photoLayer);
@@ -291,6 +301,8 @@
                     spiderfyDistanceMultiplier: 2,
                     iconSize: [currentIconSize, currentIconSize]
                 });
+                photoLayer._lastClusterRadius = currentClusterRadius;
+                photoLayer._lastIconSize = currentIconSize;
                 photoLayer.on('click', onPhotoClick);
                 photoLayer.add(data).addTo(map);
             }
@@ -503,7 +515,7 @@
                     if (pointsGroup.getLayers().length > 0) {
                         takeoutLocationsLayer = pointsGroup;
                         layerControl.addOverlay(pointsGroup, 'Photo Trail (Takeout)');
-                        // Don't add to map by default - user can enable via layer control
+                        pointsGroup.addTo(map);
                     }
                 })
                 .catch(function () {
@@ -629,6 +641,7 @@
                     cityClusters = assignPhotosToTripSegments(allPhotos, tripSegments);
                     filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
+                    buildPhotoIndex();
 
                     // Build unique sorted dates
                     var dateSet = {};
@@ -704,13 +717,14 @@
 
                             container.innerHTML =
                                 '<div class="timeline-bar">' +
-                                    '<div class="timeline-track">' + segmentsHtml + '</div>' +
+                                    '<div class="timeline-track">' + segmentsHtml + '<div class="timeline-range-fill" style="--range-start:0%;--range-size:100%"></div></div>' +
                                     '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
                                     '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
                                     '<div class="timeline-date-display">' +
                                         '<span class="timeline-date-start">' + startLabel + '</span>' +
                                         '<span class="timeline-date-end">' + endLabel + '</span>' +
                                     '</div>' +
+                                    '<div class="timeline-photo-count"><span class="photo-count-number">' + allPhotos.length + '</span> / ' + allPhotos.length + ' photos</div>' +
                                 '</div>' +
                                 '<details class="settings-section">' +
                                     '<summary>Settings</summary>' +
@@ -731,7 +745,22 @@
                     var dateStartLabel = document.querySelector('.timeline-date-start');
                     var dateEndLabel = document.querySelector('.timeline-date-end');
 
-                    function onTimelineChange() {
+                    var _filterTimeout = null;
+
+                    function scheduleFilterUpdate() {
+                        if (_filterTimeout) clearTimeout(_filterTimeout);
+                        _filterTimeout = setTimeout(applyTimelineFilter, 150);
+                    }
+
+                    function updatePhotoCount(count) {
+                        var el = document.querySelector('.timeline-photo-count');
+                        if (el) {
+                            el.innerHTML = '<span class="photo-count-number">' + count + '</span> / ' + allPhotos.length + ' photos';
+                        }
+                    }
+
+                    // Cheap visual update on every input event
+                    function onTimelineVisualUpdate() {
                         var minIdx = parseInt(handleMin.value, 10);
                         var maxIdx = parseInt(handleMax.value, 10);
                         if (minIdx > maxIdx) {
@@ -742,8 +771,34 @@
                         dateStartLabel.textContent = formatDateShort(uniqueDates[minIdx]);
                         dateEndLabel.textContent = formatDateShort(uniqueDates[maxIdx]);
 
+                        // Update range fill indicator
+                        var totalDates = uniqueDates.length || 1;
+                        var rangeFill = document.querySelector('.timeline-range-fill');
+                        if (rangeFill) {
+                            rangeFill.style.setProperty('--range-start', (minIdx / totalDates * 100) + '%');
+                            rangeFill.style.setProperty('--range-size', ((maxIdx - minIdx + 1) / totalDates * 100) + '%');
+                        }
+
+                        // Quick photo count (no array allocation)
                         var minDate = uniqueDates[minIdx];
                         var maxDate = uniqueDates[maxIdx];
+                        var count = 0;
+                        for (var f = 0; f < allPhotos.length; f++) {
+                            var pd = allPhotos[f].date || '';
+                            if (pd >= minDate && pd <= maxDate) count++;
+                        }
+                        updatePhotoCount(count);
+
+                        scheduleFilterUpdate();
+                    }
+
+                    // Expensive filter + rebuild (debounced at 150ms)
+                    function applyTimelineFilter() {
+                        var minIdx = parseInt(handleMin.value, 10);
+                        var maxIdx = parseInt(handleMax.value, 10);
+                        var minDate = uniqueDates[minIdx];
+                        var maxDate = uniqueDates[maxIdx];
+
                         filteredPhotos = [];
                         for (var f = 0; f < allPhotos.length; f++) {
                             var pd = allPhotos[f].date || '';
@@ -753,10 +808,10 @@
                         }
 
                         rebuildPhotoLayer();
+                        buildPhotoIndex();
 
                         // Update takeout locations layer if visible
                         if (takeoutLocationsLayer && map.hasLayer(takeoutLocationsLayer)) {
-                            // Rebuild filtered takeout layer
                             map.removeLayer(takeoutLocationsLayer);
                             layerControl.removeLayer(takeoutLocationsLayer);
 
@@ -798,28 +853,47 @@
                             layerControl.addOverlay(filteredPointsGroup, 'Photo Trail (Takeout)');
                             filteredPointsGroup.addTo(map);
                         }
+                    }
 
+                    function onTimelineRelease() {
+                        // Flush any pending debounced filter
+                        if (_filterTimeout) {
+                            clearTimeout(_filterTimeout);
+                            _filterTimeout = null;
+                            applyTimelineFilter();
+                        }
                         try {
-                            map.fitBounds(photoLayer.getBounds(), { padding: [50, 50] });
+                            map.flyToBounds(photoLayer.getBounds(), { padding: [50, 50], duration: 0.8, maxZoom: 14 });
                         } catch (e) {}
                     }
 
                     if (handleMin && handleMax) {
-                        handleMin.addEventListener('input', onTimelineChange);
-                        handleMax.addEventListener('input', onTimelineChange);
+                        handleMin.addEventListener('input', onTimelineVisualUpdate);
+                        handleMax.addEventListener('input', onTimelineVisualUpdate);
+                        handleMin.addEventListener('change', onTimelineRelease);
+                        handleMax.addEventListener('change', onTimelineRelease);
                     }
 
-                    // Settings slider handlers
+                    // Settings slider handlers (debounced)
+                    var _clusterTimeout = null;
+                    var _sizeTimeout = null;
+
                     document.getElementById('cluster-slider').addEventListener('input', function () {
                         currentClusterRadius = parseInt(this.value, 10);
                         document.getElementById('cluster-val').textContent = currentClusterRadius;
-                        if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                        if (_clusterTimeout) clearTimeout(_clusterTimeout);
+                        _clusterTimeout = setTimeout(function () {
+                            if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                        }, 100);
                     });
 
                     document.getElementById('size-slider').addEventListener('input', function () {
                         currentIconSize = parseInt(this.value, 10);
                         document.getElementById('size-val').textContent = currentIconSize + 'px';
-                        if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                        if (_sizeTimeout) clearTimeout(_sizeTimeout);
+                        _sizeTimeout = setTimeout(function () {
+                            if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                        }, 100);
                     });
 
                     try {

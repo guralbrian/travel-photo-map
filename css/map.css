@@ -161,6 +161,71 @@ html, body {
     color: #666;
 }
 
+/* Range fill indicator */
+.timeline-range-fill {
+    position: absolute;
+    top: 0;
+    left: var(--range-start, 0%);
+    width: var(--range-size, 100%);
+    height: 100%;
+    background: rgba(26, 115, 232, 0.18);
+    border-left: 2px solid rgba(26, 115, 232, 0.4);
+    border-right: 2px solid rgba(26, 115, 232, 0.4);
+    border-radius: 4px;
+    pointer-events: none;
+    transition: left 0.05s ease, width 0.05s ease;
+    z-index: 1;
+}
+
+/* Photo count pill */
+.timeline-photo-count {
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.timeline-photo-count .photo-count-number {
+    font-weight: 600;
+    color: #1a73e8;
+}
+
+/* Slider thumb hover/active states */
+.timeline-handle::-webkit-slider-thumb {
+    transition: transform 0.1s ease;
+}
+.timeline-handle:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+.timeline-handle:active::-webkit-slider-thumb {
+    transform: scale(1.3);
+}
+.timeline-handle::-moz-range-thumb {
+    transition: transform 0.1s ease;
+}
+.timeline-handle:hover::-moz-range-thumb {
+    transform: scale(1.2);
+}
+.timeline-handle:active::-moz-range-thumb {
+    transform: scale(1.3);
+}
+
+/* Photo marker fade-in */
+.leaflet-marker-photo {
+    transition: opacity 0.2s ease-in;
+}
+
+/* Control panel entrance */
+@keyframes controlSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.unified-control {
+    animation: controlSlideIn 0.3s ease-out;
+}
+
 .settings-section {
     border-top: 1px solid #e0e0e0;
     margin-top: 10px;
@@ -417,6 +482,23 @@ html, body {
         width: 100%;
         top: var(--seg-offset);
         height: var(--seg-size);
+    }
+
+    .timeline-range-fill {
+        left: auto;
+        width: 100%;
+        top: var(--range-start, 0%);
+        height: var(--range-size, 100%);
+        border-left: none;
+        border-right: none;
+        border-top: 2px solid rgba(26, 115, 232, 0.4);
+        border-bottom: 2px solid rgba(26, 115, 232, 0.4);
+        transition: top 0.05s ease, height 0.05s ease;
+    }
+
+    .timeline-photo-count {
+        font-size: 9px;
+        margin-top: 4px;
     }
 
     .segment-label {

@@ -12,10 +12,6 @@ client_secret*.json
 token.json
 *.json:Zone.Identifier
 
-# Generated timeline data (user-specific)
-data/timeline.json
-data/takeout_locations.json
-
 # Raw location data (personal/sensitive)
 data/location-history.json
 
