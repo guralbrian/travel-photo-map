@@ -16,6 +16,7 @@ import { doc, getDoc, setDoc, updateDoc } from './firebase-firestore-lite.js';
 // Module-level caches
 let _favorites = null;       // Array of photo ID strings
 let _photoEdits = null;      // Object keyed by photoId
+let _dailyNarratives = null; // Object keyed by date string (e.g. "2026-01-29")
 let _db = null;               // Firestore instance (set on firebase-ready)
 
 /**
@@ -171,6 +172,8 @@ async function _replayPendingWrites() {
         await _writePhotoEdit(op.photoId, 'tags', op.value);
       } else if (op.type === 'savePhotoCaption') {
         await _writePhotoEdit(op.photoId, 'caption', op.value);
+      } else if (op.type === 'saveDailyNarrative') {
+        await saveDailyNarrative(op.dateStr, op.value);
       }
     } catch (e) {
       remaining.push(op);
@@ -259,6 +262,73 @@ function getEffectiveCaption(photoId, manifestCaption) {
 }
 
 // ---------------------------------------------------------------------------
+// Daily narratives
+// ---------------------------------------------------------------------------
+
+async function loadDailyNarratives() {
+  var db = _getDb();
+  if (!db) return {};
+  try {
+    var snap = await getDoc(doc(db, 'dailyNarratives', 'all'));
+    _dailyNarratives = snap.exists() ? snap.data() : {};
+  } catch (e) {
+    console.warn('[cloud-data] loadDailyNarratives error:', e.message);
+    _dailyNarratives = {};
+  }
+  return _dailyNarratives;
+}
+
+function getDailyNarrative(dateStr) {
+  if (_dailyNarratives && _dailyNarratives[dateStr] && _dailyNarratives[dateStr].text) {
+    return _dailyNarratives[dateStr].text;
+  }
+  return '';
+}
+
+async function saveDailyNarrative(dateStr, text) {
+  // Optimistic update to cache
+  if (!_dailyNarratives) _dailyNarratives = {};
+  var user = window.firebaseAuth && window.firebaseAuth.currentUser;
+  if (text) {
+    _dailyNarratives[dateStr] = {
+      text: text,
+      updatedAt: Date.now(),
+      updatedBy: (user && user.email) || ''
+    };
+  } else {
+    delete _dailyNarratives[dateStr];
+  }
+
+  var db = _getDb();
+  if (!db) return;
+
+  try {
+    var ref = doc(db, 'dailyNarratives', 'all');
+    var data = {};
+    if (text) {
+      data[dateStr + '.text'] = text;
+      data[dateStr + '.updatedAt'] = Date.now();
+      if (user && user.email) data[dateStr + '.updatedBy'] = user.email;
+    } else {
+      data[dateStr] = {};
+    }
+    try {
+      await updateDoc(ref, data);
+    } catch (updateErr) {
+      // Document may not exist yet — create it with setDoc
+      var fullData = {};
+      if (text) {
+        fullData[dateStr] = { text: text, updatedAt: Date.now(), updatedBy: (user && user.email) || '' };
+      }
+      await setDoc(ref, fullData);
+    }
+  } catch (e) {
+    console.warn('[cloud-data] saveDailyNarrative failed, queuing:', e.message);
+    _queuePendingWrite({ type: 'saveDailyNarrative', dateStr: dateStr, value: text, timestamp: Date.now() });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -273,6 +343,9 @@ window.cloudData = {
   savePhotoCaption,
   getEffectiveTags,
   getEffectiveCaption,
+  loadDailyNarratives,
+  getDailyNarrative,
+  saveDailyNarrative,
   getPendingWritesCount: function () {
     try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]').length; } catch (e) { return 0; }
   },

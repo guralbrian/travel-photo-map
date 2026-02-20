@@ -835,6 +835,264 @@ html, body {
     text-align: center;
 }
 
+/* ──── Feed Sidebar (Desktop: right drawer) ──── */
+.feed-sidebar {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: 280px;
+    z-index: 1001;
+    background: rgba(24, 24, 28, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: #e8e6e3;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(0);
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+    animation: feedSlideIn 0.3s ease-out;
+}
+
+.feed-sidebar.hidden {
+    transform: translateX(calc(100% + 20px));
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes feedSlideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Feed toggle button */
+.feed-toggle {
+    position: fixed;
+    top: 80px;
+    right: 10px;
+    z-index: 1002;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #d4a853;
+    color: #18181c;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease-out, background 0.15s ease;
+}
+
+.feed-toggle:hover {
+    background: #e0b86a;
+}
+
+.feed-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Feed header */
+.feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.feed-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e8e6e3;
+}
+
+.feed-close {
+    background: none;
+    border: none;
+    color: #9a9790;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.feed-close:hover {
+    color: #e8e6e3;
+}
+
+/* Feed entries container */
+.feed-entries {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+}
+
+.feed-entries::-webkit-scrollbar {
+    width: 6px;
+}
+
+.feed-entries::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.feed-entries::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.feed-entries::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Feed entry card */
+.feed-entry {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.feed-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.feed-entry:last-child {
+    border-bottom: none;
+}
+
+/* Active entry highlight */
+.feed-entry.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--entry-color, #d4a853);
+    padding-left: 13px;
+    transition: background 0.25s ease-out, border-left 0.25s ease-out;
+}
+
+/* Feed entry header (date + city) */
+.feed-entry-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.feed-entry-date {
+    font-size: 12px;
+    color: #9a9790;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.feed-entry-city {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Feed thumbnails grid */
+.feed-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.feed-thumbnail {
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    transition: opacity 0.3s ease-in, transform 0.15s ease;
+    opacity: 0;
+}
+
+.feed-thumbnail.loaded {
+    opacity: 1;
+}
+
+.feed-thumbnail:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.feed-more-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #9a9790;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Feed narrative text */
+.feed-narrative {
+    font-size: 13px;
+    color: #c8c5c0;
+    line-height: 1.45;
+    margin: 6px 0 2px;
+    padding: 0;
+}
+
+.feed-add-note {
+    font-size: 12px;
+    color: #9a9790;
+    cursor: pointer;
+    margin: 4px 0 0;
+    font-style: italic;
+    transition: color 0.15s ease;
+}
+
+.feed-add-note:hover {
+    color: #d4a853;
+}
+
+.feed-narrative-editor {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    color: #e8e6e3;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.45;
+    padding: 4px 0;
+    margin: 4px 0 0;
+    resize: vertical;
+    outline: none;
+    min-height: 36px;
+    transition: border-color 0.2s;
+}
+
+.feed-narrative-editor:focus {
+    border-bottom-color: #d4a853;
+}
+
+/* Feed drag handle (mobile) */
+.feed-drag-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    margin: 8px auto 4px;
+    flex-shrink: 0;
+    display: none;
+}
+
 /* ──── Mobile: bottom sheet ──── */
 @media (max-width: 768px) {
     .panel-toggle {
@@ -887,6 +1145,45 @@ html, body {
 
     .timeline-date-display {
         font-size: 12px;
+    }
+
+    /* Feed sidebar → bottom sheet on mobile */
+    .feed-toggle {
+        display: none;
+    }
+
+    .feed-sidebar {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 85vh;
+        border-radius: 12px 12px 0 0;
+        animation: none;
+        transform: translateY(calc(100% - 60px));
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .feed-sidebar.hidden {
+        transform: translateY(100%);
+        opacity: 1;
+    }
+
+    .feed-sidebar.feed-sheet-collapsed {
+        transform: translateY(calc(100% - 60px));
+    }
+
+    .feed-sidebar.feed-sheet-half {
+        transform: translateY(50%);
+    }
+
+    .feed-sidebar.feed-sheet-full {
+        transform: translateY(0);
+    }
+
+    .feed-drag-handle {
+        display: block;
     }
 }
 

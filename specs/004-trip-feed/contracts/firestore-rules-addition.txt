@@ -1,0 +1,12 @@
+// Add this rule to firebase/firestore.rules inside the match /databases/{database}/documents block
+// Place alongside the existing photoEdits/all and favorites/{uid} rules
+
+    match /dailyNarratives/all {
+      // Anyone can read daily narratives (part of the public trip story)
+      allow read: if true;
+
+      // Only authorized editors can write narratives
+      allow write: if request.auth != null &&
+          request.auth.token.email in
+              get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }

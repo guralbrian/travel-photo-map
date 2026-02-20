@@ -11,6 +11,19 @@
 <body>
     <div id="map"></div>
 
+    <!-- Feed sidebar -->
+    <button class="feed-toggle" id="feed-toggle" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg>
+    </button>
+    <div class="feed-sidebar hidden" id="feed-sidebar">
+        <div class="feed-drag-handle"></div>
+        <div class="feed-header">
+            <h3>Trip Feed</h3>
+            <button class="feed-close" id="feed-close">&times;</button>
+        </div>
+        <div class="feed-entries" id="feed-entries"></div>
+    </div>
+
     <script src="js/leaflet.js"></script>
     <script src="js/Leaflet.Photo.js"></script>
     <!-- <script src="js/ForceLayout.js"></script> -->
@@ -141,6 +154,7 @@
             var currentIconSize = 90;
             var cityClusters = [];
             var photoIndex = {};
+            var dateIndex = {}; // { "YYYY-MM-DD": { photos: [], segmentName, segmentColor, segmentIndex } }
 
             // Favorites helpers — delegates to Firestore for signed-in editors,
             // falls back to localStorage for anonymous visitors.
@@ -872,6 +886,355 @@
                 return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
             }
 
+            // ──── Feed Sidebar ────
+            var feedSidebar = document.getElementById('feed-sidebar');
+            var feedToggle = document.getElementById('feed-toggle');
+            var feedClose = document.getElementById('feed-close');
+            var feedEntries = document.getElementById('feed-entries');
+            var activeFeedDate = null;
+
+            function toggleFeedSidebar() {
+                var isHidden = feedSidebar.classList.toggle('hidden');
+                feedToggle.style.display = isHidden ? '' : 'none';
+                // On medium viewports, auto-collapse control panel when feed opens
+                if (!isHidden && window.innerWidth >= 769 && window.innerWidth < 1280) {
+                    var cp = document.querySelector('.control-panel');
+                    if (cp && !cp.classList.contains('hidden')) {
+                        cp.classList.add('hidden');
+                        var pt = document.querySelector('.panel-toggle');
+                        if (pt) { pt.classList.remove('open'); pt.style.display = ''; }
+                    }
+                }
+            }
+
+            feedToggle.addEventListener('click', toggleFeedSidebar);
+            feedClose.addEventListener('click', toggleFeedSidebar);
+
+            // Prevent map interaction behind feed sidebar
+            L.DomEvent.disableClickPropagation(feedSidebar);
+            L.DomEvent.disableScrollPropagation(feedSidebar);
+            L.DomEvent.disableClickPropagation(feedToggle);
+
+            function buildFeed() {
+                var keys = Object.keys(dateIndex).sort();
+                var html = '';
+                for (var i = 0; i < keys.length; i++) {
+                    var date = keys[i];
+                    var entry = dateIndex[date];
+                    var photos = entry.photos;
+                    var maxThumbs = 6;
+                    var remaining = photos.length - maxThumbs;
+
+                    html += '<div class="feed-entry" data-date="' + date + '" style="--entry-color:' + entry.segmentColor + '">';
+                    html += '<div class="feed-entry-header">';
+                    html += '<span class="feed-entry-date">' + formatDateShort(date) + '</span>';
+                    html += '<span class="feed-entry-city" style="color:' + entry.segmentColor + '">' + entry.segmentName + '</span>';
+                    html += '</div>';
+
+                    // Narrative text placeholder (will be populated by US3)
+                    html += '<div class="feed-narrative-slot" data-date="' + date + '"></div>';
+
+                    html += '<div class="feed-thumbnails">';
+                    for (var t = 0; t < Math.min(photos.length, maxThumbs); t++) {
+                        var photo = photos[t];
+                        html += '<img class="feed-thumbnail" src="' + photo.thumbnail + '" alt="" data-photo-url="' + photo.url + '" data-photo-lat="' + photo.lat + '" data-photo-lng="' + photo.lng + '" onload="this.classList.add(\'loaded\')">';
+                    }
+                    if (remaining > 0) {
+                        html += '<span class="feed-more-indicator">+' + remaining + '</span>';
+                    }
+                    html += '</div>'; // .feed-thumbnails
+                    html += '</div>'; // .feed-entry
+                }
+                feedEntries.innerHTML = html;
+
+                // Wire entry click handlers (fly to map)
+                var entryEls = feedEntries.querySelectorAll('.feed-entry');
+                for (var e = 0; e < entryEls.length; e++) {
+                    entryEls[e].addEventListener('click', onFeedEntryClick);
+                }
+
+                // Wire thumbnail click handlers (open lightbox)
+                var thumbEls = feedEntries.querySelectorAll('.feed-thumbnail');
+                for (var th = 0; th < thumbEls.length; th++) {
+                    thumbEls[th].addEventListener('click', onFeedThumbnailClick);
+                }
+            }
+
+            function onFeedEntryClick(evt) {
+                // Don't handle if clicking on a thumbnail, narrative editor, or add-note
+                if (evt.target.classList.contains('feed-thumbnail') ||
+                    evt.target.classList.contains('feed-narrative-editor') ||
+                    evt.target.classList.contains('feed-add-note')) return;
+
+                var entryEl = evt.currentTarget;
+                var date = entryEl.getAttribute('data-date');
+                if (!date || !dateIndex[date]) return;
+
+                // Highlight active entry
+                var prev = feedEntries.querySelector('.feed-entry.active');
+                if (prev) prev.classList.remove('active');
+                entryEl.classList.add('active');
+                activeFeedDate = date;
+
+                // Compute bounds from photos and fly
+                var photos = dateIndex[date].photos;
+                var lats = [], lngs = [];
+                for (var i = 0; i < photos.length; i++) {
+                    if (photos[i].lat && photos[i].lng) {
+                        lats.push(photos[i].lat);
+                        lngs.push(photos[i].lng);
+                    }
+                }
+                if (lats.length === 0) return;
+
+                var sw, ne;
+                if (lats.length === 1) {
+                    // Single photo: create artificial bounds
+                    sw = L.latLng(lats[0] - 0.005, lngs[0] - 0.005);
+                    ne = L.latLng(lats[0] + 0.005, lngs[0] + 0.005);
+                } else {
+                    sw = L.latLng(Math.min.apply(null, lats), Math.min.apply(null, lngs));
+                    ne = L.latLng(Math.max.apply(null, lats), Math.max.apply(null, lngs));
+                }
+                var bounds = L.latLngBounds(sw, ne);
+
+                // Asymmetric padding: account for left panel (310px) and right feed (290px)
+                var panelVisible = document.querySelector('.control-panel') && !document.querySelector('.control-panel').classList.contains('hidden');
+                var feedVisible = !feedSidebar.classList.contains('hidden');
+                var padLeft = panelVisible ? 320 : 20;
+                var padRight = feedVisible ? 300 : 20;
+
+                // On mobile, use simpler padding
+                if (window.innerWidth <= 768) {
+                    padLeft = 20;
+                    padRight = 20;
+                    // Auto-collapse bottom sheet to half on entry tap
+                    feedSidebar.classList.remove('feed-sheet-full');
+                    feedSidebar.classList.remove('feed-sheet-collapsed');
+                    feedSidebar.classList.add('feed-sheet-half');
+                }
+
+                map.flyToBounds(bounds, {
+                    paddingTopLeft: [padLeft, 20],
+                    paddingBottomRight: [padRight, 20],
+                    duration: 0.8,
+                    maxZoom: 15
+                });
+            }
+
+            function onFeedThumbnailClick(evt) {
+                evt.stopPropagation();
+                var url = evt.target.getAttribute('data-photo-url');
+                var lat = evt.target.getAttribute('data-photo-lat');
+                var lng = evt.target.getAttribute('data-photo-lng');
+                if (!url) return;
+
+                // Find the photo in filteredPhotos to get the correct lightbox index
+                var key = url + '|' + lat + '|' + lng;
+                var idx = photoIndex.hasOwnProperty(key) ? photoIndex[key] : -1;
+                if (idx >= 0) {
+                    openLightbox(idx);
+                }
+            }
+
+            function updateFeedForTimeline(minDate, maxDate) {
+                var entries = feedEntries.querySelectorAll('.feed-entry');
+                for (var i = 0; i < entries.length; i++) {
+                    var d = entries[i].getAttribute('data-date');
+                    entries[i].style.display = (d >= minDate && d <= maxDate) ? '' : 'none';
+                }
+            }
+
+            // ──── Feed Bottom Sheet (Mobile Touch Gestures) ────
+            (function () {
+                var sheet = feedSidebar;
+                var handle = sheet.querySelector('.feed-drag-handle');
+                var header = sheet.querySelector('.feed-header');
+                var startY = 0, startTranslateY = 0, currentY = 0, isDragging = false;
+                var sheetHeight = 0;
+                var COLLAPSED_OFFSET = 0; // computed dynamically
+                var HALF_OFFSET = 0;
+
+                function getSheetState() {
+                    if (sheet.classList.contains('feed-sheet-full')) return 'full';
+                    if (sheet.classList.contains('feed-sheet-half')) return 'half';
+                    return 'collapsed';
+                }
+
+                function setSheetState(state) {
+                    sheet.classList.remove('feed-sheet-collapsed', 'feed-sheet-half', 'feed-sheet-full');
+                    sheet.classList.add('feed-sheet-' + state);
+                    sheet.style.transform = '';
+                }
+
+                function getCurrentTranslateY() {
+                    var st = window.getComputedStyle(sheet);
+                    var matrix = st.transform || st.webkitTransform;
+                    if (matrix && matrix !== 'none') {
+                        var values = matrix.split('(')[1].split(')')[0].split(',');
+                        return parseFloat(values[5]) || 0;
+                    }
+                    return 0;
+                }
+
+                function onTouchStart(e) {
+                    if (window.innerWidth > 768) return;
+                    isDragging = true;
+                    startY = e.touches[0].clientY;
+                    sheetHeight = sheet.offsetHeight;
+                    COLLAPSED_OFFSET = sheetHeight - 60;
+                    HALF_OFFSET = sheetHeight * 0.5;
+                    startTranslateY = getCurrentTranslateY();
+                    sheet.style.transition = 'none';
+                }
+
+                function onTouchMove(e) {
+                    if (!isDragging || window.innerWidth > 768) return;
+                    currentY = e.touches[0].clientY;
+                    var deltaY = currentY - startY;
+                    var newY = startTranslateY + deltaY;
+                    // Clamp: don't go above 0 (fully open) or below sheetHeight (hidden)
+                    newY = Math.max(0, Math.min(sheetHeight, newY));
+                    sheet.style.transform = 'translateY(' + newY + 'px)';
+                    e.preventDefault();
+                }
+
+                function onTouchEnd() {
+                    if (!isDragging || window.innerWidth > 768) return;
+                    isDragging = false;
+                    sheet.style.transition = '';
+
+                    var finalY = getCurrentTranslateY();
+                    var velocity = currentY - startY; // positive = swiped down
+
+                    // Snap to nearest state based on position and velocity
+                    if (velocity > 80) {
+                        // Fast swipe down
+                        var state = getSheetState();
+                        if (state === 'full') setSheetState('half');
+                        else setSheetState('collapsed');
+                    } else if (velocity < -80) {
+                        // Fast swipe up
+                        var state2 = getSheetState();
+                        if (state2 === 'collapsed') setSheetState('half');
+                        else setSheetState('full');
+                    } else {
+                        // Snap to nearest position
+                        if (finalY < HALF_OFFSET * 0.5) {
+                            setSheetState('full');
+                        } else if (finalY < COLLAPSED_OFFSET * 0.75) {
+                            setSheetState('half');
+                        } else {
+                            setSheetState('collapsed');
+                        }
+                    }
+                }
+
+                if (handle) {
+                    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+                    handle.addEventListener('touchmove', onTouchMove, { passive: false });
+                    handle.addEventListener('touchend', onTouchEnd, { passive: true });
+                }
+                if (header) {
+                    header.addEventListener('touchstart', onTouchStart, { passive: true });
+                    header.addEventListener('touchmove', onTouchMove, { passive: false });
+                    header.addEventListener('touchend', onTouchEnd, { passive: true });
+                }
+            })();
+
+            // ──── Feed Narratives ────
+            function renderFeedNarratives() {
+                var slots = feedEntries.querySelectorAll('.feed-narrative-slot');
+                var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
+                for (var i = 0; i < slots.length; i++) {
+                    var date = slots[i].getAttribute('data-date');
+                    var text = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
+                    var html = '';
+                    if (text) {
+                        html = '<p class="feed-narrative"' + (isEditor ? ' data-date="' + date + '"' : '') + '>' + _escapeHtml(text) + '</p>';
+                    } else if (isEditor) {
+                        html = '<span class="feed-add-note" data-date="' + date + '">Add note...</span>';
+                    }
+                    slots[i].innerHTML = html;
+                }
+                // Wire narrative click events
+                _wireNarrativeEditing();
+            }
+
+            function _escapeHtml(str) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(str));
+                return div.innerHTML;
+            }
+
+            function _wireNarrativeEditing() {
+                var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
+                if (!isEditor) return;
+
+                // Wire "Add note..." prompts
+                var addNotes = feedEntries.querySelectorAll('.feed-add-note');
+                for (var a = 0; a < addNotes.length; a++) {
+                    addNotes[a].addEventListener('click', _onNarrativeEditStart);
+                }
+                // Wire existing narrative text for editing
+                var narratives = feedEntries.querySelectorAll('.feed-narrative[data-date]');
+                for (var n = 0; n < narratives.length; n++) {
+                    narratives[n].style.cursor = 'pointer';
+                    narratives[n].addEventListener('click', _onNarrativeEditStart);
+                }
+            }
+
+            function _onNarrativeEditStart(evt) {
+                evt.stopPropagation();
+                var date = evt.target.getAttribute('data-date');
+                if (!date) return;
+                var currentText = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
+                var slot = feedEntries.querySelector('.feed-narrative-slot[data-date="' + date + '"]');
+                if (!slot) return;
+
+                var textarea = document.createElement('textarea');
+                textarea.className = 'feed-narrative-editor';
+                textarea.value = currentText;
+                textarea.setAttribute('data-date', date);
+                textarea.placeholder = 'Write about this day...';
+                slot.innerHTML = '';
+                slot.appendChild(textarea);
+                textarea.focus();
+
+                textarea.addEventListener('blur', function () {
+                    _saveNarrativeAndRender(this);
+                });
+                textarea.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+                textarea.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
+
+            function _saveNarrativeAndRender(textarea) {
+                var date = textarea.getAttribute('data-date');
+                var text = textarea.value.trim();
+                if (window.cloudData) {
+                    window.cloudData.saveDailyNarrative(date, text);
+                }
+                renderFeedNarratives();
+            }
+
+            // Listen for narratives loaded and auth changes to refresh narrative display
+            window.addEventListener('narratives-loaded', function () {
+                renderFeedNarratives();
+            });
+            window.addEventListener('auth-state-changed', function () {
+                // Re-render narratives to show/hide edit controls
+                if (window.cloudData) {
+                    renderFeedNarratives();
+                }
+            });
+
             // Load trip segments and manifest together
             Promise.all([
                 fetch('data/trip_segments.json').then(function (r) { return r.ok ? r.json() : []; }),
@@ -888,9 +1251,44 @@
 
                     allPhotos = photos;
                     cityClusters = assignPhotosToTripSegments(allPhotos, tripSegments);
+
+                    // Build dateIndex: group photos by date for feed sidebar
+                    dateIndex = {};
+                    for (var di = 0; di < allPhotos.length; di++) {
+                        var p = allPhotos[di];
+                        var d = p.date;
+                        if (!d) continue;
+                        if (!dateIndex[d]) {
+                            dateIndex[d] = {
+                                photos: [],
+                                segmentName: p.cityName || 'Unknown',
+                                segmentColor: p.cityColor || '#999',
+                                segmentIndex: p.cityIndex != null ? p.cityIndex : -1
+                            };
+                        }
+                        dateIndex[d].photos.push(p);
+                    }
+                    // Sort photos within each date by datetime
+                    var dateKeys = Object.keys(dateIndex).sort();
+                    for (var dk = 0; dk < dateKeys.length; dk++) {
+                        dateIndex[dateKeys[dk]].photos.sort(function (a, b) {
+                            return (a.datetime || a.date || '').localeCompare(b.datetime || b.date || '');
+                        });
+                    }
+
                     filteredPhotos = allPhotos;
                     rebuildPhotoLayer();
                     buildPhotoIndex();
+
+                    // Build and show the feed sidebar
+                    buildFeed();
+                    feedToggle.style.display = '';
+                    feedSidebar.classList.remove('hidden');
+                    feedToggle.style.display = 'none'; // hidden while feed is open
+                    // On mobile, start in collapsed state
+                    if (window.innerWidth <= 768) {
+                        feedSidebar.classList.add('feed-sheet-collapsed');
+                    }
 
                     // Draw intercity travel route (two-layer polylines + arrows)
                     var arrowMarkers = [];
@@ -1115,6 +1513,13 @@
                             var isHidden = panel.classList.toggle('hidden');
                             toggleBtn.classList.toggle('open', !isHidden);
                             toggleBtn.style.display = isHidden ? '' : 'none';
+                            // On medium viewports, auto-collapse feed when control panel opens
+                            if (!isHidden && window.innerWidth >= 769 && window.innerWidth < 1280) {
+                                if (!feedSidebar.classList.contains('hidden')) {
+                                    feedSidebar.classList.add('hidden');
+                                    feedToggle.style.display = '';
+                                }
+                            }
                         }
                         toggleBtn.addEventListener('click', togglePanel);
                         panel.querySelector('.panel-close').addEventListener('click', togglePanel);
@@ -1301,6 +1706,9 @@
 
                         rebuildPhotoLayer();
                         buildPhotoIndex();
+
+                        // Update feed to show only entries in the filtered date range
+                        updateFeedForTimeline(minDate, maxDate);
                     }
 
                     function onTimelineRelease() {
@@ -1378,11 +1786,11 @@
             // This runs for all visitors (edits are publicly readable).
             if (window.cloudData) {
                 window.cloudData.loadPhotoEdits().then(function () {
-                    // Rebuild photo layer to reflect cloud-overridden tags/captions
-                    if (typeof rebuildPhotoLayer === 'function') {
-                        // rebuildPhotoLayer is inside the IIFE — not accessible here.
-                        // Popups and lightbox will use effective values on next open.
-                    }
+                    // Popups and lightbox will use effective values on next open.
+                });
+                // Load daily narratives and render them in feed entries
+                window.cloudData.loadDailyNarratives().then(function () {
+                    window.dispatchEvent(new CustomEvent('narratives-loaded'));
                 });
             }
         });

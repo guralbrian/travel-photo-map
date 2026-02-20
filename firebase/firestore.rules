@@ -18,12 +18,42 @@ service cloud.firestore {
           get(/databases/$(database)/documents/config/app).data.authorizedEditors;
     }
 
+
+    match /dailyNarratives/all {
+      // Anyone can read daily narratives (part of the public trip story)
+      allow read: if true;
+
+      // Only authorized editors can write narratives
+      allow write: if request.auth != null &&
+          request.auth.token.email in
+              get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }
+
+    match /dailyNarratives/all {
+      // Anyone can read daily narratives (part of the public trip story)
+      allow read: if true;
+
+      // Only authorized editors can write narratives
+      allow write: if request.auth != null &&
+          request.auth.token.email in
+              get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }
+
     // Favorites: readable by everyone (favorites affect public map display).
     // Writable only by the owning user, and only if they are an authorized editor.
     match /favorites/{userId} {
       allow read: if true;
       allow write: if request.auth != null &&
         request.auth.uid == userId &&
+        request.auth.token.email in
+          get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }
+
+    // Daily narratives: readable by everyone (part of the public trip story).
+    // Writable only by authenticated users whose email is in the authorized editors list.
+    match /dailyNarratives/all {
+      allow read: if true;
+      allow write: if request.auth != null &&
         request.auth.token.email in
           get(/databases/$(database)/documents/config/app).data.authorizedEditors;
     }
