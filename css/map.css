@@ -889,3 +889,174 @@ html, body {
         font-size: 12px;
     }
 }
+
+/* ===== Auth UI ===== */
+.auth-section {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    min-height: 36px;
+}
+
+.auth-sign-in-btn {
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    width: 100%;
+}
+
+.auth-sign-in-btn:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: rgba(255,255,255,0.35);
+}
+
+.auth-user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.auth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.3);
+    flex-shrink: 0;
+}
+
+.auth-name {
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.auth-sign-out {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.auth-sign-out:hover {
+    color: rgba(255,255,255,0.8);
+}
+
+/* ===== Tag Editor ===== */
+.tag-editor {
+    margin-top: 6px;
+}
+
+.tag-editor-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.tag-chip-remove {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.15s;
+}
+
+.tag-chip-remove:hover {
+    color: #fff;
+}
+
+.tag-editor-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 2px;
+    outline: none;
+    width: 120px;
+    transition: border-color 0.2s;
+}
+
+.tag-editor-input::placeholder {
+    color: rgba(255,255,255,0.35);
+}
+
+.tag-editor-input:focus {
+    border-bottom-color: #d4a853;
+}
+
+/* ===== Caption Editor ===== */
+.lightbox-caption-wrap {
+    position: relative;
+}
+
+.lightbox-caption.caption-placeholder::after {
+    content: attr(data-placeholder);
+    color: rgba(255,255,255,0.35);
+    font-style: italic;
+    font-weight: normal;
+}
+
+.caption-editor-input {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    padding: 6px 8px;
+    border-radius: 4px;
+    width: 100%;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.caption-editor-input:focus {
+    border-color: #d4a853;
+}
+
+/* ===== Pending Writes Indicator ===== */
+.pending-writes-indicator {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #d4a853;
+    opacity: 0.8;
+    animation: pendingPulse 2s ease-in-out infinite;
+    cursor: default;
+    margin-left: 4px;
+}
+
+@keyframes pendingPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}

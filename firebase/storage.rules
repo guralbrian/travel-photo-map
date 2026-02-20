@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Thumbnails: publicly readable (served via <img> tags on the map).
+    // No client-side writes — uploads happen exclusively via the Python
+    // pipeline using the Admin SDK (which bypasses these rules).
+    match /thumbs/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Deny all other paths by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

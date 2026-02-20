@@ -100,22 +100,24 @@
                         html += '<video controls preload="metadata"><source src="' + photo.url + '"></video>';
                     }
                 } else {
-                    html += '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '">';
+                    html += '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '" onerror="this.onerror=null;this.style.background=\'#2a2a2e\';this.style.minHeight=\'120px\';this.alt=\'Photo unavailable\'">';
                 }
                 if (photo.google_photos_url) {
                     html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link">View on Google Photos</a>';
                 }
                 html += '<div class="popup-info">';
-                if (photo.caption) {
-                    html += '<p class="popup-caption">' + photo.caption + '</p>';
+                var _popupCaption = window.cloudData ? window.cloudData.getEffectiveCaption(window.cloudData.getPhotoId(photo), photo.caption) : (photo.caption || '');
+                if (_popupCaption) {
+                    html += '<p class="popup-caption">' + _popupCaption + '</p>';
                 }
                 if (photo.date) {
                     html += '<p class="popup-date">' + photo.date + '</p>';
                 }
-                if (photo.tags && photo.tags.length > 0) {
+                var _popupTags = window.cloudData ? window.cloudData.getEffectiveTags(window.cloudData.getPhotoId(photo), photo.tags) : (photo.tags || []);
+                if (_popupTags && _popupTags.length > 0) {
                     html += '<div class="popup-tags">';
-                    for (var i = 0; i < photo.tags.length; i++) {
-                        html += '<span class="popup-tag">' + photo.tags[i] + '</span>';
+                    for (var i = 0; i < _popupTags.length; i++) {
+                        html += '<span class="popup-tag">' + _popupTags[i] + '</span>';
                     }
                     html += '</div>';
                 }
@@ -140,7 +142,10 @@
             var cityClusters = [];
             var photoIndex = {};
 
-            // Favorites helpers (localStorage)
+            // Favorites helpers — delegates to Firestore for signed-in editors,
+            // falls back to localStorage for anonymous visitors.
+            var _cloudFavoritesLoaded = false;
+
             function getFavorites() {
                 try { return JSON.parse(localStorage.getItem('photomap_favorites') || '{}'); }
                 catch (e) { return {}; }
@@ -152,13 +157,47 @@
                 return photo.url + '|' + photo.lat + '|' + photo.lng;
             }
             function isFavorite(photo) {
+                // Cloud path: use Firestore favorites
+                if (_cloudFavoritesLoaded && window.cloudData) {
+                    var pid = window.cloudData.getPhotoId(photo);
+                    return window.cloudData.isFavoriteById(pid);
+                }
+                // Fallback: localStorage
                 return !!getFavorites()[getFavKey(photo)];
             }
             function toggleFavorite(photo) {
+                // Cloud path: use Firestore
+                if (_cloudFavoritesLoaded && window.firebaseAuth && window.firebaseAuth.isEditor && window.cloudData) {
+                    var pid = window.cloudData.getPhotoId(photo);
+                    var uid = window.firebaseAuth.currentUser.uid;
+                    window.cloudData.toggleFavorite(uid, pid).then(function () {
+                        rebuildPhotoLayer();
+                        buildPhotoIndex();
+                    });
+                    return;
+                }
+                // Fallback: localStorage
                 var favs = getFavorites();
                 var key = getFavKey(photo);
                 if (favs[key]) { delete favs[key]; } else { favs[key] = true; }
                 setFavorites(favs);
+            }
+
+            // Editor visibility control — hides edit controls for non-editors
+            function updateEditControlsVisibility() {
+                var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
+                var favBtns = document.querySelectorAll('.lightbox-favorite');
+                for (var i = 0; i < favBtns.length; i++) {
+                    favBtns[i].style.display = isEditor ? '' : 'none';
+                }
+                var tagEditors = document.querySelectorAll('.tag-editor');
+                for (var j = 0; j < tagEditors.length; j++) {
+                    tagEditors[j].style.display = isEditor ? '' : 'none';
+                }
+                var captionEls = document.querySelectorAll('.lightbox-caption');
+                for (var k = 0; k < captionEls.length; k++) {
+                    captionEls[k].style.cursor = isEditor ? 'pointer' : '';
+                }
             }
 
             var lightboxIndex = -1;
@@ -198,7 +237,7 @@
                     lightboxOverlay.className = 'lightbox-overlay';
                     lightboxOverlay.innerHTML =
                         '<button class="lightbox-close">&times;</button>' +
-                        '<button class="lightbox-favorite">&#9734;</button>' +
+                        '<button class="lightbox-favorite" style="display:none">&#9734;</button>' +
                         '<button class="lightbox-nav lightbox-prev">&#8249;</button>' +
                         '<div class="lightbox-media"></div>' +
                         '<button class="lightbox-nav lightbox-next">&#8250;</button>' +
@@ -208,9 +247,18 @@
                             '<button class="zoom-btn zoom-in">+</button>' +
                         '</div>' +
                         '<div class="lightbox-info">' +
-                            '<p class="lightbox-caption"></p>' +
+                            '<div class="lightbox-caption-wrap">' +
+                                '<p class="lightbox-caption"></p>' +
+                                '<div class="caption-editor" style="display:none">' +
+                                    '<textarea class="caption-editor-input" rows="2" placeholder="Add a caption..."></textarea>' +
+                                '</div>' +
+                            '</div>' +
                             '<p class="lightbox-date"></p>' +
                             '<div class="lightbox-tags"></div>' +
+                            '<div class="tag-editor" style="display:none">' +
+                                '<div class="tag-editor-chips"></div>' +
+                                '<input class="tag-editor-input" type="text" placeholder="Add tag..." maxlength="50">' +
+                            '</div>' +
                             '<a class="lightbox-link" target="_blank" rel="noopener noreferrer">View on Google Photos</a>' +
                         '</div>';
                     document.body.appendChild(lightboxOverlay);
@@ -242,6 +290,104 @@
                     lightboxOverlay.addEventListener('click', function (evt) {
                         if (evt.target === lightboxOverlay && !lbZoom._didDrag) closeLightbox();
                         lbZoom._didDrag = false;
+                    });
+
+                    // ── Tag editor ──
+                    var tagEditorInput = lightboxOverlay.querySelector('.tag-editor-input');
+                    tagEditorInput.addEventListener('keydown', function (evt) {
+                        if (evt.key === 'Enter') {
+                            evt.preventDefault();
+                            var val = this.value.trim();
+                            if (!val) return;
+                            if (lightboxIndex < 0 || lightboxIndex >= filteredPhotos.length) return;
+                            var photo = filteredPhotos[lightboxIndex];
+                            var pid = window.cloudData.getPhotoId(photo);
+                            var current = window.cloudData.getEffectiveTags(pid, photo.tags).slice();
+                            if (current.indexOf(val) === -1) current.push(val);
+                            window.cloudData.savePhotoTags(pid, current);
+                            this.value = '';
+                            _renderTagEditorChips(photo);
+                            _renderLightboxTags(photo);
+                        }
+                    });
+                    tagEditorInput.addEventListener('click', function (evt) { evt.stopPropagation(); });
+
+                    function _renderTagEditorChips(photo) {
+                        var container = lightboxOverlay.querySelector('.tag-editor-chips');
+                        var pid = window.cloudData ? window.cloudData.getPhotoId(photo) : '';
+                        var tags = window.cloudData ? window.cloudData.getEffectiveTags(pid, photo.tags) : (photo.tags || []);
+                        var html = '';
+                        for (var i = 0; i < tags.length; i++) {
+                            html += '<span class="tag-chip">' + tags[i] + '<button class="tag-chip-remove" data-tag="' + tags[i] + '">&times;</button></span>';
+                        }
+                        container.innerHTML = html;
+                        // Wire remove buttons
+                        var removeBtns = container.querySelectorAll('.tag-chip-remove');
+                        for (var r = 0; r < removeBtns.length; r++) {
+                            removeBtns[r].addEventListener('click', function (evt) {
+                                evt.stopPropagation();
+                                var tagToRemove = this.getAttribute('data-tag');
+                                var current = window.cloudData.getEffectiveTags(pid, photo.tags).slice();
+                                var idx = current.indexOf(tagToRemove);
+                                if (idx !== -1) current.splice(idx, 1);
+                                window.cloudData.savePhotoTags(pid, current);
+                                _renderTagEditorChips(photo);
+                                _renderLightboxTags(photo);
+                            });
+                        }
+                    }
+
+                    function _renderLightboxTags(photo) {
+                        var tagsEl = lightboxOverlay.querySelector('.lightbox-tags');
+                        var pid = window.cloudData ? window.cloudData.getPhotoId(photo) : '';
+                        var tags = window.cloudData ? window.cloudData.getEffectiveTags(pid, photo.tags) : (photo.tags || []);
+                        if (tags && tags.length > 0) {
+                            var html = '';
+                            for (var t = 0; t < tags.length; t++) html += '<span class="lightbox-tag">' + tags[t] + '</span>';
+                            tagsEl.innerHTML = html;
+                            tagsEl.style.display = '';
+                        } else {
+                            tagsEl.innerHTML = '';
+                            tagsEl.style.display = 'none';
+                        }
+                    }
+
+                    // ── Caption editor ──
+                    var captionWrap = lightboxOverlay.querySelector('.lightbox-caption-wrap');
+                    var captionDisplay = lightboxOverlay.querySelector('.lightbox-caption');
+                    var captionEditorDiv = lightboxOverlay.querySelector('.caption-editor');
+                    var captionTextarea = lightboxOverlay.querySelector('.caption-editor-input');
+
+                    captionDisplay.addEventListener('click', function (evt) {
+                        evt.stopPropagation();
+                        if (!(window.firebaseAuth && window.firebaseAuth.isEditor)) return;
+                        captionDisplay.style.display = 'none';
+                        captionEditorDiv.style.display = '';
+                        captionTextarea.value = captionDisplay.textContent || '';
+                        captionTextarea.focus();
+                    });
+
+                    captionTextarea.addEventListener('click', function (evt) { evt.stopPropagation(); });
+
+                    function _saveCaptionAndClose() {
+                        var newCaption = captionTextarea.value.trim();
+                        if (lightboxIndex >= 0 && lightboxIndex < filteredPhotos.length) {
+                            var photo = filteredPhotos[lightboxIndex];
+                            var pid = window.cloudData.getPhotoId(photo);
+                            window.cloudData.savePhotoCaption(pid, newCaption);
+                            captionDisplay.textContent = newCaption;
+                            captionDisplay.style.display = newCaption ? '' : 'none';
+                        }
+                        captionEditorDiv.style.display = 'none';
+                        if (captionDisplay.textContent) captionDisplay.style.display = '';
+                    }
+
+                    captionTextarea.addEventListener('blur', _saveCaptionAndClose);
+                    captionTextarea.addEventListener('keydown', function (evt) {
+                        if (evt.key === 'Enter' && !evt.shiftKey) {
+                            evt.preventDefault();
+                            captionTextarea.blur();
+                        }
                     });
 
                     // ── Lightbox zoom/pan logic ──
@@ -392,6 +538,14 @@
                     img.src = photo.thumbnail;
                     img.alt = photo.caption || 'Photo';
                     img.className = 'lightbox-img loading';
+                    img.onerror = function () {
+                        this.onerror = null;
+                        this.style.background = '#2a2a2e';
+                        this.style.minWidth = '300px';
+                        this.style.minHeight = '200px';
+                        this.classList.remove('loading');
+                        this.alt = 'Photo unavailable';
+                    };
                     mediaContainer.innerHTML = '';
                     mediaContainer.appendChild(img);
 
@@ -413,25 +567,53 @@
                 }
 
                 // Populate info
+                // Cloud-over-static merge for caption and tags
+                var _lbPhotoId = window.cloudData ? window.cloudData.getPhotoId(photo) : '';
+                var _lbCaption = window.cloudData ? window.cloudData.getEffectiveCaption(_lbPhotoId, photo.caption) : (photo.caption || '');
+                var _lbTags = window.cloudData ? window.cloudData.getEffectiveTags(_lbPhotoId, photo.tags) : (photo.tags || []);
+
                 var captionEl = lightboxOverlay.querySelector('.lightbox-caption');
-                captionEl.textContent = photo.caption || '';
-                captionEl.style.display = photo.caption ? '' : 'none';
+                captionEl.textContent = _lbCaption;
+                captionEl.style.display = _lbCaption ? '' : 'none';
 
                 var dateEl = lightboxOverlay.querySelector('.lightbox-date');
                 dateEl.textContent = photo.date || '';
                 dateEl.style.display = photo.date ? '' : 'none';
 
                 var tagsEl = lightboxOverlay.querySelector('.lightbox-tags');
-                if (photo.tags && photo.tags.length > 0) {
+                if (_lbTags && _lbTags.length > 0) {
                     var tagsHtml = '';
-                    for (var t = 0; t < photo.tags.length; t++) {
-                        tagsHtml += '<span class="lightbox-tag">' + photo.tags[t] + '</span>';
+                    for (var t = 0; t < _lbTags.length; t++) {
+                        tagsHtml += '<span class="lightbox-tag">' + _lbTags[t] + '</span>';
                     }
                     tagsEl.innerHTML = tagsHtml;
                     tagsEl.style.display = '';
                 } else {
                     tagsEl.innerHTML = '';
                     tagsEl.style.display = 'none';
+                }
+
+                // Show/hide editor controls based on auth state
+                var _isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
+                var tagEditorEl = lightboxOverlay.querySelector('.tag-editor');
+                tagEditorEl.style.display = _isEditor ? '' : 'none';
+                if (_isEditor && window.cloudData) {
+                    _renderTagEditorChips(photo);
+                }
+                var captionDisplayEl = lightboxOverlay.querySelector('.lightbox-caption');
+                captionDisplayEl.style.cursor = _isEditor ? 'pointer' : '';
+                // Reset caption editor to hidden (display mode)
+                var captionEdDiv = lightboxOverlay.querySelector('.caption-editor');
+                captionEdDiv.style.display = 'none';
+                if (!_lbCaption && _isEditor) {
+                    captionDisplayEl.textContent = '';
+                    captionDisplayEl.setAttribute('data-placeholder', 'Click to add caption...');
+                    captionDisplayEl.classList.add('caption-placeholder');
+                    captionDisplayEl.style.display = '';
+                } else {
+                    captionDisplayEl.classList.remove('caption-placeholder');
+                    captionDisplayEl.removeAttribute('data-placeholder');
+                    captionDisplayEl.style.display = _lbCaption ? '' : 'none';
                 }
 
                 var linkEl = lightboxOverlay.querySelector('.lightbox-link');
@@ -884,6 +1066,15 @@
                         panel.className = 'control-panel';
                         panel.innerHTML =
                             '<div class="panel-header"><h3>Controls</h3><button class="panel-close">&times;</button></div>' +
+                            '<div class="auth-section" id="auth-section">' +
+                                '<button class="auth-sign-in-btn" id="auth-sign-in-btn">Sign in with Google</button>' +
+                                '<div class="auth-user-info" id="auth-user-info" style="display:none">' +
+                                    '<img class="auth-avatar" id="auth-avatar" src="" alt="">' +
+                                    '<span class="auth-name" id="auth-name"></span>' +
+                                    '<a href="#" class="auth-sign-out" id="auth-sign-out">Sign out</a>' +
+                                '</div>' +
+                                '<span class="pending-writes-indicator" id="pending-writes-indicator" style="display:none" title="Changes pending sync">&#9729;</span>' +
+                            '</div>' +
                             '<details class="panel-section" open>' +
                                 '<summary>Timeline</summary>' +
                                 '<div class="panel-section-content">' +
@@ -960,8 +1151,85 @@
                                 };
                             })(segments));
                         }
+
+                        // Wire auth UI
+                        var signInBtn = document.getElementById('auth-sign-in-btn');
+                        var signOutLink = document.getElementById('auth-sign-out');
+                        var authUserInfo = document.getElementById('auth-user-info');
+                        var authAvatar = document.getElementById('auth-avatar');
+                        var authName = document.getElementById('auth-name');
+                        var authSection = document.getElementById('auth-section');
+
+                        if (signInBtn) {
+                            signInBtn.addEventListener('click', function () {
+                                if (window.firebaseAuth) window.firebaseAuth.signIn();
+                            });
+                        }
+                        if (signOutLink) {
+                            signOutLink.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                if (window.firebaseAuth) window.firebaseAuth.signOut();
+                            });
+                        }
+
+                        // Hide auth section until Firebase is ready
+                        if (authSection && !window.firebaseApp) {
+                            authSection.style.display = 'none';
+                        }
+
+                        window.addEventListener('firebase-ready', function () {
+                            if (authSection) authSection.style.display = '';
+                        });
+
+                        window.addEventListener('auth-state-changed', function (e) {
+                            var user = e.detail.user;
+                            var isEditor = e.detail.isEditor;
+                            if (user) {
+                                signInBtn.style.display = 'none';
+                                authUserInfo.style.display = '';
+                                authAvatar.src = user.photoURL || '';
+                                authAvatar.style.display = user.photoURL ? '' : 'none';
+                                authName.textContent = user.displayName || user.email || '';
+
+                                // Load cloud favorites for signed-in editors
+                                if (isEditor && window.cloudData) {
+                                    // Migrate localStorage favorites on first sign-in
+                                    if (localStorage.getItem('photomap_favorites')) {
+                                        window.cloudData.migrateFavorites(user.uid, allPhotos).then(function () {
+                                            _cloudFavoritesLoaded = true;
+                                            rebuildPhotoLayer();
+                                            buildPhotoIndex();
+                                        });
+                                    } else {
+                                        window.cloudData.loadFavorites(user.uid).then(function () {
+                                            _cloudFavoritesLoaded = true;
+                                            rebuildPhotoLayer();
+                                            buildPhotoIndex();
+                                        });
+                                    }
+                                }
+                            } else {
+                                signInBtn.style.display = '';
+                                authUserInfo.style.display = 'none';
+                                _cloudFavoritesLoaded = false;
+                                rebuildPhotoLayer();
+                            }
+
+                            // Gate favorite star visibility based on editor status
+                            updateEditControlsVisibility();
+                        });
                     }
                     buildControlPanel();
+
+                    // Pending-writes indicator
+                    function _updatePendingIndicator() {
+                        var el = document.getElementById('pending-writes-indicator');
+                        if (!el) return;
+                        var count = window.cloudData ? window.cloudData.getPendingWritesCount() : 0;
+                        el.style.display = count > 0 ? '' : 'none';
+                        el.title = count + ' change' + (count !== 1 ? 's' : '') + ' pending sync';
+                    }
+                    window.addEventListener('pending-writes-changed', _updatePendingIndicator);
 
                     // Timeline slider handlers
                     var handleMin = document.querySelector('.timeline-handle-min');
@@ -1095,6 +1363,29 @@
                     showEmptyState();
                 });
         })();
+    </script>
+
+    <!-- Firebase modules (ES modules, loaded after main app script) -->
+    <script type="module" src="js/firebase-init.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/cloud-data.js"></script>
+
+    <script>
+        // Re-initialize Firebase-dependent features when Firebase is ready.
+        // The main app above works without Firebase (graceful degradation).
+        window.addEventListener('firebase-ready', function () {
+            // Load cloud photo edits (tags/captions) as soon as Firebase is ready.
+            // This runs for all visitors (edits are publicly readable).
+            if (window.cloudData) {
+                window.cloudData.loadPhotoEdits().then(function () {
+                    // Rebuild photo layer to reflect cloud-overridden tags/captions
+                    if (typeof rebuildPhotoLayer === 'function') {
+                        // rebuildPhotoLayer is inside the IIFE — not accessible here.
+                        // Popups and lightbox will use effective values on next open.
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Config: readable by everyone (needed to check editor status).
+    // Writable only via Admin SDK or Firebase Console — never from the client.
+    match /config/app {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Photo edits: readable by everyone (tags/captions are public).
+    // Writable only by authenticated users whose email is in the authorized editors list.
+    match /photoEdits/all {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.auth.token.email in
+          get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }
+
+    // Favorites: readable by everyone (favorites affect public map display).
+    // Writable only by the owning user, and only if they are an authorized editor.
+    match /favorites/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.auth.token.email in
+          get(/databases/$(database)/documents/config/app).data.authorizedEditors;
+    }
+
+    // Deny all other paths by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

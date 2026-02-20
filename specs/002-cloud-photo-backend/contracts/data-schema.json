@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cloud Photo Backend - Firestore Document Schemas",
+  "definitions": {
+    "configApp": {
+      "description": "Firestore document: config/app — Authorized editors configuration",
+      "type": "object",
+      "required": ["authorizedEditors"],
+      "properties": {
+        "authorizedEditors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "description": "Google email addresses with edit access"
+        }
+      },
+      "additionalProperties": false
+    },
+    "photoEditsAll": {
+      "description": "Firestore document: photoEdits/all — All photo tag/caption overrides",
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "User-edited tags for this photo (overrides manifest)"
+            },
+            "caption": {
+              "type": "string",
+              "description": "User-edited caption for this photo (overrides manifest)"
+            },
+            "updatedAt": {
+              "type": "number",
+              "description": "Unix timestamp in milliseconds of last edit"
+            },
+            "updatedBy": {
+              "type": "string",
+              "format": "email",
+              "description": "Email of the editor who last modified this photo"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "favoritesUser": {
+      "description": "Firestore document: favorites/{uid} — Per-user favorites",
+      "type": "object",
+      "required": ["photos"],
+      "properties": {
+        "photos": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Array of photo IDs that this user has favorited"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Unix timestamp in milliseconds of last favorites change"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

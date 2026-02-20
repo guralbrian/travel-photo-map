@@ -12,6 +12,10 @@ client_secret*.json
 token.json
 *.json:Zone.Identifier
 
+# Firebase service account keys
+service-account-key.json
+*.key.json
+
 # Raw location data (personal/sensitive)
 data/location-history.json
 
