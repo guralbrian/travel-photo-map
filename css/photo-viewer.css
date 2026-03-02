@@ -131,18 +131,25 @@
     top: 12px;
     right: 16px;
     z-index: 2001;
-    background: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border: none;
     color: white;
-    font-size: 36px;
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
-    padding: 8px;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s ease, opacity 0.2s ease;
+}
+.pv-close:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* Favorite button */
@@ -151,23 +158,26 @@
     top: 12px;
     right: 64px;
     z-index: 2001;
-    background: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border: none;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 28px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 22px;
     line-height: 1;
     cursor: pointer;
-    padding: 8px;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
+    transition: color 0.15s ease, background 0.15s ease, opacity 0.2s ease;
 }
 .pv-fav:hover {
+    background: rgba(255, 255, 255, 0.2);
     color: #d4a853;
-    transform: scale(1.15);
 }
 .pv-fav.pv-is-fav {
     color: #d4a853;
@@ -179,22 +189,24 @@
     top: 50%;
     transform: translateY(-50%);
     z-index: 2001;
-    background: rgba(255, 255, 255, 0.1);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border: none;
     color: white;
-    font-size: 32px;
-    padding: 16px 12px;
+    font-size: 24px;
+    padding: 0;
     cursor: pointer;
-    border-radius: 50%;
-    min-width: 48px;
-    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.15s ease, opacity 0.2s ease;
 }
 .pv-nav:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.2);
 }
 .pv-prev { left: 12px; }
 .pv-next { right: 12px; }
@@ -387,10 +399,9 @@
 
     /* Nav arrows: slightly smaller on mobile */
     .pv-nav {
-        font-size: 24px;
-        padding: 12px 10px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
     }
 }
 

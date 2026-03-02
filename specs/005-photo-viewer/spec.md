@@ -95,10 +95,12 @@ All existing viewer features — favoriting photos, viewing captions/dates/tags,
 
 ### Edge Cases
 
+- What happens when the user double-taps while already at 2x zoom? The viewer MUST reset to 1x zoom with an animated transition — never entering a stuck state.
 - What happens when the user pinch-zooms to the maximum level and continues pinching? The zoom should cap at the maximum and not trigger any browser-level zoom or get stuck.
 - What happens when the user is zoomed in and tries to swipe to the next photo? Swipe-to-navigate should only activate when the photo is at 1x zoom; at zoomed levels, swiping should pan the image instead.
 - What happens when a photo fails to load (broken URL or network error)? The viewer should display a clear error placeholder and still allow navigation to other photos.
 - What happens when the user rapidly swipes through many photos? The viewer should handle rapid navigation gracefully, canceling in-flight image loads for skipped photos and not queuing up stale transitions.
+- What happens when the user clicks the next arrow rapidly on desktop and controls auto-hide mid-click? A 300ms click guard after each transition prevents backdrop clicks from closing the viewer. Controls stay visible while the user is actively navigating.
 - What happens when there is only one photo available? Navigation arrows/swipe gestures should be hidden or disabled.
 - What happens when a video's source URL is invalid? A clear error message should be shown instead of a broken player.
 - What happens when the user rotates their mobile device while the viewer is open? The viewer should adapt to the new orientation, re-centering the photo and resetting zoom to fit the new viewport.
@@ -112,9 +114,10 @@ All existing viewer features — favoriting photos, viewing captions/dates/tags,
 - **FR-003**: System MUST support swipe-left and swipe-right gestures on mobile to navigate between photos with a smooth sliding animation.
 - **FR-004**: System MUST support pinch-to-zoom on mobile with correct zoom behavior — zoom in, pan while zoomed, zoom out — and MUST NOT allow the zoom state to become stuck or unresponsive.
 - **FR-005**: System MUST reset pinch-zoom state cleanly when the user lifts all fingers, preventing any stuck-zoom condition.
+- **FR-005a**: System MUST support double-tap-to-zoom on mobile that toggles between 1x and 2x zoom at the tap point with an animated transition. A second double-tap MUST always reset to 1x. The zoom state MUST NOT become stuck or persistent after double-tap.
 - **FR-006**: System MUST support swipe-down-to-dismiss on mobile when the photo is at 1x zoom, with a drag-away animation.
 - **FR-007**: System MUST distinguish between zoom gestures, navigation swipes, and dismiss swipes based on the current zoom level (zoomed = pan/zoom only; 1x = swipe navigates or dismisses).
-- **FR-008**: System MUST show navigation arrows on desktop that appear on hover near the left/right edges.
+- **FR-008**: System MUST show navigation arrows on desktop that appear on hover near the left/right edges. All interactive buttons (close, nav arrows, favorite) MUST use a consistent circular style: 44px round semi-transparent dark background (rgba black) with a white icon, no stretched or oval shapes.
 - **FR-009**: System MUST support keyboard navigation (left/right arrows for photos, Escape to close).
 - **FR-010**: System MUST support scroll-wheel zoom on desktop, centered on the cursor position, without scrolling the underlying page.
 - **FR-011**: System MUST progressively load images — show thumbnail instantly, then crossfade to full-resolution when loaded — with no layout shift or size changes.
@@ -122,7 +125,8 @@ All existing viewer features — favoriting photos, viewing captions/dates/tags,
 - **FR-013**: System MUST display self-hosted .mov videos with their correct native aspect ratio at all times (thumbnail, poster, and playback). No embedded/iframe video support is required.
 - **FR-014**: System MUST show a properly-sized, undistorted thumbnail for video entries in the viewer before playback begins, using native video controls.
 - **FR-015**: System MUST NOT attempt to preload full video files for adjacent entries; only preload video thumbnails.
-- **FR-016**: System MUST toggle UI controls (close button, info panel, navigation arrows) on a single tap (mobile) or show on mouse movement / hide after inactivity (desktop).
+- **FR-016**: System MUST toggle UI controls (close button, info panel, navigation arrows) on a single tap (mobile) or show on mouse movement / hide after inactivity (desktop). Auto-hide delay MUST be 4 seconds on both mobile and desktop. Controls MUST reappear instantly on any interaction (tap, mouse move, keyboard). Any navigation action (arrow click, keyboard nav, swipe) MUST reset the auto-hide timer so controls remain visible during active browsing.
+- **FR-016a**: System MUST ignore backdrop clicks for 300ms after a photo transition completes, preventing accidental viewer dismissal during rapid navigation.
 - **FR-017**: System MUST preserve existing functionality: favorite toggling, caption display, date display, tag display, and opening from both map markers and trip feed thumbnails.
 - **FR-021**: System MUST use context-aware navigation sets: when opened from the trip feed, the viewer navigates through that day's photos; when opened from the map, the viewer navigates through the currently visible/filtered photos.
 - **FR-018**: System MUST cancel in-flight image loads when the user navigates away from a photo before it finishes loading.
@@ -152,6 +156,10 @@ All existing viewer features — favoriting photos, viewing captions/dates/tags,
 - Q: How should embedded (iframe) vs self-hosted videos be handled? → A: All videos are self-hosted .mov files served via Firebase/Google Drive. No embedded iframe videos exist. The viewer only needs to handle native video playback.
 - Q: What opening transition style should the viewer use? → A: Expand-from-thumbnail — the photo animates from its position on the map/feed into the full-screen viewer, matching iPhone Photos and Google Photos behavior.
 - Q: What photo collection does the viewer navigate through? → A: Context-aware navigation. From the trip feed, the viewer navigates that day's photos. From the map, the viewer navigates the currently visible/filtered photos.
+- Q: How should double-tap zoom behave on mobile? → A: Double-tap toggles between 1x and 2x zoom at the tap point with an animated transition, matching iPhone Photos behavior. A second double-tap always resets to 1x.
+- Q: How should the viewer protect against accidental backdrop clicks during rapid navigation? → A: Reset the auto-hide timer on each navigation action, and add a 300ms backdrop click guard after transitions during which backdrop clicks are ignored.
+- Q: What visual style should the close and navigation buttons use? → A: Minimal circular semi-transparent dark buttons (rgba black background) with white icons (× for close, ‹/› for nav), consistent 44px touch targets, Google Photos style. No stretched/oval shapes.
+- Q: What auto-hide delay should controls use? → A: 4 seconds on both mobile and desktop. Controls reappear instantly on any interaction.
 
 ## Assumptions
 

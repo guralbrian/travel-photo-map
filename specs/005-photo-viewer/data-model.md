@@ -65,9 +65,15 @@ Viewer State
 │   ├── preloadPrev: Image | null    # In-flight preload for N-1
 │   └── preloadNext: Image | null    # In-flight preload for N+1
 │
+├── Double-Tap State
+│   ├── lastTapTime: number          # Timestamp of last single-tap (for double-tap detection)
+│   ├── lastTapX: number             # X position of last single-tap
+│   └── lastTapY: number             # Y position of last single-tap
+│
 └── UI State
     ├── controlsVisible: boolean     # Whether close/info/nav controls are shown
-    └── hideTimer: number | null     # Timeout ID for auto-hide
+    ├── hideTimer: number | null     # Timeout ID for auto-hide (4000ms)
+    └── navGuardUntil: number        # Timestamp until which backdrop clicks are ignored (300ms after nav)
 ```
 
 ### Navigation Context (new concept)

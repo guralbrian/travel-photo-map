@@ -10,7 +10,7 @@
     var MIN_SCALE = 1, MAX_SCALE = 5;
     var SWIPE_THRESHOLD = 80, SWIPE_VELOCITY = 0.3, DISMISS_THRESHOLD = 150;
     var GESTURE_THRESHOLD = 10, ANGLE_HORIZ = 30, ANGLE_VERT = 60;
-    var MOBILE_HIDE_MS = 3000, DESKTOP_HIDE_MS = 2000;
+    var MOBILE_HIDE_MS = 4000, DESKTOP_HIDE_MS = 4000;
     var TAP_MS = 250, TAP_PX = 10, DRAG_PX = 3;
 
     // ── Gesture FSM modes ──
@@ -22,12 +22,13 @@
         scale: 1, tx: 0, ty: 0,
         loaded: false, pending: null, prePrev: null, preNext: null,
         ctrlVis: false, hideTimer: null, didDrag: false,
-        savedOverflow: '', savedMapPE: ''
+        savedOverflow: '', savedMapPE: '', navGuardUntil: 0
     };
     var G = {
         mode: IDLE, ptrs: new Map(),
         dist0: 0, scale0: 1, mid: { x: 0, y: 0 },
-        sx: 0, sy: 0, st: 0, stx: 0, sty: 0, committed: false
+        sx: 0, sy: 0, st: 0, stx: 0, sty: 0, committed: false,
+        lastTapTime: 0, lastTapX: 0, lastTapY: 0
     };
 
     // ── DOM refs ──
@@ -102,7 +103,7 @@
         });
 
         $ov.addEventListener('click', function (e) {
-            if ((e.target === $ov || e.target === $wrap) && !S.didDrag) close();
+            if ((e.target === $ov || e.target === $wrap) && !S.didDrag && Date.now() >= S.navGuardUntil) close();
             S.didDrag = false;
         });
 
@@ -151,11 +152,11 @@
             zoomAt(S.scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY);
         }, { passive: false });
 
-        // Double-click zoom toggle
+        // Double-click zoom toggle (desktop mouse)
         $wrap.addEventListener('dblclick', function (e) {
             e.preventDefault(); e.stopPropagation();
             if (S.scale > 1.05) animResetZoom();
-            else zoomAt(2.5, e.clientX, e.clientY);
+            else animZoomAt(2, e.clientX, e.clientY);
         });
 
         // Desktop hover for nav arrows + auto-hide
@@ -259,8 +260,13 @@
     }
 
     function zoomAt(ns, cx, cy) {
-        var rect = $wrap.getBoundingClientRect();
-        var mx = cx - rect.left, my = cy - rect.top;
+        // Use the media element's natural (un-translated) origin so the zoom
+        // pivot is always the cursor position, not the wrapper's top-left.
+        var c = $media ? $media.querySelector('img, video') : null;
+        var rect = c ? c.getBoundingClientRect() : $wrap.getBoundingClientRect();
+        var ox = rect.left - S.tx; // recover natural left edge from post-transform rect
+        var oy = rect.top - S.ty;  // recover natural top edge
+        var mx = cx - ox, my = cy - oy;
         var prev = S.scale;
         ns = Math.max(MIN_SCALE, Math.min(MAX_SCALE, ns));
         var r = ns / prev;
@@ -279,6 +285,14 @@
         S.scale = 1; S.tx = 0; S.ty = 0;
         applyTx();
         $wrap.classList.remove('pv-zoomed');
+        setTimeout(function () { if (c) c.style.transition = ''; }, 260);
+    }
+
+    function animZoomAt(ns, cx, cy) {
+        var c = $media ? $media.querySelector('img, video') : null;
+        if (!c) return;
+        c.style.transition = 'transform 0.25s ease-out';
+        zoomAt(ns, cx, cy);
         setTimeout(function () { if (c) c.style.transition = ''; }, 260);
     }
 
@@ -388,10 +402,24 @@
                 if (e.clientY - G.sy > DISMISS_THRESHOLD) close();
                 else snapDismiss();
             } else if (!G.committed) {
-                // Tap detection
+                // Tap detection (single + double-tap)
                 var td = Math.sqrt(Math.pow(e.clientX - G.sx, 2) + Math.pow(e.clientY - G.sy, 2));
                 if (td < TAP_PX && Date.now() - G.st < TAP_MS && !e.target.closest('.pv-ctrl')) {
-                    toggleCtrl();
+                    var now = Date.now();
+                    var dtx = e.clientX - G.lastTapX, dty = e.clientY - G.lastTapY;
+                    var tapDist = Math.sqrt(dtx * dtx + dty * dty);
+                    if (now - G.lastTapTime < 300 && tapDist < 30) {
+                        // Double-tap: toggle zoom 1x ↔ 2x at tap point
+                        G.lastTapTime = 0; // prevent triple-tap from re-triggering
+                        if (S.scale > 1.05) { animResetZoom(); }
+                        else { animZoomAt(2, e.clientX, e.clientY); }
+                    } else {
+                        // Single tap: toggle controls; record for potential double-tap
+                        G.lastTapTime = now;
+                        G.lastTapX = e.clientX;
+                        G.lastTapY = e.clientY;
+                        toggleCtrl();
+                    }
                 }
             }
             G.mode = IDLE; G.committed = false;
@@ -415,6 +443,7 @@
             $wrap.style.transition = 'none'; $wrap.style.transform = '';
             showPhoto(ni);
             $wrap.offsetHeight; $wrap.style.transition = '';
+            showCtrl(); resetHide(); S.navGuardUntil = Date.now() + 300;
         }, 260);
     }
     function snapSwipe() {
@@ -630,7 +659,10 @@
     // ── Navigation helper ──
     function nav(dir) {
         var ni = S.idx + dir;
-        if (ni >= 0 && ni < S.photos.length) showPhoto(ni);
+        if (ni >= 0 && ni < S.photos.length) {
+            showPhoto(ni);
+            showCtrl(); resetHide(); S.navGuardUntil = Date.now() + 300;
+        }
     }
 
     // ── Orientation / resize (T037) ──
