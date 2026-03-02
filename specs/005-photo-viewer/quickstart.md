@@ -22,19 +22,12 @@ python3 -m http.server 8000
 # Mobile: http://<your-local-ip>:8000 (same WiFi network)
 ```
 
-## New Files
-
-| File | Purpose |
-|------|---------|
-| `js/photo-viewer.js` | Photo viewer ES2020+ module — gesture handling, progressive loading, animations |
-| `css/photo-viewer.css` | Photo viewer styles — overlay, transitions, controls, responsive layout |
-
-## Modified Files
+## Files Modified (bug fixes)
 
 | File | Changes |
 |------|---------|
-| `index.html` | Remove old lightbox code (~lines 217-674). Add `<script>` and `<link>` for new module. Update `onPhotoClick` and `onFeedThumbnailClick` to call `window.photoViewer.open()`. |
-| `css/map.css` | Remove `.lightbox-*` rules (~lines 644-836). |
+| `js/photo-viewer.js` | Double-tap zoom toggle, nav guard, auto-hide timing, zoom anchor fix |
+| `css/photo-viewer.css` | Button restyling (circular dark glass buttons) |
 
 ## Testing Checklist
 
@@ -47,18 +40,25 @@ python3 -m http.server 8000
 5. Pinch back to 1x → photo fits screen
 6. Swipe down at 1x → viewer dismisses
 7. Tap screen → controls toggle
-8. Open a video → clean thumbnail, correct aspect ratio, plays on tap
+8. **Double-tap at 1x → zooms to 2x at tap point** (NEW)
+9. **Double-tap at 2x → resets to 1x** (NEW)
+10. **Double-tap rapidly → never gets stuck in zoom state** (BUG FIX)
+11. Open a video → clean thumbnail, correct aspect ratio, plays on tap
 
 ### Desktop
 
 1. Click a photo → viewer expands from thumbnail
 2. Hover edges → nav arrows appear, click → navigates
 3. Arrow keys → navigates
-4. Scroll wheel → zooms at cursor
-5. Double-click → toggles 1x/2.5x zoom
+4. **Scroll wheel → zooms centered on cursor position** (BUG FIX)
+5. Double-click → toggles 1x/2x zoom
 6. Escape or click backdrop → closes
-7. Favorite button → toggles star
-8. Open from trip feed → navigates that day's photos only
+7. **Click next arrow rapidly 5+ times → viewer never accidentally closes** (BUG FIX)
+8. **Controls stay visible while actively clicking through photos** (BUG FIX)
+9. **Buttons are circular with dark semi-transparent background** (BUG FIX)
+10. Favorite button → toggles star
+11. Open from trip feed → navigates that day's photos only
+12. **Controls auto-hide after 4 seconds (not 2)** (BUG FIX)
 
 ### Progressive Loading
 
