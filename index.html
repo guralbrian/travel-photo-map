@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/Leaflet.Photo.css">
     <link rel="stylesheet" href="css/map.css">
     <link rel="stylesheet" href="css/photo-viewer.css">
+    <link rel="stylesheet" href="css/photo-wall.css">
 </head>
 <body>
     <div id="map"></div>
@@ -25,11 +26,37 @@
         <div class="feed-entries" id="feed-entries"></div>
     </div>
 
+    <!-- Photo wall reopen button (visible when panel is fully dismissed) -->
+    <button class="photo-wall-reopen-btn" id="photo-wall-reopen-btn" aria-label="Open photo wall">
+        ▲ Photos
+    </button>
+
+    <!-- Photo wall panel -->
+    <div class="photo-wall-panel" id="photo-wall-panel">
+        <div class="photo-wall-handle" id="photo-wall-handle">
+            <div class="photo-wall-handle-bar"></div>
+        </div>
+        <div class="photo-wall-header" id="photo-wall-header">
+            <span class="photo-wall-title">Photos</span>
+            <span class="photo-wall-date-label" id="photo-wall-date-label"></span>
+            <button class="photo-wall-collapse-btn" id="photo-wall-collapse-btn" aria-label="Collapse photo wall">↓</button>
+            <button class="photo-wall-close-btn" id="photo-wall-close-btn" aria-label="Close photo wall">✕</button>
+        </div>
+        <div class="photo-wall-scroll" id="photo-wall-scroll">
+            <div class="photo-wall-spacer" id="photo-wall-spacer"></div>
+        </div>
+        <div class="photo-wall-scrubber" id="photo-wall-scrubber">
+            <div class="photo-wall-scrubber-thumb" id="photo-wall-scrubber-thumb"></div>
+            <div class="photo-wall-scrubber-tooltip" id="photo-wall-scrubber-tooltip"></div>
+        </div>
+    </div>
+
     <script src="js/leaflet.js"></script>
     <script src="js/Leaflet.Photo.js"></script>
     <!-- <script src="js/ForceLayout.js"></script> -->
     <script src="js/ViewportSampler.js"></script>
     <script src="js/photo-viewer.js"></script>
+    <script src="js/photo-wall.js"></script>
     <script>
         (function () {
             var map = L.map('map').setView([20, 0], 2);
@@ -242,6 +269,10 @@
                 if (index >= 0) {
                     var srcEl = e.layer._icon ? e.layer._icon.querySelector('img') : null;
                     window.photoViewer.open(filteredPhotos, index, srcEl);
+                    // Notify photo wall to expand and scroll to this photo
+                    if (window.photoWall) {
+                        document.dispatchEvent(new CustomEvent('photo-wall:target', { detail: { photo: photo } }));
+                    }
                 }
             }
 
@@ -575,6 +606,11 @@
                     duration: 0.8,
                     maxZoom: 15
                 });
+
+                // Notify photo wall to scroll to this date
+                if (window.photoWall) {
+                    document.dispatchEvent(new CustomEvent('photo-wall:target-date', { detail: { date: date } }));
+                }
             }
 
             function onFeedThumbnailClick(evt) {
@@ -857,6 +893,38 @@
                     // On mobile, start in collapsed state
                     if (window.innerWidth <= 768) {
                         feedSidebar.classList.add('feed-sheet-collapsed');
+                    }
+
+                    // Initialize photo wall
+                    if (window.PhotoWall) {
+                        var wallContainer = document.getElementById('photo-wall-panel');
+                        if (wallContainer) {
+                            window.photoWall = new window.PhotoWall({
+                                container: wallContainer,
+                                photos: allPhotos,
+                                segments: tripSegments
+                            });
+
+                            // Handle photo-wall clicks: open viewer + pan map
+                            document.addEventListener('photo-wall:photo-clicked', function (e) {
+                                var d = e.detail;
+                                if (window.photoViewer) {
+                                    window.photoViewer.open(d.sectionPhotos, d.indexInSection, d.srcElement);
+                                }
+                                if (d.photo && d.photo.lat && d.photo.lng) {
+                                    map.panTo([d.photo.lat, d.photo.lng]);
+                                }
+                            });
+
+                            // Relayout on window resize (debounced 200ms)
+                            var _wallResizeTimer = null;
+                            window.addEventListener('resize', function () {
+                                if (_wallResizeTimer) clearTimeout(_wallResizeTimer);
+                                _wallResizeTimer = setTimeout(function () {
+                                    if (window.photoWall) window.photoWall.relayout();
+                                }, 200);
+                            });
+                        }
                     }
 
                     // Draw intercity travel route (two-layer polylines + arrows)

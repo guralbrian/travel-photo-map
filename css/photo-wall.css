@@ -1,0 +1,465 @@
+/* ════════════════════════════════════════════════════════════════════
+   photo-wall.css — Photo Wall Album View
+   Feature 006 | Travel Photo Map
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── CSS Custom Properties ─────────────────────────────────────────── */
+:root {
+    --wall-collapsed-height: 30vh;
+    --wall-half-height: 50vh;
+    --wall-bg: rgba(24, 24, 28, 0.97);
+    --wall-accent: #d4a853;
+    --wall-text: #e8e6e3;
+    --wall-text-muted: rgba(232, 230, 227, 0.5);
+    --wall-border: rgba(255, 255, 255, 0.08);
+    --wall-item-bg: rgba(255, 255, 255, 0.06);
+    --wall-scrubber-width: 20px;
+    --wall-header-height: 48px;
+    --wall-section-header-height: 40px;
+}
+
+/* ── Panel Base ─────────────────────────────────────────────────────── */
+.photo-wall-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--wall-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 12px 12px 0 0;
+    border-top: 1px solid var(--wall-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+    /* Default height handled by snap state classes */
+    height: var(--wall-collapsed-height);
+    touch-action: none;
+    /* Start off-screen; JS adds --visible to slide it up on load */
+    transform: translateY(100%);
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photo-wall-panel--visible {
+    transform: translateY(0);
+}
+
+/* Fully hidden below viewport (user dismissed) */
+.photo-wall-panel--hidden {
+    transform: translateY(100%);
+    pointer-events: none;
+}
+
+/* ── Snap States ────────────────────────────────────────────────────── */
+.photo-wall-panel--collapsed {
+    height: var(--wall-collapsed-height);
+}
+
+.photo-wall-panel--half {
+    height: var(--wall-half-height);
+}
+
+.photo-wall-panel--full {
+    height: 100vh;
+    z-index: 1003;
+    border-radius: 0;
+}
+
+.photo-wall-panel--animating {
+    transition: height 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                border-radius 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Drag Handle ────────────────────────────────────────────────────── */
+.photo-wall-handle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0 6px;
+    cursor: grab;
+    flex-shrink: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.photo-wall-handle:active {
+    cursor: grabbing;
+}
+
+.photo-wall-handle-bar {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+    transition: background 200ms;
+}
+
+.photo-wall-handle:hover .photo-wall-handle-bar {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.photo-wall-header {
+    display: flex;
+    align-items: center;
+    padding: 0 12px 8px 14px;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: var(--wall-header-height);
+}
+
+.photo-wall-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wall-text);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.photo-wall-date-label {
+    font-size: 12px;
+    color: var(--wall-text-muted);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.photo-wall-collapse-btn {
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--wall-border);
+    color: var(--wall-text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 150ms, color 150ms;
+    line-height: 1;
+}
+
+.photo-wall-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--wall-text);
+}
+
+/* ── Grid Container ─────────────────────────────────────────────────── */
+.photo-wall-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+    /* Padding-right for scrubber */
+    padding-right: var(--wall-scrubber-width);
+    scroll-behavior: auto; /* JS will use scrollTo({behavior:'smooth'}) */
+}
+
+/* Scrollbar styling */
+.photo-wall-scroll::-webkit-scrollbar {
+    width: 0;
+}
+
+.photo-wall-spacer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    pointer-events: none;
+}
+
+/* ── Grid Items ─────────────────────────────────────────────────────── */
+.photo-wall-item {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 2px;
+    cursor: pointer;
+    background: var(--wall-item-bg);
+    transition: transform 80ms;
+}
+
+.photo-wall-item:active {
+    transform: scale(0.97);
+}
+
+.photo-wall-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transition: opacity 200ms ease;
+    pointer-events: none;
+}
+
+.photo-wall-item img.loaded {
+    opacity: 1;
+}
+
+/* Placeholder / loading shimmer */
+.photo-wall-item:not(.photo-wall-item--loaded)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(40, 40, 46, 0.8) 25%,
+        rgba(55, 55, 62, 0.8) 50%,
+        rgba(40, 40, 46, 0.8) 75%
+    );
+    background-size: 400px 100%;
+    animation: photo-wall-shimmer 1.5s infinite;
+}
+
+.photo-wall-item.photo-wall-item--loaded::before {
+    display: none;
+}
+
+@keyframes photo-wall-shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+/* ── Video items ────────────────────────────────────────────────────── */
+.photo-wall-item--video .photo-wall-play-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+.photo-wall-item--video:hover .photo-wall-play-icon,
+.photo-wall-item--video img.loaded ~ .photo-wall-play-icon {
+    opacity: 1;
+}
+
+/* ── Section Headers ────────────────────────────────────────────────── */
+.photo-wall-section-header {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: var(--wall-section-header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 12px 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--wall-text);
+    letter-spacing: 0.02em;
+    border-left: 3px solid var(--section-color, #888);
+    background: rgba(24, 24, 28, 0.7);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Sticky section header (mirrors section-header, but sticky at top of scroll) */
+.photo-wall-sticky-header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--wall-section-header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 12px 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--wall-text);
+    letter-spacing: 0.02em;
+    border-left: 3px solid var(--section-color, #888);
+    background: var(--wall-bg);
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* ── Highlight Animation ─────────────────────────────────────────────── */
+@keyframes photo-wall-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(212, 168, 83, 0.8); }
+    40%  { box-shadow: 0 0 0 6px rgba(212, 168, 83, 0.4); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 168, 83, 0); }
+}
+
+.photo-wall-item--highlight {
+    animation: photo-wall-pulse 2s ease-out;
+    outline: 2px solid rgba(212, 168, 83, 0.75);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* ── Date Scrubber ───────────────────────────────────────────────────── */
+.photo-wall-scrubber {
+    position: absolute;
+    right: 0;
+    top: calc(var(--wall-header-height) + 20px);
+    bottom: 0;
+    width: var(--wall-scrubber-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    z-index: 5;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Subtle track line */
+.photo-wall-scrubber::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 1px;
+}
+
+.photo-wall-scrubber-thumb {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--wall-accent);
+    box-shadow: 0 0 4px rgba(212, 168, 83, 0.5);
+    pointer-events: none;
+    transition: transform 100ms;
+}
+
+.photo-wall-scrubber:active .photo-wall-scrubber-thumb {
+    transform: translateX(-50%) scale(1.4);
+}
+
+.photo-wall-scrubber-tooltip {
+    position: absolute;
+    right: calc(var(--wall-scrubber-width) + 4px);
+    top: 0;
+    background: rgba(24, 24, 28, 0.95);
+    border: 1px solid var(--wall-border);
+    color: var(--wall-text);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 150ms;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.photo-wall-scrubber-tooltip.visible {
+    opacity: 1;
+}
+
+/* ── Empty State ────────────────────────────────────────────────────── */
+.photo-wall-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--wall-text-muted);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* ── Close Button (✕) ───────────────────────────────────────────────── */
+.photo-wall-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--wall-border);
+    color: var(--wall-text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 150ms, color 150ms;
+    line-height: 1;
+}
+
+.photo-wall-close-btn:hover {
+    background: rgba(220, 80, 80, 0.3);
+    color: #ff8080;
+}
+
+/* ── Reopen Button (shown when panel is fully hidden) ────────────────── */
+.photo-wall-reopen-btn {
+    position: fixed;
+    bottom: 12px;
+    right: 60px;
+    z-index: 1001;
+    background: rgba(24, 24, 28, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--wall-border);
+    color: var(--wall-text);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    transition: background 150ms;
+}
+
+.photo-wall-reopen-btn:hover {
+    background: rgba(40, 40, 46, 0.97);
+}
+
+.photo-wall-reopen-btn.visible {
+    display: flex;
+}
+
+/* ── Mobile Adjustments ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    :root {
+        --wall-collapsed-height: 25vh;
+    }
+
+    .photo-wall-scrubber {
+        width: 24px;
+    }
+
+    .photo-wall-scrubber-thumb {
+        width: 10px;
+        height: 24px;
+        border-radius: 5px;
+    }
+
+    .photo-wall-scroll {
+        padding-right: 24px;
+    }
+
+    .photo-wall-panel--full {
+        border-radius: 0;
+    }
+}
