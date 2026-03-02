@@ -55,6 +55,7 @@
     <script src="js/Leaflet.Photo.js"></script>
     <!-- <script src="js/ForceLayout.js"></script> -->
     <script src="js/ViewportSampler.js"></script>
+    <script src="js/route-builder.js"></script>
     <script src="js/photo-viewer.js"></script>
     <script src="js/photo-wall.js"></script>
     <script>
@@ -370,16 +371,6 @@
 
             // Intercity travel route (drawn after trip segments load)
             var travelRouteLayer = null;
-
-            function haversineKm(lat1, lng1, lat2, lng2) {
-                var R = 6371;
-                var dLat = (lat2 - lat1) * Math.PI / 180;
-                var dLng = (lng2 - lng1) * Math.PI / 180;
-                var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            }
 
             var tripSegments = [];
 
@@ -895,6 +886,9 @@
                         feedSidebar.classList.add('feed-sheet-collapsed');
                     }
 
+                    // Draw intercity travel route using photo geotags
+                    travelRouteLayer = buildSmartRoutes(allPhotos, tripSegments, map);
+                    if (travelRouteLayer) travelRouteLayer.addTo(map);
                     // Initialize photo wall
                     if (window.PhotoWall) {
                         var wallContainer = document.getElementById('photo-wall-panel');
