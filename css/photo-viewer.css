@@ -6,7 +6,7 @@
 .pv-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: var(--z-viewer);
     background: rgba(0, 0, 0, 0.95);
     display: none;
     align-items: center;
@@ -80,6 +80,7 @@
     height: 100%;
     touch-action: none;
     overflow: hidden;
+    pointer-events: none;
 }
 
 .pv-media img,
@@ -88,11 +89,11 @@
     max-height: 100%;
     object-fit: contain;
     will-change: transform;
+    pointer-events: auto;
 }
 
 .pv-media img {
     -webkit-user-drag: none;
-    pointer-events: none;
 }
 
 /* Progressive loading crossfade */
@@ -107,10 +108,12 @@
 }
 
 /* Zoomed cursor states */
-.pv-zoomed .pv-media {
+.pv-zoomed .pv-media img,
+.pv-zoomed .pv-media video {
     cursor: grab;
 }
-.pv-zoomed .pv-media:active {
+.pv-zoomed .pv-media img:active,
+.pv-zoomed .pv-media video:active {
     cursor: grabbing;
 }
 
@@ -130,7 +133,7 @@
     position: absolute;
     top: 12px;
     right: 16px;
-    z-index: 2001;
+    z-index: var(--z-viewer-controls);
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -139,7 +142,7 @@
     -webkit-backdrop-filter: blur(4px);
     border: none;
     color: white;
-    font-size: 24px;
+    font-size: var(--font-xl);
     line-height: 1;
     cursor: pointer;
     padding: 0;
@@ -157,7 +160,7 @@
     position: absolute;
     top: 12px;
     right: 64px;
-    z-index: 2001;
+    z-index: var(--z-viewer-controls);
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -166,7 +169,7 @@
     -webkit-backdrop-filter: blur(4px);
     border: none;
     color: rgba(255, 255, 255, 0.8);
-    font-size: 22px;
+    font-size: var(--font-xl);
     line-height: 1;
     cursor: pointer;
     padding: 0;
@@ -177,10 +180,10 @@
 }
 .pv-fav:hover {
     background: rgba(255, 255, 255, 0.2);
-    color: #d4a853;
+    color: var(--color-accent);
 }
 .pv-fav.pv-is-fav {
-    color: #d4a853;
+    color: var(--color-accent);
 }
 
 /* ── Navigation arrows ── */
@@ -188,7 +191,7 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 2001;
+    z-index: var(--z-viewer-controls);
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -197,7 +200,7 @@
     -webkit-backdrop-filter: blur(4px);
     border: none;
     color: white;
-    font-size: 24px;
+    font-size: var(--font-xl);
     padding: 0;
     cursor: pointer;
     display: flex;
@@ -232,13 +235,13 @@
     padding: 48px 20px 20px;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
     color: white;
-    z-index: 2001;
+    z-index: var(--z-viewer-controls);
     max-height: 40vh;
     overflow-y: auto;
 }
 
 .pv-cap {
-    font-size: 16px;
+    font-size: var(--font-lg);
     font-weight: 600;
     margin: 0 0 4px;
     line-height: 1.3;
@@ -258,7 +261,7 @@
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 6px;
     color: white;
-    font-size: 14px;
+    font-size: var(--font-base);
     padding: 8px;
     resize: vertical;
     font-family: inherit;
@@ -269,7 +272,7 @@
 }
 
 .pv-date {
-    font-size: 13px;
+    font-size: var(--font-base);
     opacity: 0.7;
     margin: 0 0 6px;
 }
@@ -285,7 +288,7 @@
     background: rgba(255, 255, 255, 0.18);
     padding: 2px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: var(--font-xs);
     line-height: 1.6;
 }
 
@@ -306,14 +309,14 @@
     background: rgba(255, 255, 255, 0.18);
     padding: 2px 8px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: var(--font-xs);
 }
 .pv-chip-x {
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-base);
     line-height: 1;
     padding: 0 2px;
 }
@@ -326,7 +329,7 @@
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 6px;
     color: white;
-    font-size: 12px;
+    font-size: var(--font-sm);
     padding: 6px 8px;
     width: 140px;
     font-family: inherit;
@@ -338,8 +341,8 @@
 
 /* Google Photos link */
 .pv-link {
-    color: #d4a853;
-    font-size: 13px;
+    color: var(--color-accent);
+    font-size: var(--font-base);
     text-decoration: none;
 }
 .pv-link:hover {
@@ -349,7 +352,7 @@
 /* ── Error placeholder ── */
 .pv-error {
     color: rgba(255, 255, 255, 0.5);
-    font-size: 16px;
+    font-size: var(--font-lg);
     text-align: center;
     padding: 40px;
     background: rgba(255, 255, 255, 0.05);
@@ -401,7 +404,13 @@
     .pv-nav {
         width: 44px;
         height: 44px;
-        font-size: 22px;
+        font-size: var(--font-xl);
+    }
+
+    /* Touch target: 44px minimum (T024) */
+    .pv-link {
+        padding: 12px;
+        display: inline-block;
     }
 }
 

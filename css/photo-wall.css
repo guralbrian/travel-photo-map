@@ -3,15 +3,48 @@
    Feature 006 | Travel Photo Map
    ════════════════════════════════════════════════════════════════════ */
 
-/* ── CSS Custom Properties ─────────────────────────────────────────── */
+/* ── Shared Design Tokens ─────────────────────────────────────────── */
 :root {
+    /* Colors */
+    --color-accent: #d4a853;
+    --color-accent-hover: #e0b862;
+    --color-text: #e8e6e3;
+    --color-text-muted: #9a9790;
+    --color-bg-panel: rgba(24, 24, 28, 0.80);
+    --color-bg-panel-heavy: rgba(24, 24, 28, 0.95);
+    --color-border: rgba(255, 255, 255, 0.08);
+
+    /* Font sizes */
+    --font-xs: 11px;
+    --font-sm: 12px;
+    --font-base: 13px;
+    --font-md: 15px;
+    --font-lg: 16px;
+    --font-xl: 20px;
+
+    /* Transitions */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --easing-enter: cubic-bezier(0.22, 1, 0.36, 1);
+    --easing-standard: ease-out;
+
+    /* Z-index layers */
+    --z-panel: 1000;
+    --z-panel-controls: 1001;
+    --z-panel-toggle: 1002;
+    --z-panel-full: 1003;
+    --z-viewer: 2000;
+    --z-viewer-controls: 2001;
+
+    /* Photo Wall specific */
     --wall-collapsed-height: 30vh;
     --wall-half-height: 50vh;
-    --wall-bg: rgba(24, 24, 28, 0.97);
-    --wall-accent: #d4a853;
-    --wall-text: #e8e6e3;
-    --wall-text-muted: rgba(232, 230, 227, 0.5);
-    --wall-border: rgba(255, 255, 255, 0.08);
+    --wall-bg: var(--color-bg-panel);
+    --wall-accent: var(--color-accent);
+    --wall-text: var(--color-text);
+    --wall-text-muted: rgba(232, 230, 227, 0.6);
+    --wall-border: var(--color-border);
     --wall-item-bg: rgba(255, 255, 255, 0.06);
     --wall-scrubber-width: 20px;
     --wall-header-height: 48px;
@@ -24,7 +57,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: var(--z-panel);
     background: var(--wall-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -63,7 +96,7 @@
 
 .photo-wall-panel--full {
     height: 100vh;
-    z-index: 1003;
+    z-index: var(--z-panel-full);
     border-radius: 0;
 }
 
@@ -91,10 +124,10 @@
 }
 
 .photo-wall-handle-bar {
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.22);
+    width: 48px;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.30);
     transition: background 200ms;
 }
 
@@ -106,23 +139,24 @@
 .photo-wall-header {
     display: flex;
     align-items: center;
-    padding: 0 12px 8px 14px;
+    padding: 0 16px 10px 16px;
     gap: 8px;
     flex-shrink: 0;
     min-height: var(--wall-header-height);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .photo-wall-title {
-    font-size: 13px;
+    font-size: var(--font-base);
     font-weight: 700;
     color: var(--wall-text);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     flex-shrink: 0;
 }
 
 .photo-wall-date-label {
-    font-size: 12px;
+    font-size: var(--font-sm);
     color: var(--wall-text-muted);
     flex: 1;
     overflow: hidden;
@@ -139,12 +173,12 @@
     border: 1px solid var(--wall-border);
     color: var(--wall-text-muted);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--font-base);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background 150ms, color 150ms;
+    transition: background 200ms, color 200ms;
     line-height: 1;
 }
 
@@ -185,11 +219,19 @@
     border-radius: 2px;
     cursor: pointer;
     background: var(--wall-item-bg);
-    transition: transform 80ms;
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
 
 .photo-wall-item:active {
     transform: scale(0.97);
+}
+
+@media (hover: hover) {
+    .photo-wall-item:hover {
+        transform: scale(1.03);
+        box-shadow: 0 2px 12px rgba(212, 168, 83, 0.15);
+        z-index: 1;
+    }
 }
 
 .photo-wall-item img {
@@ -237,7 +279,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: var(--font-xl);
     color: rgba(255, 255, 255, 0.9);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
     pointer-events: none;
@@ -260,7 +302,7 @@
     display: flex;
     align-items: center;
     padding: 0 12px 0 14px;
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-weight: 600;
     color: var(--wall-text);
     letter-spacing: 0.02em;
@@ -280,7 +322,7 @@
     display: flex;
     align-items: center;
     padding: 0 12px 0 14px;
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-weight: 600;
     color: var(--wall-text);
     letter-spacing: 0.02em;
@@ -359,13 +401,13 @@
     background: rgba(24, 24, 28, 0.95);
     border: 1px solid var(--wall-border);
     color: var(--wall-text);
-    font-size: 11px;
+    font-size: var(--font-xs);
     font-weight: 500;
     padding: 3px 7px;
     border-radius: 4px;
     white-space: nowrap;
     opacity: 0;
-    transition: opacity 150ms;
+    transition: opacity 200ms;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
@@ -381,7 +423,7 @@
     justify-content: center;
     height: 100%;
     color: var(--wall-text-muted);
-    font-size: 14px;
+    font-size: var(--font-base);
     font-style: italic;
 }
 
@@ -394,12 +436,12 @@
     border: 1px solid var(--wall-border);
     color: var(--wall-text-muted);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--font-sm);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background 150ms, color 150ms;
+    transition: background 200ms, color 200ms;
     line-height: 1;
 }
 
@@ -413,26 +455,28 @@
     position: fixed;
     bottom: 12px;
     right: 60px;
-    z-index: 1001;
-    background: rgba(24, 24, 28, 0.92);
+    z-index: var(--z-panel-toggle);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-accent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--wall-border);
-    color: var(--wall-text);
-    font-size: 12px;
+    color: #18181c;
+    font-size: var(--font-lg);
     font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 20px;
+    padding: 0;
     cursor: pointer;
     display: none;
     align-items: center;
-    gap: 5px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-    transition: background 150ms;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: background var(--duration-normal) ease;
 }
 
 .photo-wall-reopen-btn:hover {
-    background: rgba(40, 40, 46, 0.97);
+    background: var(--color-accent-hover);
 }
 
 .photo-wall-reopen-btn.visible {
@@ -442,7 +486,18 @@
 /* ── Mobile Adjustments ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
     :root {
-        --wall-collapsed-height: 25vh;
+        --wall-collapsed-height: 35vh;
+    }
+
+    .photo-wall-reopen-btn {
+        right: 110px;
+    }
+
+    /* Touch targets: 44px minimum (T020) */
+    .photo-wall-collapse-btn,
+    .photo-wall-close-btn {
+        width: 44px;
+        height: 44px;
     }
 
     .photo-wall-scrubber {

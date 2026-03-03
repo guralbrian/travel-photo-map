@@ -2,6 +2,7 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 #map {
@@ -77,23 +78,23 @@ html, body {
     position: fixed;
     top: 80px;
     left: 10px;
-    z-index: 1002;
+    z-index: var(--z-panel-toggle);
     width: 44px;
     height: 44px;
     border-radius: 50%;
     border: none;
-    background: #d4a853;
+    background: var(--color-accent);
     color: #18181c;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.25s ease-out, background 0.15s ease;
+    transition: transform var(--duration-normal) var(--easing-standard), background 0.2s ease;
 }
 
 .panel-toggle:hover {
-    background: #e0b86a;
+    background: var(--color-accent-hover);
 }
 
 .panel-toggle svg {
@@ -113,15 +114,14 @@ html, body {
     left: 10px;
     bottom: 10px;
     width: 300px;
-    z-index: 1001;
-    background: rgba(24, 24, 28, 0.88);
+    z-index: var(--z-panel-controls);
+    background: var(--color-bg-panel);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px;
-    color: #e8e6e3;
+    font-size: var(--font-base);
+    color: var(--color-text);
     overflow-y: auto;
     overflow-x: hidden;
     transform: translateX(0);
@@ -159,34 +159,34 @@ html, body {
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .panel-header h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--font-md);
     font-weight: 600;
-    color: #e8e6e3;
+    color: var(--color-text);
 }
 
 .panel-close {
     background: none;
     border: none;
-    color: #9a9790;
-    font-size: 20px;
+    color: var(--color-text-muted);
+    font-size: var(--font-xl);
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
-    transition: color 0.15s ease;
+    transition: color var(--duration-fast) ease;
 }
 
 .panel-close:hover {
-    color: #e8e6e3;
+    color: var(--color-text);
 }
 
 /* Panel sections */
 .panel-section {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     margin: 0;
     padding: 0;
 }
@@ -194,8 +194,8 @@ html, body {
 .panel-section summary {
     cursor: pointer;
     font-weight: 600;
-    color: #9a9790;
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-size: var(--font-sm);
     padding: 10px 16px;
     user-select: none;
     list-style: none;
@@ -204,7 +204,7 @@ html, body {
     gap: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    transition: color 0.15s ease;
+    transition: color var(--duration-fast) ease;
 }
 
 .panel-section summary::-webkit-details-marker {
@@ -215,7 +215,7 @@ html, body {
     content: '\25B8';
     display: inline-block;
     transition: transform 0.15s ease;
-    font-size: 10px;
+    font-size: var(--font-xs);
 }
 
 .panel-section[open] summary::before {
@@ -223,7 +223,7 @@ html, body {
 }
 
 .panel-section summary:hover {
-    color: #e8e6e3;
+    color: var(--color-text);
 }
 
 .panel-section-content {
@@ -235,28 +235,28 @@ html, body {
     display: block;
     margin: 8px 0 4px;
     font-weight: 600;
-    color: #e8e6e3;
-    font-size: 12px;
+    color: var(--color-text);
+    font-size: var(--font-sm);
 }
 
 .panel-section-content .slider-value {
     float: right;
     font-weight: normal;
-    color: #9a9790;
+    color: var(--color-text-muted);
 }
 
 .panel-section-content input[type="range"] {
     width: 100%;
     margin: 0 0 6px 0;
     cursor: pointer;
-    accent-color: #d4a853;
+    accent-color: var(--color-accent);
 }
 
 /* Map layers section */
 .layer-group-title {
-    font-size: 11px;
+    font-size: var(--font-xs);
     font-weight: 600;
-    color: #9a9790;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin: 0 0 6px 0;
@@ -268,18 +268,18 @@ html, body {
     gap: 8px;
     padding: 4px 0;
     cursor: pointer;
-    font-size: 12px;
-    color: #e8e6e3;
-    transition: color 0.15s ease;
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    transition: color var(--duration-fast) ease;
 }
 
 .layer-option:hover {
-    color: #d4a853;
+    color: var(--color-accent);
 }
 
 .layer-option input[type="radio"],
 .layer-option input[type="checkbox"] {
-    accent-color: #d4a853;
+    accent-color: var(--color-accent);
     margin: 0;
 }
 
@@ -330,9 +330,9 @@ html, body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 10px;
+    font-size: var(--font-xs);
     font-weight: 600;
-    color: #e8e6e3;
+    color: var(--color-text);
     white-space: nowrap;
     pointer-events: none;
     text-align: center;
@@ -351,16 +351,16 @@ html, body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(24, 24, 28, 0.95);
-    color: #e8e6e3;
-    font-size: 12px;
+    background: var(--color-bg-panel-heavy);
+    color: var(--color-text);
+    font-size: var(--font-sm);
     font-weight: 600;
     padding: 4px 8px;
     border-radius: 4px;
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--duration-fast) ease;
     z-index: 10;
 }
 
@@ -417,7 +417,7 @@ html, body {
     position: absolute;
     top: -14px;
     left: -1px;
-    font-size: 9px;
+    font-size: var(--font-xs);
     text-transform: uppercase;
     color: rgba(212, 168, 83, 0.8);
     font-weight: 600;
@@ -449,8 +449,8 @@ html, body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #e8e6e3;
-    border: 2px solid #d4a853;
+    background: var(--color-text);
+    border: 2px solid var(--color-accent);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     pointer-events: auto;
@@ -469,8 +469,8 @@ html, body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #e8e6e3;
-    border: 2px solid #d4a853;
+    background: var(--color-text);
+    border: 2px solid var(--color-accent);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     pointer-events: auto;
@@ -511,22 +511,22 @@ html, body {
     display: flex;
     justify-content: space-between;
     margin-top: 6px;
-    font-size: 11px;
-    color: #9a9790;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
 }
 
 /* Photo count pill */
 .timeline-photo-count {
     text-align: center;
-    font-size: 11px;
-    color: #9a9790;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
     margin-top: 2px;
     font-variant-numeric: tabular-nums;
 }
 
 .timeline-photo-count .photo-count-number {
     font-weight: 600;
-    color: #d4a853;
+    color: var(--color-accent);
 }
 
 /* Photo marker fade-in */
@@ -635,22 +635,25 @@ html, body {
     font-size: 14px;
 }
 
+/* Trip Feed hidden — superseded by Photo Wall (re-enable by removing these rules) */
+.feed-sidebar,
+.feed-toggle { display: none !important; }
+
 /* ──── Feed Sidebar (Desktop: right drawer) ──── */
 .feed-sidebar {
     position: fixed;
     top: 10px;
     right: 10px;
-    bottom: 10px;
+    bottom: calc(var(--wall-collapsed-height) + 20px);
     width: 280px;
-    z-index: 1001;
-    background: rgba(24, 24, 28, 0.88);
+    z-index: var(--z-panel-controls);
+    background: var(--color-bg-panel);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px;
-    color: #e8e6e3;
+    font-size: var(--font-base);
+    color: var(--color-text);
     display: flex;
     flex-direction: column;
     transform: translateX(0);
@@ -674,23 +677,23 @@ html, body {
     position: fixed;
     top: 80px;
     right: 10px;
-    z-index: 1002;
+    z-index: var(--z-panel-toggle);
     width: 44px;
     height: 44px;
     border-radius: 50%;
     border: none;
-    background: #d4a853;
+    background: var(--color-accent);
     color: #18181c;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.25s ease-out, background 0.15s ease;
+    transition: transform var(--duration-normal) var(--easing-standard), background 0.2s ease;
 }
 
 .feed-toggle:hover {
-    background: #e0b86a;
+    background: var(--color-accent-hover);
 }
 
 .feed-toggle svg {
@@ -704,30 +707,30 @@ html, body {
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
 }
 
 .feed-header h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--font-md);
     font-weight: 600;
-    color: #e8e6e3;
+    color: var(--color-text);
 }
 
 .feed-close {
     background: none;
     border: none;
-    color: #9a9790;
-    font-size: 20px;
+    color: var(--color-text-muted);
+    font-size: var(--font-xl);
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
-    transition: color 0.15s ease;
+    transition: color var(--duration-fast) ease;
 }
 
 .feed-close:hover {
-    color: #e8e6e3;
+    color: var(--color-text);
 }
 
 /* Feed entries container */
@@ -736,6 +739,7 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 4px 0;
+    pointer-events: none;
 }
 
 .feed-entries::-webkit-scrollbar {
@@ -761,6 +765,7 @@ html, body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     cursor: pointer;
     transition: background 0.2s ease;
+    pointer-events: auto;
 }
 
 .feed-entry:hover {
@@ -788,14 +793,14 @@ html, body {
 }
 
 .feed-entry-date {
-    font-size: 12px;
-    color: #9a9790;
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
     font-weight: 600;
     white-space: nowrap;
 }
 
 .feed-entry-city {
-    font-size: 13px;
+    font-size: var(--font-base);
     font-weight: 600;
 }
 
@@ -834,14 +839,14 @@ html, body {
     height: 38px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.08);
-    color: #9a9790;
-    font-size: 11px;
+    color: var(--color-text-muted);
+    font-size: var(--font-xs);
     font-weight: 600;
 }
 
 /* Feed narrative text */
 .feed-narrative {
-    font-size: 13px;
+    font-size: var(--font-base);
     color: #c8c5c0;
     line-height: 1.45;
     margin: 6px 0 2px;
@@ -849,16 +854,16 @@ html, body {
 }
 
 .feed-add-note {
-    font-size: 12px;
-    color: #9a9790;
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
     cursor: pointer;
     margin: 4px 0 0;
     font-style: italic;
-    transition: color 0.15s ease;
+    transition: color var(--duration-fast) ease;
 }
 
 .feed-add-note:hover {
-    color: #d4a853;
+    color: var(--color-accent);
 }
 
 .feed-narrative-editor {
@@ -866,8 +871,8 @@ html, body {
     background: transparent;
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-    color: #e8e6e3;
-    font-size: 13px;
+    color: var(--color-text);
+    font-size: var(--font-base);
     font-family: inherit;
     line-height: 1.45;
     padding: 4px 0;
@@ -879,7 +884,7 @@ html, body {
 }
 
 .feed-narrative-editor:focus {
-    border-bottom-color: #d4a853;
+    border-bottom-color: var(--color-accent);
 }
 
 /* Feed drag handle (mobile) */
@@ -896,10 +901,10 @@ html, body {
 /* ──── Mobile: bottom sheet ──── */
 @media (max-width: 768px) {
     .panel-toggle {
-        top: auto;
-        left: auto;
-        bottom: 20px;
-        right: 20px;
+        top: 10px;
+        left: 10px;
+        bottom: auto;
+        right: auto;
     }
 
     .control-panel {
@@ -944,7 +949,34 @@ html, body {
     }
 
     .timeline-date-display {
-        font-size: 12px;
+        font-size: var(--font-sm);
+    }
+
+    /* Touch targets: 44px minimum (T019, T021, T022, T023) */
+    .panel-close,
+    .feed-close {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .panel-section summary {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+
+    .layer-option {
+        min-height: 44px;
+        padding: 10px 0;
+    }
+
+    .leaflet-control-zoom a {
+        min-width: 44px;
+        min-height: 44px;
+        line-height: 44px;
+        font-size: 20px;
     }
 
     /* Feed sidebar → bottom sheet on mobile */
@@ -1003,7 +1035,7 @@ html, body {
     color: #fff;
     padding: 6px 14px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: var(--font-base);
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
     width: 100%;
@@ -1032,7 +1064,7 @@ html, body {
 
 .auth-name {
     color: rgba(255,255,255,0.9);
-    font-size: 13px;
+    font-size: var(--font-base);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1042,7 +1074,7 @@ html, body {
 
 .auth-sign-out {
     color: rgba(255,255,255,0.5);
-    font-size: 12px;
+    font-size: var(--font-sm);
     text-decoration: none;
     flex-shrink: 0;
     transition: color 0.2s;
@@ -1055,8 +1087,8 @@ html, body {
 /* ===== Pending Writes Indicator ===== */
 .pending-writes-indicator {
     flex-shrink: 0;
-    font-size: 16px;
-    color: #d4a853;
+    font-size: var(--font-lg);
+    color: var(--color-accent);
     opacity: 0.8;
     animation: pendingPulse 2s ease-in-out infinite;
     cursor: default;

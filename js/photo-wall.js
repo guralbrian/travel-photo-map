@@ -312,8 +312,8 @@
 
         let target;
         if (velocity > 400) {
-            // Fast swipe down
-            target = (this.currentState === 'full') ? 'half' : 'collapsed';
+            // Fast swipe down: full→half, half→collapsed, collapsed→hidden
+            target = (this.currentState === 'full') ? 'half' : (this.currentState === 'half') ? 'collapsed' : 'hidden';
         } else if (velocity < -400) {
             // Fast swipe up
             target = (this.currentState === 'collapsed') ? 'half' : 'full';
@@ -507,6 +507,14 @@
 
         // Prevent scroll events from reaching the map (blocks map zoom-on-scroll)
         container.addEventListener('wheel', e => e.stopPropagation(), { passive: false });
+
+        // Wire close button (X) to fully dismiss the panel
+        const closeBtn = document.getElementById('photo-wall-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this._snap.snapTo('hidden');
+            });
+        }
 
         // Wire reopen button (shown when panel is fully dismissed)
         const reopenBtn = document.getElementById('photo-wall-reopen-btn');
