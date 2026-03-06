@@ -14,6 +14,8 @@
 - Q: Photo Wall reopen mechanism after X or drag-to-close? → A: Fix the existing gold reopen button so it reliably appears and is tappable after any close action (X click or drag-to-close).
 - Q: Drag-to-close threshold for Photo Wall? → A: Velocity-based — a fast downward flick (>400px/s) past the collapsed state snaps to hidden; a slow drag snaps back to collapsed.
 - (Directive) Playwright testing: Use two local servers (localhost:8000 and localhost:8001) in parallel — one for desktop viewport testing, one for mobile viewport testing.
+- Q: Legacy straight-line route code (index.html:924-968) duplicates route rendering on top of smart routes (route-builder.js). How to resolve? → A: Remove legacy route code entirely; smart routes are the sole route renderer.
+- Q: Should route segment colors from trip_segments.json be pulled into the design token system? → A: No — route colors are data-driven values from trip data. Design tokens cover UI chrome only (backgrounds, text, accents, borders), not data-driven visual encodings.
 
 ## Audit Summary
 
@@ -130,7 +132,7 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 - **FR-003**: All panel close buttons MUST have a minimum tap target of 44x44px on mobile viewports.
 - **FR-004**: All accordion section headers in the Controls panel MUST have a minimum tap target height of 44px.
 - **FR-005**: All radio button and checkbox rows in Map Layers MUST have a minimum tap target height of 44px.
-- **FR-006**: System MUST define shared design tokens for: primary colors (accent, text, backgrounds), font size scale, transition durations, easing functions, and z-index layers.
+- **FR-006**: System MUST define shared design tokens for: UI chrome colors (accent, text, backgrounds, borders), font size scale, transition durations, easing functions, and z-index layers. Data-driven colors (e.g., route segment colors from trip_segments.json) are excluded from the token system.
 - **FR-007**: System MUST replace legacy light-theme colors (#666, #333) in popup and annotation styles with dark-theme palette values.
 - **FR-008**: System MUST resolve z-index conflicts so that no interactive element is blocked by another panel's pointer events at any viewport width.
 - **FR-009**: The Photo Viewer close button MUST be clickable without being intercepted by the media container.
@@ -147,6 +149,7 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 - **FR-014**: The font size scale SHOULD be rationalized to no more than 6 standard sizes defined as tokens.
 - **FR-015**: The Photo Wall collapsed state on mobile SHOULD show enough content for at least two rows of thumbnails.
 - **FR-016**: The Photo Wall drag handle SHOULD be visually prominent enough to be discoverable.
+- **FR-023**: The legacy straight-line route rendering code (`index.html:924-968`) MUST be removed. The smart route builder (`route-builder.js`) is the sole route renderer. The route toggle in Map Layers MUST control the smart routes layer.
 
 ### Assumptions
 
@@ -174,3 +177,4 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 - **SC-012**: Controls toggle button is positioned at top-left on both desktop and mobile, with no overlap against Photo Wall or other UI elements.
 - **SC-013**: A fast downward flick (>400px/s) on the Photo Wall from collapsed state snaps to fully hidden and shows the gold reopen button.
 - **SC-014**: The gold reopen button is visible and tappable after every Photo Wall close action (X, drag-to-close) on both viewports.
+- **SC-015**: Only one set of route polylines is rendered on the map (no duplicate legacy lines). The route toggle in Map Layers controls visibility of the smart routes.

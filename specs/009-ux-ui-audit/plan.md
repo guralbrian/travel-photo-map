@@ -1,39 +1,40 @@
 # Implementation Plan: UX/UI Audit Remediation
 
-**Branch**: `009-ux-ui-audit` | **Date**: 2026-03-03 | **Spec**: `specs/009-ux-ui-audit/spec.md`
+**Branch**: `009-ux-ui-audit` | **Date**: 2026-03-03 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/specs/009-ux-ui-audit/spec.md`
 
 ## Summary
 
-Remediate 6 bug-level issues and 20+ visual/usability issues discovered during a UX/UI audit. The work is pure frontend (CSS + vanilla JS) with no data model, backend, or dependency changes. Key deliverables: hide Trip Feed, fix Photo Wall close/reopen/drag-to-close cycle, reposition settings button, default settings panel to closed, establish CSS custom property design tokens, fix typography inheritance, enlarge mobile touch targets, resolve z-index conflicts, and replace legacy light-theme colors.
+Remediate all issues found during a comprehensive UX/UI audit across desktop (1440px) and mobile (375px) viewports. The work falls into six categories: (1) design token consolidation, (2) typography and color consistency, (3) touch target accessibility, (4) z-index and layering fixes, (5) Photo Wall interaction bug fixes, and (6) removal of duplicate route rendering code. All changes are pure frontend — CSS modifications, minor JS event wiring, and dead code removal. No new dependencies, data models, or backend changes.
 
 ## Technical Context
 
 **Language/Version**: Vanilla JavaScript (ES2020+), CSS3, HTML5
-**Primary Dependencies**: Leaflet.js (existing, vendored) — no new dependencies
+**Primary Dependencies**: Leaflet.js (vendored), no new dependencies
 **Storage**: N/A — pure visual changes, no data persistence
-**Testing**: Playwright MCP visual screenshots on two parallel local servers
-**Target Platform**: Web — desktop (1440px) and mobile (375px) viewports
-**Project Type**: Single static web application
-**Performance Goals**: 60fps on map interactions; no layout shifts during panel transitions
-**Constraints**: No build step; no frameworks; all changes in vanilla CSS/JS; static-file deployable
-**Scale/Scope**: 4 CSS files modified, 1 JS file modified, 1 HTML file modified
+**Testing**: Playwright MCP visual regression (dual-viewport: 1440px desktop, 375px mobile)
+**Target Platform**: Static web app (any HTTP server, GitHub Pages)
+**Project Type**: Single-page web application
+**Performance Goals**: 60fps transitions, no layout shifts
+**Constraints**: No build step, no transpilation, no frameworks. System font stack only.
+**Scale/Scope**: ~7 CSS files (~2,200 lines), 1 HTML file, 3 JS files touched
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. Privacy by Default | PASS | No data changes; no external services added |
-| II. Static & Zero-Config | PASS | Pure CSS/JS changes; remains static-file deployable |
-| III. Approachable by Everyone | PASS | Directly improves: 44px touch targets, discoverable reopen buttons, intuitive panel behavior |
-| IV. Professional Visual Polish | PASS | Core focus: design tokens, consistent typography, unified transitions |
-| V. Performant at Any Scale | PASS | CSS custom properties have zero runtime cost; no new JS computations |
-| VI. Unified Media Experience | PASS | Photo Wall and Photo Viewer interaction fixes improve media browsing |
-| VII. Map-Centric Integration | PASS | Controls remain as map overlays; panels minimize to preserve map view |
+| Principle | Status | Compliance |
+|-----------|--------|------------|
+| I. Privacy by Default | PASS | No analytics, tracking, or external data transmission added |
+| II. Static & Zero-Config | PASS | All changes are CSS/JS edits to existing static files. No new dependencies, APIs, or build steps |
+| III. Approachable by Everyone | PASS | Core goal — enlarging touch targets, improving discoverability, fixing non-functional buttons |
+| IV. Professional Visual Polish | PASS | Core goal — design tokens, consistent typography, unified color palette, smooth transitions |
+| V. Performant at Any Scale | PASS | Removing duplicate route rendering (28→14 polylines) improves performance. CSS custom properties have negligible overhead |
+| VI. Unified Media Experience | PASS | Photo Viewer close button fix (FR-009) restores full viewing workflow |
+| VII. Map-Centric Integration | PASS | All changes are overlays/panels on the single map surface. Route line cleanup keeps map as hero element |
+| Technology Constraints | PASS | Vanilla JS + CSS only. No new vendored libs. No build step. |
 
-No violations. No complexity tracking entries needed.
+**Gate result**: ALL PASS — no violations.
 
 ## Project Structure
 
@@ -42,122 +43,133 @@ No violations. No complexity tracking entries needed.
 ```text
 specs/009-ux-ui-audit/
 ├── plan.md              # This file
-├── research.md          # Phase 0 output — code audit findings
-├── data-model.md        # Phase 1 output — N/A (no data changes)
-├── quickstart.md        # Phase 1 output — testing setup guide
-└── tasks.md             # Phase 2 output (created by /speckit.tasks)
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output (minimal — no new entities)
+├── quickstart.md        # Phase 1 output
+└── tasks.md             # Phase 2 output (/speckit.tasks)
 ```
 
-### Source Code (files to modify)
+### Source Code (files touched)
 
 ```text
 css/
-├── map.css              # Design tokens, panel-toggle position, control-panel defaults,
-│                        #   feed hiding, z-index fixes, touch targets, legacy color replacement
-├── photo-wall.css       # Photo Wall token consumption, reopen button z-index,
-│                        #   drag handle visibility, typography fixes
-├── photo-viewer.css     # Close button pointer-events fix, token consumption
-└── Leaflet.Photo.css    # Popup color fixes (legacy #666/#333 replacement)
+├── photo-wall.css       # Design tokens (already partially defined here), wall styling
+├── map.css              # Controls panel, feed sidebar, timeline, toggles, popups
+├── photo-viewer.css     # Viewer overlay, close/nav buttons, info panel
+├── Leaflet.Photo.css    # Photo markers, cluster badges
+├── MarkerCluster.css    # Cluster animations (minor)
+└── MarkerCluster.Default.css  # Cluster colors (minor)
 
 js/
-└── photo-wall.js        # Drag-to-close (hidden snap target), reopen button reliability
+├── photo-wall.js        # Photo Wall close/reopen/drag behavior
+├── photo-viewer.js      # Viewer open/close, pointer-events fix
+└── route-builder.js     # Smart routes (sole renderer after cleanup)
 
-index.html               # Control panel default state (add 'hidden' class),
-                         #   toggle button initial display
+index.html               # Controls panel, feed sidebar, route toggle, legacy route removal
 ```
 
-**Structure Decision**: No new files created. All changes are modifications to existing CSS/JS/HTML files. Design tokens are defined as CSS custom properties in `css/map.css` `:root` block (already partially exists with `--color-accent`, `--z-*` variables).
+**Structure Decision**: Existing single-page structure. No new files created — all work is edits to existing CSS and JS files. Design tokens are centralized in `css/photo-wall.css` `:root` block and consumed via `var()` references across all CSS files.
 
-## Change Inventory
+## Implementation Approach
 
-### Group A: Bug Fixes (P0 — must ship)
+### Layer 1: Design Token Foundation (FR-006, FR-014)
 
-| ID | File(s) | Change | FR |
-|----|---------|--------|----|
-| A1 | `css/map.css` | Hide Trip Feed: add `display:none!important` to `.feed-sidebar`, `.feed-toggle` | FR-017 |
-| A2 | `js/photo-wall.js` | Drag-to-close: in `_onPointerUp`, when `currentState === 'collapsed'` and velocity > 400 downward, snap to `'hidden'` instead of staying at `'collapsed'` | FR-020 |
-| A3 | `js/photo-wall.js` | Ensure reopen button visibility toggle fires reliably in `_onSnapStateChange` for all close paths | FR-002, FR-021 |
-| A4 | `css/map.css`, `index.html` | Control panel defaults to closed: add `hidden` class to panel element, show toggle button by default | FR-019 |
-| A5 | `css/map.css` | Move `.panel-toggle` to top-left on mobile (override `bottom`/`right` with `top: 10px; left: 10px`) | FR-018 |
-| A6 | `css/photo-wall.css` | Ensure `.photo-wall-reopen-btn` z-index is above all other bottom-positioned elements | FR-021 |
+**Current state**: Design tokens partially exist in `photo-wall.css` `:root`:
+- Colors: `--color-accent`, `--color-text`, `--color-bg-panel`, etc.
+- Z-index: `--z-panel` through `--z-viewer-controls`
+- Timing: `--duration-fast/normal/slow`, `--easing-enter/standard`
 
-### Group B: Design Token System (P1)
+**Needed**: Extend token coverage and migrate all hardcoded values:
+1. **Move tokens to a shared location** — keep in `photo-wall.css` `:root` since it loads first and is already the token home
+2. **Add missing tokens**: font-size scale (rationalize 12 sizes → 6), spacing scale, border-radius
+3. **Migrate consumers**: Replace hardcoded hex colors, font-sizes, transitions in `map.css`, `photo-viewer.css`, `Leaflet.Photo.css` with `var()` references
+4. **Scope exclusions**: Route segment colors from `trip_segments.json` remain data-driven (per clarification)
 
-| ID | File(s) | Change | FR |
-|----|---------|--------|----|
-| B1 | `css/map.css` | Define complete `:root` token set: colors, font sizes (6-tier scale), transition durations, easing functions, z-index layers | FR-006 |
-| B2 | `css/map.css`, `css/photo-wall.css`, `css/photo-viewer.css` | Replace all hardcoded values with token references | FR-006 |
-| B3 | `css/map.css` | Declare `font-family` on `body` using system font stack | FR-001 |
-| B4 | `css/map.css`, `css/Leaflet.Photo.css` | Replace legacy `#666`, `#333` with dark-theme token values | FR-007 |
-| B5 | All CSS files | Unify gold hover color to single `--color-accent-hover` token | FR-011 |
-
-### Group C: Touch Target & Accessibility (P1)
-
-| ID | File(s) | Change | FR |
-|----|---------|--------|----|
-| C1 | `css/map.css` | Accordion `<summary>` elements: `min-height: 44px; padding` | FR-004 |
-| C2 | `css/map.css` | Radio/checkbox label rows: `min-height: 44px` | FR-005 |
-| C3 | `css/photo-wall.css`, `css/photo-viewer.css` | Close buttons: ensure 44x44px minimum on mobile | FR-003 |
-
-### Group D: Z-Index & Layering (P2)
-
-| ID | File(s) | Change | FR |
-|----|---------|--------|----|
-| D1 | `css/map.css` | Define z-index token scale: map(0) < markers(100) < panels(1000) < controls(1001) < viewer(1100) | FR-008 |
-| D2 | `css/photo-viewer.css` | Fix close button `pointer-events` so media container doesn't intercept clicks | FR-009 |
-| D3 | `css/map.css`, `css/photo-wall.css` | Ensure reopen buttons don't overlap on mobile | FR-010 |
-
-### Group E: Visual Polish (P3)
-
-| ID | File(s) | Change | FR |
-|----|---------|--------|----|
-| E1 | `css/photo-wall.css` | Header left padding matches control panel header | FR-012 |
-| E2 | All CSS files | Unify transition durations to token values | FR-013 |
-| E3 | `css/photo-wall.css` | Increase drag handle visual presence (taller bar, more opacity) | FR-016 |
-| E4 | `css/photo-wall.css` | Increase collapsed state height on mobile for 2+ thumbnail rows | FR-015 |
-
-## Implementation Order
-
-```
-Phase 1: Bug Fixes (A1–A6)
-  ├── A1 (Trip Feed hide) — independent
-  ├── A4 + A5 (Settings panel + button) — independent
-  └── A2 + A3 + A6 (Photo Wall close/reopen cycle) — dependent chain
-
-Phase 2: Design Tokens (B1–B5)
-  ├── B1 (Define tokens) — must come first
-  ├── B3 (Body font-family) — independent
-  └── B2 + B4 + B5 (Token consumption) — depends on B1
-
-Phase 3: Touch Targets (C1–C3) — independent of Phase 2
-
-Phase 4: Z-Index & Layering (D1–D3) — should follow B1 for token references
-
-Phase 5: Visual Polish (E1–E4) — should follow B1 for token references
+**Font size scale** (rationalized from 12 to 6):
+```css
+--font-xs: 0.7rem;    /* ~11px — badges, timestamps */
+--font-sm: 0.8rem;    /* ~13px — secondary text, labels */
+--font-base: 0.875rem; /* 14px — body text, controls */
+--font-md: 1rem;       /* 16px — section headers, panel titles */
+--font-lg: 1.125rem;   /* 18px — panel headings */
+--font-xl: 1.25rem;    /* 20px — overlay titles (rare) */
 ```
 
-## Testing Strategy
+### Layer 2: Typography & Color Consistency (FR-001, FR-007, FR-011)
 
-**Dual-server parallel testing** per FR-022:
+1. **Global font-family on `body`** — already declared in `map.css` on `html, body`. Verify propagation to Photo Wall (currently inherits correctly after token work)
+2. **Font-family unification** — `photo-viewer.css` uses a slightly different stack (includes Roboto). Normalize to single stack
+3. **Legacy color removal** — search for `#666`, `#333`, and replace with token equivalents
+4. **Gold hover unification** — standardize `#e0b86a` vs `#e0b862` drift to single `--color-accent-hover`
 
-| Server | Viewport | Purpose |
-|--------|----------|---------|
-| `localhost:8000` | Desktop 1440x900 | Desktop visual verification |
-| `localhost:8001` | Mobile 375x812 | Mobile visual verification |
+### Layer 3: Touch Target Accessibility (FR-003, FR-004, FR-005)
 
-**Test after each phase:**
-1. Screenshot both viewports via Playwright MCP
-2. Verify phase-specific acceptance criteria
-3. Test panel open/close/reopen cycle on both viewports
-4. Confirm no regressions in unmodified panels
+**Current state**: Most touch targets already at 44px from previous work (commit `ecb157e`). Verify:
+- Panel close buttons: 44px on mobile ✓
+- Accordion headers: `min-height: 44px` on mobile ✓
+- Layer option rows: `min-height: 44px` on mobile ✓
+- Photo popup link ("View on Google Photos"): needs verification
 
-**Key interaction tests:**
-- Photo Wall: X close → reopen button appears → click reopen → wall returns to collapsed
-- Photo Wall: drag down fast from collapsed → snaps to hidden → reopen button appears
-- Photo Wall: drag down slow from collapsed → snaps back to collapsed (not hidden)
-- Settings: page load → panel closed → click toggle → panel opens → click toggle → closes
-- Settings button: visible at top-left on both desktop and mobile, no overlap with Photo Wall
+**Remaining**: Audit any elements missed in previous pass. Photo Wall collapse/close buttons are 28px on desktop but 44px on mobile — this is intentional (desktop has mouse precision).
+
+### Layer 4: Z-Index & Layering Fixes (FR-008, FR-009, FR-010)
+
+**Current token hierarchy**:
+```
+--z-panel:          1000  (feed sidebar, controls panel)
+--z-panel-controls: 1001  (internal panel controls)
+--z-panel-toggle:   1002  (toggle buttons)
+--z-panel-full:     1003  (photo wall full-screen)
+--z-viewer:         2000  (photo viewer overlay)
+--z-viewer-controls:2001  (photo viewer UI)
+```
+
+**Fixes needed**:
+1. Trip Feed z-index conflict with Photo Wall → resolved by hiding Trip Feed (FR-017)
+2. Photo Viewer close button intercepted by media container → add `pointer-events: none` to media wrapper, `pointer-events: auto` on close button
+3. Mobile reopen button overlap → ensure stacking context separates Controls toggle and Photo Wall reopen button positions
+
+### Layer 5: Photo Wall Interaction Fixes (FR-002, FR-020, FR-021)
+
+**Close button** (FR-002): Already wired in `photo-wall.js:512-517` — verify it triggers `snapTo('hidden')` and the reopen button gets `.visible` class
+
+**Velocity-based drag-to-close** (FR-020):
+- Photo Wall PanelSnap already implements drag with snap points
+- Need to add velocity detection: track pointer positions over time, compute velocity on pointerup
+- If velocity > 400px/s downward past collapsed state → `snapTo('hidden')`
+- If slow drag below collapsed → snap back to `collapsed`
+
+**Gold reopen button** (FR-021): Already in `photo-wall.js:520-525` — verify `.visible` class toggles correctly and button is not obscured by z-index conflicts
+
+### Layer 6: Route Rendering Cleanup (FR-023)
+
+**The bug**: `index.html` contains two route-rendering systems:
+1. Line 890: `buildSmartRoutes()` → smart waypoint-based routes (14 polylines)
+2. Lines 924-968: Legacy straight city-to-city lines (14 more polylines)
+
+Both are added to the map simultaneously (28 total SVG paths). Line 967 overwrites `travelRouteLayer` with legacy routes, so the Map Layers toggle only controls legacy routes while smart routes stay permanently visible.
+
+**Fix**:
+1. Delete lines 924-968 (legacy route code + `calcBearing` duplicate + `arrowMarkers` array)
+2. Delete the zoom-based arrow handler that references the now-deleted `arrowMarkers` (lines 971-979) — this is handled inside `route-builder.js` already
+3. `travelRouteLayer` remains set from line 890 (smart routes) — the route toggle at line 1157 will correctly control smart routes
+4. Verify: 14 polylines rendered (not 28), toggle works
+
+### Layer 7: Panel Visibility Defaults (FR-017, FR-018, FR-019)
+
+1. **Hide Trip Feed** (FR-017): Add `display: none` to `#feed-sidebar` and `#feed-toggle` in CSS
+2. **Controls toggle position** (FR-018): Verify top-left placement on both viewports
+3. **Controls closed on load** (FR-019): Already starts with `hidden` class — verify
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Token migration breaks existing styles | Medium | High | Incremental migration with Playwright screenshots after each file |
+| Velocity drag calculation inaccurate | Low | Medium | Use pointer event timestamps; test with Playwright slow/fast gestures |
+| Removing legacy routes breaks toggle | Low | High | Verify `travelRouteLayer` reference chain before and after deletion |
+| Z-index changes create new conflicts | Low | Medium | Test all panel combinations at both viewports |
 
 ## Complexity Tracking
 
-No constitution violations. No complexity justifications needed.
+> No constitution violations — table not needed.

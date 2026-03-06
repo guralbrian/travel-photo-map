@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `/specs/009-ux-ui-audit/`
 **Prerequisites**: plan.md, spec.md, research.md, quickstart.md
-**Updated**: 2026-03-03 — added bug fix tasks from clarification session
+**Updated**: 2026-03-03 — added bug fix tasks from clarification session + legacy route code removal (FR-023)
 
 **Tests**: Not requested. Visual verification via Playwright screenshots using dual-server setup (localhost:8000 for desktop 1440x900, localhost:8001 for mobile 375x812).
 
@@ -48,11 +48,16 @@
 
 - [x] T006 [P] Ensure gold reopen button z-index is above all bottom-positioned elements in `css/photo-wall.css`: set explicit `z-index: var(--z-panel-toggle)` on `.photo-wall-reopen-btn` (currently no explicit z-index, ~line 454). Verify button positioning doesn't overlap with settings toggle after reposition (settings now top-left, reopen stays bottom-right).
 
+### Legacy Route Code Removal
+
+- [x] T006b [P] Remove legacy straight-line route rendering code from `index.html`: delete lines 924-979 (legacy route loop with direct city-to-city lines, duplicate `calcBearing` function, `arrowMarkers` array, and zoom-based arrow handler). Keep smart routes initialization at line 890-891 intact. After removal, `travelRouteLayer` correctly references smart routes and the Map Layers toggle controls them (FR-023, SC-015, Research #11)
+
 ### Phase 2 Verification
 
 - [x] T007 Verify all bug fixes via Playwright on both servers: (a) localhost:8000 at 1440x900 — Trip Feed not visible, settings panel closed on load, settings button at top-left, Photo Wall X close shows reopen button, reopen button click restores wall. (b) localhost:8001 at 375x812 — same checks plus: settings button at top-left with no overlap, fast flick down from collapsed snaps to hidden, slow drag back snaps to collapsed, reopen button visible and tappable after close.
+- [x] T007b Verify legacy route removal via Playwright: confirm only 14 SVG path elements in `.leaflet-overlay-pane` (not 28), verify route toggle in Map Layers correctly shows/hides smart routes, confirm no console errors related to routes (SC-015)
 
-**Checkpoint**: All 6 bugs fixed. SC-010, SC-011, SC-012, SC-013, SC-014 satisfied.
+**Checkpoint**: All 7 bugs fixed. SC-010, SC-011, SC-012, SC-013, SC-014, SC-015 satisfied.
 
 ---
 
@@ -113,7 +118,7 @@
 
 - [x] T024 Full interaction walkthrough at desktop (localhost:8000 at 1440x900): load page → settings closed → click settings toggle → panel opens → close → Photo Wall visible → X close → reopen button appears → click reopen → wall returns → no Trip Feed visible anywhere
 - [x] T025 Full interaction walkthrough at mobile (localhost:8001 at 375x812): load page → settings closed, button at top-left → Photo Wall collapsed → fast flick down → snaps to hidden → reopen button visible → tap reopen → wall returns to collapsed → slow drag down → snaps back to collapsed → no Trip Feed visible
-- [x] T026 Compare before/after screenshots. Confirm all success criteria: SC-001 through SC-014.
+- [x] T026 Compare before/after screenshots. Confirm all success criteria: SC-001 through SC-015 (including route deduplication).
 
 ---
 
@@ -138,9 +143,11 @@ Batch 1 (parallel — different files):
   T004: css/map.css (settings button — different section from T002)
   T005: js/photo-wall.js (drag-to-close)
   T006: css/photo-wall.css (reopen button z-index)
+  T006b: index.html (legacy route removal — different section from T003)
 
 Batch 2 (sequential — depends on Batch 1):
-  T007: Playwright verification of all changes
+  T007: Playwright verification of bug fixes
+  T007b: Playwright verification of route deduplication
 ```
 
 Note: T002 and T004 both modify `css/map.css` but in completely different sections (feed rules ~line 638 vs mobile media query ~line 899), so they can be done in one edit session without conflicts.
@@ -159,9 +166,9 @@ Note: T002 and T004 both modify `css/map.css` but in completely different sectio
 ### Execution
 
 Since Phases 3–7 are already complete, the remaining work is:
-1. **6 new tasks** (T002–T007) in Phase 2
+1. **2 new tasks** (T006b, T007b) in Phase 2 — legacy route removal + verification
 2. **3 verification tasks** (T024–T026) in Phase 8
-3. **Total: 9 tasks remaining** out of 26
+3. **Total: 5 tasks remaining** out of 28
 
 ---
 

@@ -35,7 +35,7 @@ python3 -m http.server 8001
 | `css/photo-viewer.css` | Token consumption, close button pointer-events fix, touch targets |
 | `css/Leaflet.Photo.css` | Popup color fixes (legacy #666/#333 replacement) |
 | `js/photo-wall.js` | Drag-to-close snap logic (add 'hidden' target for fast flick from collapsed) |
-| `index.html` | Control panel default state: add `hidden` class, show toggle button, remove `open` class |
+| `index.html` | Control panel default state, **remove legacy route code (lines 924-979)** |
 
 ## Verification Checklist
 
@@ -49,6 +49,8 @@ After each phase, use Playwright MCP to screenshot both servers:
 - [ ] Photo Wall fast flick down from collapsed → snaps to hidden
 - [ ] Photo Wall slow drag down from collapsed → snaps back to collapsed
 - [ ] Gold reopen button visible and tappable after any close action
+- [ ] Only 14 route polylines rendered (not 28) — legacy route code removed
+- [ ] Route toggle in Map Layers controls smart routes
 
 ### Design Tokens (Phase 2)
 - [ ] All panels render in system font (no Times New Roman)
@@ -68,7 +70,7 @@ After each phase, use Playwright MCP to screenshot both servers:
 
 ## Implementation Order
 
-1. **Phase 1**: Bug fixes — Trip Feed hide, settings defaults, Photo Wall close/reopen cycle
+1. **Phase 1**: Bug fixes — Trip Feed hide, settings defaults, Photo Wall close/reopen cycle, legacy route removal
 2. **Phase 2**: Design tokens — `:root` token definitions, body font, legacy color replacement
 3. **Phase 3**: Touch targets + z-index fixes
 4. **Phase 4**: Visual polish — collapsed height, drag handle, padding consistency

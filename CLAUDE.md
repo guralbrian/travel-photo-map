@@ -15,6 +15,7 @@ Auto-generated from all feature plans. Last updated: 2026-02-20
 - Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored) — no new dependencies (008-ui-ux-polish)
 - N/A — pure visual changes, no data changes (008-ui-ux-polish)
 - N/A — pure visual changes, no data persistence (009-ux-ui-audit)
+- Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies (009-ux-ui-audit)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -39,9 +40,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 009-ux-ui-audit: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies
 - 009-ux-ui-audit: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored) — no new dependencies
 - 009-ux-ui-audit: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored) — no new dependencies
-- 008-ui-ux-polish: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored) — no new dependencies
 
 
 <!-- MANUAL ADDITIONS START -->

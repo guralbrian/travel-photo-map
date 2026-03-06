@@ -90,9 +90,9 @@ This chains: full→half, half→collapsed, collapsed→hidden for successive fa
 
 ### 7. CSS Custom Properties Scope
 
-**Decision**: Expand the existing `:root` block in `css/map.css` (which already has `--color-accent`, `--z-panel-*`, etc.) to include the complete token set.
+**Decision**: Keep all design tokens in the existing `:root` block in `css/photo-wall.css` (line 7), which already defines colors, z-index, font sizes, durations, and easing tokens.
 
-**Rationale**: `css/map.css` already defines the primary design tokens in `:root` (lines 1-75). `css/photo-wall.css` also has some `:root` variables. Consolidating all shared tokens into `map.css` (which loads first) and keeping photo-wall-specific tokens in `photo-wall.css` maintains clear ownership.
+**Rationale**: `css/photo-wall.css` is the canonical token home — it already defines the complete set of shared tokens (colors, z-index layers, font scale, timing). All other CSS files (`map.css`, `photo-viewer.css`) already consume these tokens via `var()`. No file reorganization needed.
 
 **Token scale**:
 - **Font sizes**: `--font-xs` (11px), `--font-sm` (12px), `--font-base` (13px), `--font-md` (15px), `--font-lg` (16px), `--font-xl` (20px)
@@ -132,3 +132,24 @@ This chains: full→half, half→collapsed, collapsed→hidden for successive fa
 2. `python3 -m http.server 8001` — mobile testing at 375x812
 3. After each change: navigate to port 8000, resize to 1440x900, screenshot; then navigate to port 8001, resize to 375x812, screenshot
 4. Both servers serve identical files — the viewport size is the differentiator
+
+### 11. Legacy Route Code Duplication (NEW — discovered via Playwright)
+
+**Decision**: Remove legacy straight-line route rendering code at `index.html:924-968` and its associated arrow handler at lines 971-979. The smart route builder (`route-builder.js`) becomes the sole route renderer.
+
+**Rationale**: Playwright visual inspection + DOM analysis revealed 28 SVG path elements on the map — exactly double the expected 14. Every route color has 4 polylines (2 smart bg+fg + 2 legacy bg+fg). The legacy code at lines 924-968 draws direct city-to-city straight lines ON TOP of the smart waypoint-based routes from `route-builder.js`. Additionally, line 967 (`travelRouteLayer = routeGroup`) overwrites the smart routes reference, causing the Map Layers toggle to only control legacy routes while smart routes stay permanently visible.
+
+**Implementation**:
+1. Delete `index.html` lines 924-979 (legacy route loop, `calcBearing` duplicate, `arrowMarkers` array, zoom-based arrow handler)
+2. Keep line 890 (`travelRouteLayer = buildSmartRoutes(...)`) and line 891 (`travelRouteLayer.addTo(map)`) — these set up the smart routes
+3. The route toggle at line 1157 (`routeToggle.addEventListener('change', ...)`) references `travelRouteLayer`, which will now correctly point to the smart routes layer
+4. `route-builder.js` already handles its own arrow marker zoom visibility (lines 369-377), so the deleted zoom handler is redundant
+
+**Verification**: After removal, confirm:
+- 14 SVG path elements (down from 28)
+- Route toggle in Map Layers correctly shows/hides smart routes
+- No console errors
+
+**Alternatives considered**:
+- Keep both behind a toggle: Rejected — user clarification explicitly chose "remove legacy entirely"
+- Move smart routes to control both: Over-engineering — the smart route builder already handles the "no transit photos" case with straight city-to-city fallback

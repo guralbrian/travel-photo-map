@@ -921,64 +921,6 @@
                         }
                     }
 
-                    // Draw intercity travel route (two-layer polylines + arrows)
-                    var arrowMarkers = [];
-                    if (tripSegments.length > 1) {
-                        var routeGroup = L.layerGroup();
-
-                        function calcBearing(lat1, lng1, lat2, lng2) {
-                            var dLng = (lng2 - lng1) * Math.PI / 180;
-                            var lat1r = lat1 * Math.PI / 180;
-                            var lat2r = lat2 * Math.PI / 180;
-                            var y = Math.sin(dLng) * Math.cos(lat2r);
-                            var x = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
-                            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-                        }
-
-                        for (var ri = 0; ri < tripSegments.length - 1; ri++) {
-                            var from = tripSegments[ri];
-                            var to = tripSegments[ri + 1];
-                            var coords = [[from.lat, from.lng], [to.lat, to.lng]];
-
-                            // Background: solid, thick, subtle
-                            var bgLine = L.polyline(coords, { color: from.color, weight: 5, opacity: 0.3, lineCap: 'round' });
-                            bgLine.bindPopup(from.name + ' \u2192 ' + to.name);
-                            routeGroup.addLayer(bgLine);
-
-                            // Foreground: dashed, animated flow
-                            var fgLine = L.polyline(coords, { color: from.color, weight: 3, opacity: 0.7, dashArray: '8, 12', className: 'route-line-animated' });
-                            routeGroup.addLayer(fgLine);
-
-                            // Arrow marker at midpoint
-                            var midLat = (from.lat + to.lat) / 2;
-                            var midLng = (from.lng + to.lng) / 2;
-                            var bearing = calcBearing(from.lat, from.lng, to.lat, to.lng);
-                            var arrowIcon = L.divIcon({
-                                className: 'route-arrow-icon',
-                                html: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 L14 13 L8 9 L2 13 Z" fill="' + from.color + '" opacity="0.85" transform="rotate(' + bearing + ', 8, 8)"/></svg>',
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
-                            });
-                            var arrowMk = L.marker([midLat, midLng], { icon: arrowIcon, interactive: false });
-                            arrowMarkers.push(arrowMk);
-                            routeGroup.addLayer(arrowMk);
-                        }
-
-                        travelRouteLayer = routeGroup;
-                        routeGroup.addTo(map);
-                    }
-
-                    // Show/hide arrow markers based on zoom level
-                    map.on('zoomend', function () {
-                        var zoom = map.getZoom();
-                        for (var ai = 0; ai < arrowMarkers.length; ai++) {
-                            var el = arrowMarkers[ai].getElement ? arrowMarkers[ai].getElement() : null;
-                            if (el) {
-                                el.style.display = zoom < 4 ? 'none' : '';
-                            }
-                        }
-                    });
-
                     // Build unique sorted dates
                     var dateSet = {};
                     for (var i = 0; i < allPhotos.length; i++) {
