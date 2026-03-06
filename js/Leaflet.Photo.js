@@ -71,22 +71,50 @@ L.Photo.Icon = L.Icon.extend({
 
     createIcon: function () {
         var el = document.createElement('div');
-        var img = document.createElement('img');
-        el.appendChild(img);
+
+        // Support tier-based sizing (new) with fallback to legacy iconSize
+        var frameSize, stemHeight, tier;
+        if (this.options.frameSize !== undefined) {
+            frameSize = this.options.frameSize;
+            stemHeight = this.options.stemHeight || 0;
+            tier = this.options.tier !== undefined ? this.options.tier : 0;
+        } else {
+            frameSize = this.options.iconSize[0];
+            stemHeight = 0;
+            tier = 0;
+        }
+
+        // Set iconSize to total element dimensions for Leaflet's internal positioning
+        this.options.iconSize = [frameSize, frameSize + stemHeight];
+
+        // iconAnchor: stemmed markers anchor at stem tip; stemless anchor at frame center
+        if (tier > 0 && stemHeight > 0) {
+            this.options.iconAnchor = [Math.round(frameSize / 2), frameSize + stemHeight];
+        } else {
+            this.options.iconAnchor = [Math.round(frameSize / 2), Math.round(frameSize / 2)];
+        }
+
         this._setIconStyles(el, 'icon');
+        el.classList.add('marker-tier-' + tier);
 
-        el.style.width = this.options.iconSize[0] + 'px';
-        el.style.height = this.options.iconSize[1] + 'px';
+        // Inner frame div — clips photo and contains all badges
+        var frameInner = document.createElement('div');
+        frameInner.className = 'photo-frame-inner';
+        frameInner.style.width = frameSize + 'px';
+        frameInner.style.height = frameSize + 'px';
+        el.appendChild(frameInner);
 
+        var img = document.createElement('img');
         img.src = this.options.thumbnail || '';
-        img.style.width = this.options.iconSize[0] + 'px';
-        img.style.height = this.options.iconSize[1] + 'px';
+        img.style.width = frameSize + 'px';
+        img.style.height = frameSize + 'px';
+        frameInner.appendChild(img);
 
         if (this.options.isVideo) {
             var badge = document.createElement('span');
             badge.className = 'photo-video-badge';
             badge.textContent = '\u25B6';
-            el.appendChild(badge);
+            frameInner.appendChild(badge);
         }
 
         if (this.options.isFavorite) {
@@ -94,21 +122,21 @@ L.Photo.Icon = L.Icon.extend({
             var favBadge = document.createElement('span');
             favBadge.className = 'photo-favorite-badge';
             favBadge.textContent = '\u2605';
-            el.appendChild(favBadge);
+            frameInner.appendChild(favBadge);
         }
 
         if (this.options.hasCaption) {
             var notesBadge = document.createElement('span');
             notesBadge.className = 'photo-notes-badge';
             notesBadge.textContent = '\uD83D\uDCAC';
-            el.appendChild(notesBadge);
+            frameInner.appendChild(notesBadge);
         }
 
         if (this.options.hiddenCount && this.options.hiddenCount > 0) {
             var countBadge = document.createElement('span');
             countBadge.className = 'photo-cluster-count';
-            countBadge.textContent = '+' + this.options.hiddenCount;
-            el.appendChild(countBadge);
+            countBadge.textContent = '' + this.options.hiddenCount;
+            frameInner.appendChild(countBadge);
         }
 
         return el;

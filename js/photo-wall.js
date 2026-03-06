@@ -539,6 +539,36 @@
         this._onTargetDate(date);
     };
 
+    PhotoWall.prototype.setPhotos = function (photos) {
+        this._photos = photos || [];
+
+        // Remove all rendered items and headers
+        var staleEls = this._scrollEl.querySelectorAll('.photo-wall-item, .photo-wall-section-header');
+        staleEls.forEach(function (el) { el.parentNode.removeChild(el); });
+        this._activeItems.clear();
+
+        // Remove empty state if present
+        var emptyEl = this._scrollEl.querySelector('.photo-wall-empty');
+        if (emptyEl) emptyEl.parentNode.removeChild(emptyEl);
+
+        // Rebuild layout from scratch
+        this._buildLayout();
+
+        if (this._isEmpty) {
+            var emptyDiv = document.createElement('div');
+            emptyDiv.className = 'photo-wall-empty';
+            emptyDiv.innerHTML = '<span>No photos to display</span>';
+            this._scrollEl.appendChild(emptyDiv);
+            if (this._spacerEl) this._spacerEl.style.height = '0px';
+        } else {
+            if (this._spacerEl) this._spacerEl.style.height = this._layout.totalHeight + 'px';
+            this._renderVisibleRows();
+        }
+
+        this._scrubber.updateSections(this._sections);
+        this._scrollEl.scrollTop = 0;
+    };
+
     PhotoWall.prototype.relayout = function () {
         if (!this._layout) return;
         const newWidth = Math.max(100, this._scrollEl.clientWidth - SCRUBBER_WIDTH);

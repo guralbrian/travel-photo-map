@@ -1,10 +1,20 @@
+/* Outer marker container — includes frame area + stem space below.
+   filter: drop-shadow traces the actual shape (frame + triangle), so both get a shadow. */
 .leaflet-marker-photo {
-    border: none;
-    border-radius: 3px;
-    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
     background-color: transparent;
     cursor: pointer;
+    overflow: visible;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+/* Inner frame div — clips photo thumbnail and contains badges.
+   z-index: 1 ensures it paints above the ::after stem pseudo-element. */
+.photo-frame-inner {
+    position: relative;
     overflow: hidden;
+    border-radius: 6px;
+    border: 3px solid white;
+    z-index: 1;
 }
 
 .leaflet-marker-photo img {
@@ -12,17 +22,51 @@
     object-fit: cover;
 }
 
+/* ── Pointer stems: tiers 1–3 get a downward-pointing CSS triangle ── */
+.marker-tier-1::after,
+.marker-tier-2::after,
+.marker-tier-3::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.marker-tier-1::after {
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 12px solid white;
+}
+
+.marker-tier-2::after {
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 14px solid white;
+}
+
+.marker-tier-3::after {
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 16px solid white;
+}
+
+/* Tier 0 — single photo, no stem needed */
+.marker-tier-0::after {
+    display: none;
+}
+
 .photo-cluster-count {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
-    background: rgba(0, 0, 0, 0.75);
+    bottom: 6px;
+    right: 6px;
+    background: none;
     color: #fff;
-    font: bold 11px/1 "Helvetica Neue", Arial, sans-serif;
-    padding: 3px 5px;
-    border-radius: 8px;
-    min-width: 14px;
-    text-align: center;
+    font: bold 13px/1 "Helvetica Neue", Arial, sans-serif;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.7);
     pointer-events: none;
     z-index: 1;
 }
@@ -52,14 +96,28 @@
 
 /* Favorite marker styles */
 .photo-marker-favorite {
-    border: 3px solid #d4a853 !important;
-    box-shadow: 0 0 8px rgba(212, 168, 83, 0.6), 1px 1px 3px rgba(0, 0, 0, 0.4);
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 10px rgba(212, 168, 83, 0.55));
+}
+
+.photo-marker-favorite .photo-frame-inner {
+    border-color: #d4a853;
+}
+
+/* Gold pointer stem for favorite clusters */
+.photo-marker-favorite.marker-tier-1::after {
+    border-top-color: #d4a853;
+}
+.photo-marker-favorite.marker-tier-2::after {
+    border-top-color: #d4a853;
+}
+.photo-marker-favorite.marker-tier-3::after {
+    border-top-color: #d4a853;
 }
 
 .photo-favorite-badge {
     position: absolute;
-    top: -6px;
-    left: -6px;
+    top: 2px;
+    left: 2px;
     color: #d4a853;
     font-size: 14px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -70,8 +128,8 @@
 /* Notes/caption emblem */
 .photo-notes-badge {
     position: absolute;
-    bottom: -4px;
-    left: -4px;
+    bottom: 2px;
+    left: 2px;
     font-size: 11px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
     pointer-events: none;

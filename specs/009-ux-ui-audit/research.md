@@ -153,3 +153,66 @@ This chains: full→half, half→collapsed, collapsed→hidden for successive fa
 **Alternatives considered**:
 - Keep both behind a toggle: Rejected — user clarification explicitly chose "remove legacy entirely"
 - Move smart routes to control both: Over-engineering — the smart route builder already handles the "no transit photos" case with straight city-to-city fallback
+
+### 12. Apple Maps-Style Photo Marker — Icon Anchor
+
+**Decision**: Use `iconAnchor` on `L.Photo.Icon` to position the marker so the pointer stem tip aligns with the GPS coordinate.
+
+**Rationale**: Leaflet's `L.Icon` supports `iconAnchor: [x, y]` — the pixel offset from the top-left of the icon element that sits on the lat/lng point. For stemmed markers: `iconAnchor = [frameWidth/2, frameHeight + stemHeight]`. For stemless (single photo): `iconAnchor = [frameWidth/2, frameHeight/2]`. This is the standard Leaflet pattern for pointer-style markers.
+
+**Alternatives considered**:
+- CSS `transform: translateY()` — conflicts with Leaflet's internal pixel positioning during pan/zoom.
+- Separate overlay layer for stems — doubles DOM elements, synchronization complexity.
+
+### 13. Pointer Stem Visual Implementation
+
+**Decision**: CSS `::after` pseudo-element on the **outer** container creates the triangle. The white border and photo clip live on `.photo-frame-inner` (the inner div). Shadow uses `filter: drop-shadow` on the outer container so it traces both the frame shape and the triangle.
+
+**Key implementation details**:
+- Border (`3px solid white`) and `border-radius: 6px` are on `.photo-frame-inner`, not on `.leaflet-marker-photo`. This prevents the border from wrapping the transparent stem area.
+- `filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45))` on `.leaflet-marker-photo` traces the actual alpha shape (frame + triangle) for a unified shadow. Using `box-shadow` instead would only shadow the rectangular bounding box.
+- `.photo-frame-inner` requires `z-index: 1` to paint above the `::after` pseudo-element. Without it, the absolutely-positioned `::after` renders on top of the photo in DOM paint order, visually overlapping the bottom of the thumbnail.
+- The outer `.leaflet-marker-photo` has `overflow: visible` and no border/shadow of its own.
+
+**Alternatives considered**:
+- `box-shadow` on outer container — only shadows the rectangle, stem gets no shadow.
+- `filter: drop-shadow` on `::after` directly — pseudo-elements don't support `filter` reliably.
+- Inline SVG path — heavier DOM, no benefit for a simple triangle.
+- Canvas — requires per-marker JS rendering, incompatible with CSS animations.
+
+### 14. Adaptive Size Tier Configuration
+
+**Decision**: Four fixed tiers (0–3) with predetermined pixel dimensions.
+
+| Tier | Photo Count | Frame (px) | Stem (px) | Total Height | iconAnchor |
+|------|-------------|------------|-----------|-------------|------------|
+| 0 | 1 | 70×70 | 0 | 70 | [35, 35] |
+| 1 | 2–5 | 85×85 | 12 | 97 | [43, 97] |
+| 2 | 6–15 | 100×100 | 14 | 114 | [50, 114] |
+| 3 | 16+ | 115×115 | 16 | 131 | [58, 131] |
+
+**Rationale**: Current default icon size is 90×90. Tier 2 (85px) is close to the current default. Tier 1 (70px) reduces visual noise for solo photos. Tiers 3–4 progressively emphasize high-density clusters. Stem height scales proportionally.
+
+**Performance note**: Tier calculation is O(1). No impact on viewport sampling performance.
+
+### 15. Favorites Layer Integration
+
+**Decision**: Favorites render as tier-1-style markers (no stem) with gold border. Size is 80px (70 + 10px bonus, consistent with current `currentIconSize + 10`).
+
+**Rationale**: Favorites bypass ViewportSampler — individually placed via `L.Photo`, never clustered. They naturally map to "single photo" behavior. Gold (#d4a853) border replaces white frame border.
+
+### 16. Click Target for Stem Area
+
+**Decision**: The icon element's dimensions include the stem area (height = frame + stem). Leaflet routes clicks to the icon root element, so the full area (frame + stem) responds to clicks.
+
+**Rationale**: No extra event listeners or overlay divs needed. The existing Leaflet click handling works because the root element spans the entire marker height.
+
+### 17. Cluster Count Badge Styling
+
+**Decision**: Badge is positioned inside `.photo-frame-inner` at `bottom: 6px; right: 6px`. No background, no "+" prefix — just the number in bold white with a strong `text-shadow` for legibility against any photo.
+
+**Rationale**: A grey pill background felt cramped and added visual noise at small sizes. Text-shadow (`0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.7)`) provides sufficient contrast against light and dark thumbnails. Removing the "+" prefix reduces clutter since context (multiple photos visible) is already implied by the marker's stem.
+
+**Alternatives considered**:
+- Badge pill at top-right — rejected by user; felt cramped and competed with photo content.
+- Keeping "+" prefix — rejected by user; redundant given the visual context.

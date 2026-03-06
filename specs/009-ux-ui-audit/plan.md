@@ -1,40 +1,38 @@
-# Implementation Plan: UX/UI Audit Remediation
+# Implementation Plan: UX/UI Audit Remediation + Apple Maps-Style Markers
 
-**Branch**: `009-ux-ui-audit` | **Date**: 2026-03-03 | **Spec**: [spec.md](spec.md)
+**Branch**: `009-ux-ui-audit` | **Date**: 2026-03-06 | **Spec**: `specs/009-ux-ui-audit/spec.md`
 **Input**: Feature specification from `/specs/009-ux-ui-audit/spec.md`
 
 ## Summary
 
-Remediate all issues found during a comprehensive UX/UI audit across desktop (1440px) and mobile (375px) viewports. The work falls into six categories: (1) design token consolidation, (2) typography and color consistency, (3) touch target accessibility, (4) z-index and layering fixes, (5) Photo Wall interaction bug fixes, and (6) removal of duplicate route rendering code. All changes are pure frontend — CSS modifications, minor JS event wiring, and dead code removal. No new dependencies, data models, or backend changes.
+Two-part remediation: (1) fix existing UX/UI audit issues (design tokens, touch targets, z-index, close-button bug, legacy code removal) and (2) redesign photo map markers to an Apple Maps-style with white-bordered frames, downward pointer stems for clusters, and 4-tier adaptive sizing based on photo density.
 
 ## Technical Context
 
 **Language/Version**: Vanilla JavaScript (ES2020+), CSS3, HTML5
-**Primary Dependencies**: Leaflet.js (vendored), no new dependencies
-**Storage**: N/A — pure visual changes, no data persistence
-**Testing**: Playwright MCP visual regression (dual-viewport: 1440px desktop, 375px mobile)
-**Target Platform**: Static web app (any HTTP server, GitHub Pages)
-**Project Type**: Single-page web application
-**Performance Goals**: 60fps transitions, no layout shifts
-**Constraints**: No build step, no transpilation, no frameworks. System font stack only.
-**Scale/Scope**: ~7 CSS files (~2,200 lines), 1 HTML file, 3 JS files touched
+**Primary Dependencies**: Leaflet.js (vendored in `js/`), no new libraries
+**Storage**: N/A — reads `data/manifest.json` + `data/trip_segments.json` at runtime
+**Testing**: Playwright MCP screenshots at 1440px (desktop) and 375px (mobile)
+**Target Platform**: Modern browsers (static hosting, `python -m http.server`)
+**Project Type**: web (frontend-only static site)
+**Performance Goals**: 60fps map panning, <300ms marker rebuild on viewport change, smooth fade animations
+**Constraints**: No build step, no npm, no new external dependencies. All changes are CSS + vanilla JS within vendored Leaflet.Photo plugin and ViewportSampler.
+**Scale/Scope**: ~500 photos in manifest, ~50 visible markers at any zoom level
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-| Principle | Status | Compliance |
-|-----------|--------|------------|
-| I. Privacy by Default | PASS | No analytics, tracking, or external data transmission added |
-| II. Static & Zero-Config | PASS | All changes are CSS/JS edits to existing static files. No new dependencies, APIs, or build steps |
-| III. Approachable by Everyone | PASS | Core goal — enlarging touch targets, improving discoverability, fixing non-functional buttons |
-| IV. Professional Visual Polish | PASS | Core goal — design tokens, consistent typography, unified color palette, smooth transitions |
-| V. Performant at Any Scale | PASS | Removing duplicate route rendering (28→14 polylines) improves performance. CSS custom properties have negligible overhead |
-| VI. Unified Media Experience | PASS | Photo Viewer close button fix (FR-009) restores full viewing workflow |
-| VII. Map-Centric Integration | PASS | All changes are overlays/panels on the single map surface. Route line cleanup keeps map as hero element |
-| Technology Constraints | PASS | Vanilla JS + CSS only. No new vendored libs. No build step. |
-
-**Gate result**: ALL PASS — no violations.
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| I. Privacy by Default | PASS | No new data collection, no external services. Photo thumbnails already exist. |
+| II. Static & Zero-Config | PASS | All changes are CSS + JS in static files. No backend, no API keys. |
+| III. Approachable by Everyone | PASS | Apple Maps-style markers are universally recognized. Touch targets remain ≥44px. Pointer stems visually clarify photo location. |
+| IV. Professional Visual Polish | PASS | Core goal of this feature — white frames, consistent sizing tiers, smooth transitions. |
+| V. Performant at Any Scale | PASS | ViewportSampler density sampling unchanged. Marker DOM complexity increases marginally (one extra SVG/CSS element for stem). Size tiers are O(1) lookup. |
+| VI. Unified Media Experience | PASS | Click behavior unchanged — markers still open photo viewer. Video badges preserved. |
+| VII. Map-Centric Integration | PASS | All changes are on the map surface. No new pages or navigation. |
+| Tech Constraints | PASS | No new dependencies. All code in vendored `js/` and `css/` files. |
 
 ## Project Structure
 
@@ -44,132 +42,192 @@ Remediate all issues found during a comprehensive UX/UI audit across desktop (14
 specs/009-ux-ui-audit/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output (minimal — no new entities)
-├── quickstart.md        # Phase 1 output
-└── tasks.md             # Phase 2 output (/speckit.tasks)
+├── spec.md              # Feature specification
+└── tasks.md             # Phase 2 output (from /speckit.tasks)
 ```
 
-### Source Code (files touched)
+### Source Code (repository root)
 
 ```text
 css/
-├── photo-wall.css       # Design tokens (already partially defined here), wall styling
-├── map.css              # Controls panel, feed sidebar, timeline, toggles, popups
-├── photo-viewer.css     # Viewer overlay, close/nav buttons, info panel
-├── Leaflet.Photo.css    # Photo markers, cluster badges
-├── MarkerCluster.css    # Cluster animations (minor)
-└── MarkerCluster.Default.css  # Cluster colors (minor)
+├── Leaflet.Photo.css    # MODIFY: marker frame, pointer stem, tier sizes, favorites gold border
+├── map.css              # MODIFY: design tokens (already partially tokenized), legacy color fixes
+├── photo-wall.css       # MODIFY: design tokens root (source of truth for tokens)
+└── photo-viewer.css     # NO CHANGE (already uses tokens)
 
 js/
-├── photo-wall.js        # Photo Wall close/reopen/drag behavior
-├── photo-viewer.js      # Viewer open/close, pointer-events fix
-└── route-builder.js     # Smart routes (sole renderer after cleanup)
+├── Leaflet.Photo.js     # MODIFY: createIcon() to build frame + stem DOM structure, accept tier/cluster options
+├── ViewportSampler.js   # MODIFY: pass hiddenCount to icon, compute size tier, set iconAnchor for stem offset
+└── photo-wall.js        # MODIFY: close button bug fix (FR-002)
 
-index.html               # Controls panel, feed sidebar, route toggle, legacy route removal
+index.html               # MODIFY: remove legacy route code, pass tier info to favorites layer
 ```
 
-**Structure Decision**: Existing single-page structure. No new files created — all work is edits to existing CSS and JS files. Design tokens are centralized in `css/photo-wall.css` `:root` block and consumed via `var()` references across all CSS files.
-
-## Implementation Approach
-
-### Layer 1: Design Token Foundation (FR-006, FR-014)
-
-**Current state**: Design tokens partially exist in `photo-wall.css` `:root`:
-- Colors: `--color-accent`, `--color-text`, `--color-bg-panel`, etc.
-- Z-index: `--z-panel` through `--z-viewer-controls`
-- Timing: `--duration-fast/normal/slow`, `--easing-enter/standard`
-
-**Needed**: Extend token coverage and migrate all hardcoded values:
-1. **Move tokens to a shared location** — keep in `photo-wall.css` `:root` since it loads first and is already the token home
-2. **Add missing tokens**: font-size scale (rationalize 12 sizes → 6), spacing scale, border-radius
-3. **Migrate consumers**: Replace hardcoded hex colors, font-sizes, transitions in `map.css`, `photo-viewer.css`, `Leaflet.Photo.css` with `var()` references
-4. **Scope exclusions**: Route segment colors from `trip_segments.json` remain data-driven (per clarification)
-
-**Font size scale** (rationalized from 12 to 6):
-```css
---font-xs: 0.7rem;    /* ~11px — badges, timestamps */
---font-sm: 0.8rem;    /* ~13px — secondary text, labels */
---font-base: 0.875rem; /* 14px — body text, controls */
---font-md: 1rem;       /* 16px — section headers, panel titles */
---font-lg: 1.125rem;   /* 18px — panel headings */
---font-xl: 1.25rem;    /* 20px — overlay titles (rare) */
-```
-
-### Layer 2: Typography & Color Consistency (FR-001, FR-007, FR-011)
-
-1. **Global font-family on `body`** — already declared in `map.css` on `html, body`. Verify propagation to Photo Wall (currently inherits correctly after token work)
-2. **Font-family unification** — `photo-viewer.css` uses a slightly different stack (includes Roboto). Normalize to single stack
-3. **Legacy color removal** — search for `#666`, `#333`, and replace with token equivalents
-4. **Gold hover unification** — standardize `#e0b86a` vs `#e0b862` drift to single `--color-accent-hover`
-
-### Layer 3: Touch Target Accessibility (FR-003, FR-004, FR-005)
-
-**Current state**: Most touch targets already at 44px from previous work (commit `ecb157e`). Verify:
-- Panel close buttons: 44px on mobile ✓
-- Accordion headers: `min-height: 44px` on mobile ✓
-- Layer option rows: `min-height: 44px` on mobile ✓
-- Photo popup link ("View on Google Photos"): needs verification
-
-**Remaining**: Audit any elements missed in previous pass. Photo Wall collapse/close buttons are 28px on desktop but 44px on mobile — this is intentional (desktop has mouse precision).
-
-### Layer 4: Z-Index & Layering Fixes (FR-008, FR-009, FR-010)
-
-**Current token hierarchy**:
-```
---z-panel:          1000  (feed sidebar, controls panel)
---z-panel-controls: 1001  (internal panel controls)
---z-panel-toggle:   1002  (toggle buttons)
---z-panel-full:     1003  (photo wall full-screen)
---z-viewer:         2000  (photo viewer overlay)
---z-viewer-controls:2001  (photo viewer UI)
-```
-
-**Fixes needed**:
-1. Trip Feed z-index conflict with Photo Wall → resolved by hiding Trip Feed (FR-017)
-2. Photo Viewer close button intercepted by media container → add `pointer-events: none` to media wrapper, `pointer-events: auto` on close button
-3. Mobile reopen button overlap → ensure stacking context separates Controls toggle and Photo Wall reopen button positions
-
-### Layer 5: Photo Wall Interaction Fixes (FR-002, FR-020, FR-021)
-
-**Close button** (FR-002): Already wired in `photo-wall.js:512-517` — verify it triggers `snapTo('hidden')` and the reopen button gets `.visible` class
-
-**Velocity-based drag-to-close** (FR-020):
-- Photo Wall PanelSnap already implements drag with snap points
-- Need to add velocity detection: track pointer positions over time, compute velocity on pointerup
-- If velocity > 400px/s downward past collapsed state → `snapTo('hidden')`
-- If slow drag below collapsed → snap back to `collapsed`
-
-**Gold reopen button** (FR-021): Already in `photo-wall.js:520-525` — verify `.visible` class toggles correctly and button is not obscured by z-index conflicts
-
-### Layer 6: Route Rendering Cleanup (FR-023)
-
-**The bug**: `index.html` contains two route-rendering systems:
-1. Line 890: `buildSmartRoutes()` → smart waypoint-based routes (14 polylines)
-2. Lines 924-968: Legacy straight city-to-city lines (14 more polylines)
-
-Both are added to the map simultaneously (28 total SVG paths). Line 967 overwrites `travelRouteLayer` with legacy routes, so the Map Layers toggle only controls legacy routes while smart routes stay permanently visible.
-
-**Fix**:
-1. Delete lines 924-968 (legacy route code + `calcBearing` duplicate + `arrowMarkers` array)
-2. Delete the zoom-based arrow handler that references the now-deleted `arrowMarkers` (lines 971-979) — this is handled inside `route-builder.js` already
-3. `travelRouteLayer` remains set from line 890 (smart routes) — the route toggle at line 1157 will correctly control smart routes
-4. Verify: 14 polylines rendered (not 28), toggle works
-
-### Layer 7: Panel Visibility Defaults (FR-017, FR-018, FR-019)
-
-1. **Hide Trip Feed** (FR-017): Add `display: none` to `#feed-sidebar` and `#feed-toggle` in CSS
-2. **Controls toggle position** (FR-018): Verify top-left placement on both viewports
-3. **Controls closed on load** (FR-019): Already starts with `hidden` class — verify
-
-## Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Token migration breaks existing styles | Medium | High | Incremental migration with Playwright screenshots after each file |
-| Velocity drag calculation inaccurate | Low | Medium | Use pointer event timestamps; test with Playwright slow/fast gestures |
-| Removing legacy routes breaks toggle | Low | High | Verify `travelRouteLayer` reference chain before and after deletion |
-| Z-index changes create new conflicts | Low | Medium | Test all panel combinations at both viewports |
+**Structure Decision**: Existing flat structure with vendored JS/CSS. No new files needed — all changes modify existing files.
 
 ## Complexity Tracking
 
-> No constitution violations — table not needed.
+No constitution violations to justify.
+
+---
+
+## Phase 0: Research
+
+### R1: Leaflet Icon Anchor for Pointer Stem
+
+**Decision**: Use `iconAnchor` to offset the marker so the stem tip (bottom center of the total marker element) aligns with the GPS coordinate.
+
+**Rationale**: Leaflet's `L.Icon` and `L.DivIcon` support `iconAnchor: [x, y]` which controls which pixel of the icon element sits at the marker's lat/lng. By setting `iconAnchor` to `[width/2, totalHeight]` (where totalHeight = frame height + stem height), the stem tip will land exactly on the GPS point. For single-photo markers (no stem), `iconAnchor` is `[width/2, height/2]` (centered).
+
+**Alternatives considered**:
+- CSS `transform: translate()` on the icon element — rejected because Leaflet positions icons via absolute pixel offsets and transform would fight with Leaflet's internal positioning.
+- Separate overlay layer for stems — rejected as over-complex and would double DOM elements.
+
+### R2: Pointer Stem Implementation
+
+**Decision**: Use a CSS pseudo-element (`::after`) on the marker container to create the triangular pointer stem. The stem is a CSS triangle (border trick) in white, matching the frame border color.
+
+**Rationale**: CSS triangles are the lightest-weight approach — zero extra DOM elements, pure CSS, works in all browsers. The marker `overflow: hidden` will be changed to `overflow: visible` to allow the stem to extend below the frame.
+
+**Alternatives considered**:
+- Inline SVG for stem — heavier DOM, more complexity for no visual benefit.
+- Canvas drawing — requires JS per marker, incompatible with CSS transitions.
+- Extra `<div>` child element — works but CSS pseudo-element achieves same result with less DOM.
+
+### R3: Adaptive Size Tiers
+
+**Decision**: Four discrete tiers based on total photos in cell (hiddenCount + 1):
+
+| Tier | Photo Count | Frame Size (px) | Stem Height (px) |
+|------|-------------|-----------------|-------------------|
+| 1 (small) | 1 | 70×70 | 0 (no stem) |
+| 2 (medium) | 2–5 | 85×85 | 12 |
+| 3 (large) | 6–15 | 100×100 | 14 |
+| 4 (x-large) | 16+ | 115×115 | 16 |
+
+**Rationale**: Current default is 90×90. The new tiers bracket this value. Smallest tier (single photo, no cluster) is 70px to reduce clutter. Largest is 115px to clearly signal high-density clusters. Stem heights scale proportionally. These values can be tuned during visual testing.
+
+**Alternatives considered**:
+- Continuous linear scaling — rejected per spec (discrete tiers chosen).
+- Only 2 sizes — rejected per spec (4 tiers chosen).
+
+### R4: Favorites Integration
+
+**Decision**: Favorites use the same frame/stem structure but with gold (#d4a853) border instead of white. Since favorites are always rendered via `L.Photo` (not ViewportSampler), they always show as single-photo markers (tier 1, no stem) unless we change the favorites layer to also report cluster info. Per current architecture, favorites are individual markers — they get the white-to-gold border swap but no stem (they're never clustered).
+
+**Rationale**: Favorites bypass ViewportSampler and are always visible. They don't cluster, so they naturally fall into tier 1 (no stem). The gold border preserves their distinct visual identity.
+
+### R5: Click Target for Stem
+
+**Decision**: The CSS pseudo-element (`::after`) for the stem is not inherently clickable in Leaflet's hit detection. To make the entire marker (frame + stem) clickable, we increase the icon element's explicit dimensions to include the stem area and use `iconAnchor` to position correctly. The `overflow: visible` on the container plus Leaflet's click detection on the icon element will cover both frame and stem.
+
+**Rationale**: Leaflet routes click events to the icon's root element. If the root element's bounding box includes the stem space (by setting the element height to frame + stem), clicks on the stem area will register. The actual photo thumbnail remains at the top, with transparent space below for the stem pseudo-element.
+
+---
+
+## Phase 1: Design
+
+### Data Model
+
+No new data entities. The existing `manifest.json` photo objects and ViewportSampler cell buckets are sufficient. The only new computed value is the **size tier** (1–4), derived at render time from `hiddenCount + 1`.
+
+### Tier Calculation (pure function)
+
+```javascript
+function getSizeTier(totalPhotos) {
+    if (totalPhotos <= 1) return 1;
+    if (totalPhotos <= 5) return 2;
+    if (totalPhotos <= 15) return 3;
+    return 4;
+}
+```
+
+### Marker DOM Structure (new)
+
+**Clustered marker (tier 2–4):**
+```html
+<div class="leaflet-marker-photo marker-tier-2" style="width:85px; height:97px">
+  <img src="thumb.jpg" style="width:85px; height:85px">
+  <!-- badges: video, favorite, notes, cluster-count -->
+  <!-- ::after pseudo-element creates the pointer stem -->
+</div>
+```
+- Element height = frame height + stem height (85 + 12 = 97px for tier 2)
+- `iconAnchor` = [42, 97] (center-x, bottom of stem)
+
+**Single-photo marker (tier 1):**
+```html
+<div class="leaflet-marker-photo marker-tier-1" style="width:70px; height:70px">
+  <img src="thumb.jpg" style="width:70px; height:70px">
+  <!-- badges -->
+</div>
+```
+- `iconAnchor` = [35, 35] (centered)
+
+### CSS Changes (Leaflet.Photo.css)
+
+1. **White border frame**: Add `border: 3px solid white` and `border-radius: 6px` to `.leaflet-marker-photo`
+2. **Overflow visible**: Change `overflow: hidden` → `overflow: visible` (img gets its own `overflow: hidden` + `border-radius`)
+3. **Pointer stem via `::after`**: Tier-specific CSS classes (`.marker-tier-2`, `.marker-tier-3`, `.marker-tier-4`) add the `::after` triangle
+4. **Favorite gold border**: `.photo-marker-favorite` keeps gold border `#d4a853` (already exists, just ensure it overrides white)
+5. **Tier size tokens**: CSS custom properties or direct class-based sizing
+
+### JS Changes
+
+**Leaflet.Photo.js** — `L.Photo.Icon.createIcon()`:
+- Accept new options: `tier` (1–4), `stemHeight` (0/12/14/16)
+- Set element dimensions to `[frameWidth, frameHeight + stemHeight]`
+- Add `marker-tier-N` class to element
+- Set `iconAnchor` based on tier
+
+**ViewportSampler.js** — `createMarker()`:
+- Compute `totalPhotos = hiddenCount + 1`
+- Call `getSizeTier(totalPhotos)` to determine tier
+- Look up frame size and stem height from tier config
+- Pass `tier`, `stemHeight`, and tier-appropriate `iconSize` to `L.Photo.Icon`
+- Set `iconAnchor` on the Leaflet marker
+
+**ViewportSampler.js** — `updateBadge()`:
+- When `hiddenCount` changes on an existing marker, check if tier changed
+- If tier changed, rebuild the marker icon (size change requires new icon)
+
+**index.html** — `rebuildPhotoLayer()`:
+- Favorites layer: pass `tier: 1` explicitly (no stem, gold border)
+- Favorites size: use tier 1 frame size (70px) + 10px bonus = 80px
+
+### Contracts
+
+No API contracts needed — this is a pure frontend visual change.
+
+### Quickstart
+
+After implementation:
+1. `python3 -m http.server 8000` from project root
+2. Open `http://localhost:8000` at 1440px width — verify markers have white frames
+3. Zoom into a dense area — verify clustered markers show pointer stems pointing down
+4. Verify cluster markers are larger than single-photo markers (4 visible size tiers)
+5. Check favorite markers have gold borders with same frame style
+6. Click on a marker (frame or stem area) — photo viewer should open
+7. Resize to 375px mobile — verify markers still render correctly
+
+---
+
+## Implementation Phases (for /speckit.tasks)
+
+### Phase A: Design Token Foundation (existing audit items)
+- Consolidate design tokens in `:root` (already partially done in photo-wall.css)
+- Fix legacy colors, font consistency
+- Bug fixes (Photo Wall close button, z-index conflicts)
+
+### Phase B: Apple Maps-Style Marker Redesign
+1. Add tier config constants and `getSizeTier()` to ViewportSampler
+2. Modify `L.Photo.Icon.createIcon()` for frame + stem DOM structure
+3. Update `ViewportSampler.createMarker()` to compute and pass tier info
+4. Update `ViewportSampler.updateBadge()` to handle tier changes
+5. Add CSS: white border, pointer stem pseudo-elements, tier classes
+6. Update favorites layer in index.html for new tier system
+7. Visual verification at both viewports
+
+### Phase C: Legacy Cleanup
+- Remove legacy route rendering code from index.html
+- Hide Trip Feed via CSS

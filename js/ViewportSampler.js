@@ -8,10 +8,26 @@ var ViewportSampler = (function () {
     var _photos = [];          // full filtered photo array
     var _markers = {};         // key -> L.Marker currently on map
     var _layerGroup = null;
-    var _iconSize = 90;
+    var _iconSize = 90;        // legacy — kept for backward compat, not used for marker sizing
     var _cellSize = 150;
     var _onClickHandler = null;
     var _favGetter = null;     // function(photo) -> bool
+
+    // Tier configuration for adaptive marker sizing (Apple Maps style)
+    // tier 0 = single photo (no stem), tiers 1-3 = clusters (downward pointer stem)
+    var TIER_CONFIG = [
+        { maxCount: 1,        frameSize: 70,  stemHeight: 0  },
+        { maxCount: 5,        frameSize: 85,  stemHeight: 12 },
+        { maxCount: 15,       frameSize: 100, stemHeight: 14 },
+        { maxCount: Infinity, frameSize: 115, stemHeight: 16 }
+    ];
+
+    function getSizeTier(totalPhotos) {
+        for (var t = 0; t < TIER_CONFIG.length; t++) {
+            if (totalPhotos <= TIER_CONFIG[t].maxCount) return t;
+        }
+        return TIER_CONFIG.length - 1;
+    }
 
     // Stable hash for deterministic tiebreaking
     function stableHash(s) {
@@ -136,14 +152,14 @@ var ViewportSampler = (function () {
             delete _markers[rmKey];
         }
 
-        // Update existing markers' hiddenCount badge
+        // Update existing markers' hiddenCount badge (rebuild if tier changed)
         var keepKeys = Object.keys(toKeep);
         for (var uk = 0; uk < keepKeys.length; uk++) {
             var uKey = keepKeys[uk];
             var marker = _markers[uKey];
             var info = nextMarkers[uKey];
-            if (marker && marker._icon) {
-                updateBadge(marker._icon, info.hiddenCount);
+            if (marker) {
+                updateBadge(marker, info.hiddenCount);
             }
         }
 
@@ -164,8 +180,13 @@ var ViewportSampler = (function () {
     }
 
     function createMarker(photo, hiddenCount) {
+        var totalPhotos = (hiddenCount || 0) + 1;
+        var tier = getSizeTier(totalPhotos);
+        var tierCfg = TIER_CONFIG[tier];
         var icon = new L.Photo.Icon(L.extend({}, {
-            iconSize: [_iconSize, _iconSize],
+            frameSize: tierCfg.frameSize,
+            stemHeight: tierCfg.stemHeight,
+            tier: tier,
             thumbnail: photo.thumbnail,
             isVideo: photo.type === 'video',
             isFavorite: photo._isFavorite || false,
@@ -177,6 +198,8 @@ var ViewportSampler = (function () {
             title: photo.caption || ''
         });
         marker.photo = photo;
+        marker._tier = tier;
+        marker._hiddenCount = hiddenCount || 0;
 
         if (_onClickHandler) {
             marker.on('click', function () {
@@ -213,44 +236,54 @@ var ViewportSampler = (function () {
         }
     }
 
-    function updateBadge(iconEl, hiddenCount) {
+    function updateBadge(marker, hiddenCount) {
+        var totalPhotos = (hiddenCount || 0) + 1;
+        var newTier = getSizeTier(totalPhotos);
+
+        // Rebuild icon if tier changed
+        if (marker._tier !== newTier) {
+            var tierCfg = TIER_CONFIG[newTier];
+            var icon = new L.Photo.Icon(L.extend({}, {
+                frameSize: tierCfg.frameSize,
+                stemHeight: tierCfg.stemHeight,
+                tier: newTier,
+                thumbnail: marker.photo.thumbnail,
+                isVideo: marker.photo.type === 'video',
+                isFavorite: marker.photo._isFavorite || false,
+                hasCaption: !!(marker.photo.caption),
+                hiddenCount: hiddenCount || 0
+            }));
+            marker.setIcon(icon);
+            marker._tier = newTier;
+            marker._hiddenCount = hiddenCount || 0;
+            return;
+        }
+
+        marker._hiddenCount = hiddenCount || 0;
+        var iconEl = marker._icon;
+        if (!iconEl) return;
         var badge = iconEl.querySelector('.photo-cluster-count');
         if (hiddenCount > 0) {
             if (!badge) {
                 badge = document.createElement('span');
                 badge.className = 'photo-cluster-count';
-                iconEl.appendChild(badge);
+                var frame = iconEl.querySelector('.photo-frame-inner') || iconEl;
+                frame.appendChild(badge);
             }
-            badge.textContent = '+' + hiddenCount;
+            badge.textContent = '' + hiddenCount;
         } else {
             if (badge) badge.parentNode.removeChild(badge);
         }
     }
 
     function updateIconSize(size) {
-        _iconSize = size;
-        // Rebuild all markers with new size
-        var keys = Object.keys(_markers);
-        for (var i = 0; i < keys.length; i++) {
-            var marker = _markers[keys[i]];
-            if (marker && marker.photo) {
-                var hiddenCount = 0;
-                var badge = marker._icon ? marker._icon.querySelector('.photo-cluster-count') : null;
-                if (badge) {
-                    var text = badge.textContent;
-                    hiddenCount = parseInt(text.replace('+', ''), 10) || 0;
-                }
-                var icon = new L.Photo.Icon(L.extend({}, {
-                    iconSize: [size, size],
-                    thumbnail: marker.photo.thumbnail,
-                    isVideo: marker.photo.type === 'video',
-                    isFavorite: marker.photo._isFavorite || false,
-                    hasCaption: !!(marker.photo.caption),
-                    hiddenCount: hiddenCount
-                }));
-                marker.setIcon(icon);
-            }
+        _iconSize = size; // kept for backward compat; tier-based sizing is now fixed
+        // Re-run update to rebuild markers with current tier config
+        if (_layerGroup) {
+            _layerGroup.clearLayers();
+            _markers = {};
         }
+        update();
     }
 
     function setCellSize(size) {

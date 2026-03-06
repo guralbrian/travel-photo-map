@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `/specs/009-ux-ui-audit/`
 **Prerequisites**: plan.md, spec.md, research.md, quickstart.md
-**Updated**: 2026-03-03 — added bug fix tasks from clarification session + legacy route code removal (FR-023)
+**Updated**: 2026-03-06 — added US7 Apple Maps-style photo markers (FR-024 through FR-029) from clarification session 2026-03-06
 
 **Tests**: Not requested. Visual verification via Playwright screenshots using dual-server setup (localhost:8000 for desktop 1440x900, localhost:8001 for mobile 375x812).
 
@@ -112,9 +112,50 @@
 
 ---
 
-## Phase 8: Final Verification
+## Phase 8: US7 — Apple Maps-Style Photo Markers with Pointer Stems (Priority: P2)
 
-**Purpose**: Cross-cutting visual regression check after all bug fixes applied
+**Goal**: Photo markers display as white-bordered frames. Clustered markers (2+ photos) have downward pointer stems anchored at GPS coordinates. Marker size follows 4 discrete tiers based on photo count. Favorites use gold borders. Entire marker (frame + stem) is a unified click target.
+
+**Independent Test**: Load the map, zoom to areas with varying photo density. Verify clustered markers show white frames with pointer stems, single photos show stemless frames, sizes vary by cluster count, favorites have gold borders.
+
+**Tier Configuration** (from research #14):
+
+| Tier | Photo Count | Frame (px) | Stem (px) | Total Height | iconAnchor |
+|------|-------------|------------|-----------|-------------|------------|
+| 0 | 1 | 70×70 | 0 | 70 | [35, 35] |
+| 1 | 2–5 | 85×85 | 12 | 97 | [42, 97] |
+| 2 | 6–15 | 100×100 | 14 | 114 | [50, 114] |
+| 3 | 16+ | 115×115 | 16 | 131 | [57, 131] |
+
+### JS Implementation
+
+- [x] T027 [US7] Add tier configuration constants and `getSizeTier()` function to `js/ViewportSampler.js` — define `TIER_CONFIG` array with 4 entries: `{maxCount: 1, frameSize: 70, stemHeight: 0}`, `{maxCount: 5, frameSize: 85, stemHeight: 12}`, `{maxCount: 15, frameSize: 100, stemHeight: 14}`, `{maxCount: Infinity, frameSize: 115, stemHeight: 16}`. Add `getSizeTier(totalPhotos)` function returning tier index (0–3). Per FR-026, research #14.
+- [x] T028 [US7] Modify `L.Photo.Icon` in `js/Leaflet.Photo.js` to accept new options: `tier` (0–3), `stemHeight`, `frameSize`. In `createIcon()`: set element width to `frameSize`, element height to `frameSize + stemHeight`, set img dimensions to `frameSize × frameSize`, add CSS class `marker-tier-{tier}` to the element. Override `iconAnchor` in `initialize()`: for stemmed markers (tier > 0) set `[frameSize/2, frameSize + stemHeight]`; for stemless (tier 0) set `[frameSize/2, frameSize/2]`. Per FR-024, FR-025, FR-028, research #12.
+- [x] T029 [US7] Update `createMarker()` in `js/ViewportSampler.js` — compute `totalPhotos = hiddenCount + 1`, call `getSizeTier(totalPhotos)`, look up `frameSize` and `stemHeight` from `TIER_CONFIG`. Pass `tier`, `stemHeight`, `frameSize` as icon options instead of the flat `[_iconSize, _iconSize]`. Store the tier index on the marker object (`marker._tier = tier`) for later comparison in `updateBadge()`.
+- [x] T030 [US7] Update `updateBadge()` in `js/ViewportSampler.js` — when `hiddenCount` changes on an existing marker, recompute `totalPhotos` and tier. If the new tier differs from `marker._tier`, rebuild the marker icon entirely via `marker.setIcon(newIcon)` with updated frameSize/stemHeight/iconAnchor. Update `marker._tier` after rebuild.
+- [x] T031 [US7] Update `updateIconSize()` in `js/ViewportSampler.js` — currently rebuilds all markers at a flat `_iconSize`. Replace with tier-based sizing: for each marker, read its stored `hiddenCount` (from badge text), recompute tier, and rebuild with the appropriate `TIER_CONFIG` entry. Remove or deprecate the `_iconSize` variable. If the icon size slider in Controls still exists, either remove it or make it scale the tier config base sizes proportionally.
+- [x] T032 [US7] Update favorites layer in `index.html` `rebuildPhotoLayer()` — change `favSize` from `currentIconSize + 10` to `80` (tier 0 base 70 + 10 bonus). Pass `tier: 0`, `frameSize: 80`, `stemHeight: 0` to the favorites `L.Photo` icon options so favorites render as white-framed (gold-bordered) markers without stems per FR-027, research #15.
+
+### CSS Implementation
+
+- [x] T033 [P] [US7] Add Apple Maps-style base frame CSS to `css/Leaflet.Photo.css` — (a) change `.leaflet-marker-photo` to: `border: 3px solid white`, `border-radius: 6px`, `overflow: visible` (was `hidden`), `background-color: transparent`, `position: relative`. (b) Add `.leaflet-marker-photo img` rules: `border-radius: 4px`, `overflow: hidden`, `display: block`, `object-fit: cover` (preserve existing). The img clips within the frame while the `::after` stem extends below.
+- [x] T034 [P] [US7] Add pointer stem CSS via `::after` pseudo-elements in `css/Leaflet.Photo.css` — `.marker-tier-1::after, .marker-tier-2::after, .marker-tier-3::after` (tiers with stems) get: `content: ''`, `position: absolute`, `bottom: 0`, `left: 50%`, `transform: translateX(-50%)`, `width: 0`, `height: 0`, `border-left: 8px solid transparent`, `border-right: 8px solid transparent`, `border-top: Npx solid white` (12px for tier 1, 14px for tier 2, 16px for tier 3). `.marker-tier-0` gets no `::after` (no stem). Per FR-024, FR-029, research #13.
+- [x] T035 [US7] Update favorite marker CSS in `css/Leaflet.Photo.css` — ensure `.photo-marker-favorite` overrides border color: `border-color: var(--color-accent) !important` (gold instead of white). Add `.photo-marker-favorite::after` with `border-top-color: var(--color-accent)` so the stem is also gold for stemmed favorites. Verify gold glow shadow still works with new frame structure. Per FR-027.
+- [x] T036 [US7] Reposition badge elements in `css/Leaflet.Photo.css` — adjust `.photo-cluster-count` from `bottom: -4px; right: -4px` to position at the bottom-right of the photo *frame area* (not stem). For stemmed markers, this means the badge sits above the stem. Adjust `.photo-favorite-badge` (top-left) and `.photo-notes-badge` (bottom-left) positions to account for the 3px white border.
+
+### Verification
+
+- [x] T037 [US7] Screenshot verification desktop — navigate to localhost:8000 (1440px), zoom to areas with varying photo density. Verify: (a) single photos show white-framed markers centered over location with no stem (SC-017), (b) clusters show white-framed markers with downward pointer stems anchored at GPS coordinate (SC-016), (c) 4 distinct size tiers visible across different cluster densities (SC-018), (d) favorites have gold borders with same frame style (SC-019), (e) clicking any marker (frame or stem area) opens photo viewer (SC-020).
+- [x] T038 [US7] Screenshot verification mobile — navigate to localhost:8001 (375px), verify markers render correctly at mobile zoom levels. Check that marker sizes are appropriate for the smaller viewport, stems point straight down, and click/tap targets work on touch simulation.
+- [x] T039 [US7] Edge case verification — zoom in/out rapidly to trigger cluster count changes. Verify markers animate smoothly with existing fade-in/fade-out transitions. Verify no visual glitches when a marker transitions between tiers during viewport recalculation.
+
+**Checkpoint**: Apple Maps-style markers working on both viewports. 4 size tiers visible. Favorites have gold borders. Click targets include stem area. SC-016 through SC-020 satisfied.
+
+---
+
+## Phase 9: Previously Completed — Final Verification (SC-001 through SC-015)
+
+**Status**: Completed in prior implementation pass. These checks validated all non-marker success criteria.
 
 - [x] T024 Full interaction walkthrough at desktop (localhost:8000 at 1440x900): load page → settings closed → click settings toggle → panel opens → close → Photo Wall visible → X close → reopen button appears → click reopen → wall returns → no Trip Feed visible anywhere
 - [x] T025 Full interaction walkthrough at mobile (localhost:8001 at 375x812): load page → settings closed, button at top-left → Photo Wall collapsed → fast flick down → snaps to hidden → reopen button visible → tap reopen → wall returns to collapsed → slow drag down → snaps back to collapsed → no Trip Feed visible
@@ -122,53 +163,81 @@
 
 ---
 
+## Phase 10: Final Comprehensive Verification
+
+**Purpose**: End-to-end validation after Apple Maps markers are implemented — all SC-001 through SC-020.
+
+- [ ] T040 Full visual regression check desktop (localhost:8000 at 1440px) — verify no regressions from marker changes: panels still use correct fonts, tokens still propagate, z-index layering intact, route toggle works, all buttons clickable. Plus: markers display Apple Maps style per SC-016–SC-020.
+- [ ] T041 Full visual regression check mobile (localhost:8001 at 375px) — verify touch targets still ≥44px, Photo Wall close/reopen cycle works, controls panel starts closed. Plus: markers display correctly at mobile zoom levels.
+- [ ] T042 Run quickstart.md validation — follow the 7-step quickstart checklist from plan.md to verify all acceptance criteria end-to-end.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
 
-- **Phase 1 (Setup)**: No dependencies — start immediately
-- **Phase 2 (Bug Fixes)**: Depends on Phase 1 (need servers running for verification)
-  - T002, T003, T004, T006 can run in **parallel** (different files)
-  - T005 is independent (different file from T002-T004)
-  - T007 depends on T002–T006 all being complete
-- **Phases 3–7**: Already completed — no action needed
-- **Phase 8 (Final Verification)**: Depends on Phase 2 completion
+- **Phases 1–7**: Already completed — no action needed
+- **Phase 8 (US7 Markers)**: Depends on Phase 5 (design tokens) being complete (✅ already done)
+  - JS tasks (T027–T032) are sequential: T027 → T028 → T029 → T030 → T031 → T032
+  - CSS tasks (T033–T036) can run in **parallel** with JS tasks (different files)
+  - T033, T034 can run in parallel (different CSS concerns, same file but non-overlapping selectors)
+  - T035 depends on T033 (needs base frame styles first)
+  - T036 depends on T033 (needs frame structure for badge positioning)
+  - T037–T039 (verification) depend on all implementation tasks
+- **Phase 9**: Already completed
+- **Phase 10 (Final)**: Depends on Phase 8 completion
 
-### Parallel Opportunities (Phase 2)
+### Within US7 Task Dependencies
 
 ```
 Batch 1 (parallel — different files):
-  T002: css/map.css (feed hide)
-  T003: index.html (settings defaults)
-  T004: css/map.css (settings button — different section from T002)
-  T005: js/photo-wall.js (drag-to-close)
-  T006: css/photo-wall.css (reopen button z-index)
-  T006b: index.html (legacy route removal — different section from T003)
+  JS: T027 (tier config in ViewportSampler.js)
+  CSS: T033 (base frame in Leaflet.Photo.css)
+  CSS: T034 (pointer stem in Leaflet.Photo.css — different selectors from T033)
 
-Batch 2 (sequential — depends on Batch 1):
-  T007: Playwright verification of bug fixes
-  T007b: Playwright verification of route deduplication
+Batch 2 (depends on Batch 1):
+  JS: T028 (Leaflet.Photo.js createIcon — needs tier config from T027)
+  CSS: T035 (favorites CSS — needs base frame from T033)
+  CSS: T036 (badges — needs frame structure from T033)
+
+Batch 3 (depends on Batch 2):
+  JS: T029 (updateBadge — needs createIcon changes from T028)
+  JS: T030 (updateIconSize — needs tier config from T027 + createIcon from T028)
+  JS: T031 (updateIconSize — needs T030)
+
+Batch 4 (depends on Batch 3):
+  JS: T032 (index.html favorites — needs Leaflet.Photo.js changes from T028)
+
+Batch 5 (depends on all):
+  T037: Desktop screenshot verification
+  T038: Mobile screenshot verification
+  T039: Edge case zoom verification
 ```
-
-Note: T002 and T004 both modify `css/map.css` but in completely different sections (feed rules ~line 638 vs mobile media query ~line 899), so they can be done in one edit session without conflicts.
 
 ---
 
 ## Implementation Strategy
 
-### MVP (Phase 2 Only)
+### Remaining Work
 
-1. Complete Phase 1: Dual-server setup + baselines
-2. Complete Phase 2: All 6 bug fixes
-3. **STOP and VALIDATE**: Run T007 verification
-4. If clean → proceed to Phase 8 final verification
+Since Phases 1–7 and Phase 9 are already complete, the remaining work is:
 
-### Execution
+1. **Phase 8**: US7 Apple Maps-style markers — **13 tasks** (T027–T039)
+   - 6 JS implementation tasks (T027–T032)
+   - 4 CSS implementation tasks (T033–T036)
+   - 3 verification tasks (T037–T039)
+2. **Phase 10**: Final comprehensive verification — **3 tasks** (T040–T042)
+3. **Total: 16 new tasks**
 
-Since Phases 3–7 are already complete, the remaining work is:
-1. **2 new tasks** (T006b, T007b) in Phase 2 — legacy route removal + verification
-2. **3 verification tasks** (T024–T026) in Phase 8
-3. **Total: 5 tasks remaining** out of 28
+### Execution Order
+
+1. Start JS (T027) and CSS (T033, T034) in parallel
+2. After T027 → T028 (Leaflet.Photo.js); after T033 → T035, T036
+3. After T028 → T029, T030; then T031
+4. After T028 → T032 (index.html favorites)
+5. After all impl → T037, T038, T039 (screenshots)
+6. After Phase 8 complete → Phase 10 (T040–T042)
 
 ---
 
@@ -177,6 +246,6 @@ Since Phases 3–7 are already complete, the remaining work is:
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
 - All verification uses Playwright MCP with dual-server setup (port 8000 = desktop, port 8001 = mobile)
-- No new files created — all changes edit existing CSS, JS, and HTML files
-- Trip Feed hide uses `!important` for maximum reversibility — remove 2 CSS rules to re-enable
-- Settings panel change touches both CSS and HTML — test interaction thoroughly
+- No new files created — all changes modify existing `js/Leaflet.Photo.js`, `js/ViewportSampler.js`, `css/Leaflet.Photo.css`, and `index.html`
+- The icon size slider in Controls may need adjustment or removal since tier-based sizing replaces flat icon sizing
+- Favorites layer in index.html needs updated to pass tier info (T032)

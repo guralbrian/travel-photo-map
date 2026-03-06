@@ -17,6 +17,14 @@
 - Q: Legacy straight-line route code (index.html:924-968) duplicates route rendering on top of smart routes (route-builder.js). How to resolve? → A: Remove legacy route code entirely; smart routes are the sole route renderer.
 - Q: Should route segment colors from trip_segments.json be pulled into the design token system? → A: No — route colors are data-driven values from trip data. Design tokens cover UI chrome only (backgrounds, text, accents, borders), not data-driven visual encodings.
 
+### Session 2026-03-06
+
+- Q: Adaptive sizing strategy for clustered photo markers? → A: Discrete tier steps — 4 size tiers based on photo count ranges (e.g., 1 photo = small, 2-5 = medium, 6-15 = large, 16+ = extra-large).
+- Q: Single-photo marker appearance (no cluster)? → A: White-bordered frame with no pointer stem, centered over the photo's GPS location. Keeps visual language consistent with clustered markers.
+- Q: How should favorite markers integrate with the new Apple Maps-style design? → A: Favorites get the same frame/pointer style but with a gold (#d4a853) border instead of white. They remain always-visible and exempt from density limits.
+- Q: Should the pointer stem be part of the click/tap target? → A: Yes — entire marker (frame + pointer stem) is one unified click/tap target for opening the photo viewer.
+- Q: Pointer stem orientation when markers are near each other? → A: Always straight down — simple, consistent, matches Apple Maps. ViewportSampler grid spacing already minimizes collisions.
+
 ## Audit Summary
 
 A comprehensive visual and code-level audit was conducted across desktop (1440x900) and mobile (375x812) viewports using Playwright screenshots and CSS source analysis. The app has a strong dark-glass aesthetic with gold accents, but the audit revealed **1 functional bug**, **8 high-priority issues**, **11 medium-priority issues**, and **6 low-priority issues** across typography, touch targets, z-index layering, design token consistency, and mobile usability.
@@ -116,12 +124,32 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 
 ---
 
+### User Story 7 - Apple Maps-Style Photo Markers with Pointer Stems (Priority: P2)
+
+A visitor browsing the map sees photo previews displayed in white-bordered frames resembling Apple Maps place markers. When a cell contains multiple photos (cluster), the marker displays a downward-pointing stem whose tip ends at the actual GPS location. Single-photo markers have the white frame but no pointer, centered over their location. Marker size scales with photo count using discrete tiers.
+
+**Why this priority**: The current markers are flat squares sitting directly on the map. The Apple Maps-style framing with pointer stems gives a more polished, professional appearance and provides a clear visual cue for photo density via adaptive sizing.
+
+**Independent Test**: Load the map, zoom to an area with photo clusters. Confirm clustered markers show white-bordered frames with downward pointer stems, single photos show frameless pointers, and marker sizes vary by cluster count.
+
+**Acceptance Scenarios**:
+
+1. **Given** a map cell with 2+ photos, **When** the marker is rendered, **Then** it displays a white-bordered photo frame with a downward-pointing stem whose tip is anchored at the representative photo's GPS coordinate.
+2. **Given** a map cell with exactly 1 photo, **When** the marker is rendered, **Then** it displays a white-bordered photo frame with no pointer stem, centered over the photo's GPS location.
+3. **Given** clusters of varying sizes, **When** markers are rendered, **Then** marker frame size follows 4 discrete tiers based on photo count (e.g., 1 = small, 2-5 = medium, 6-15 = large, 16+ = extra-large).
+4. **Given** a favorite photo, **When** its marker is rendered, **Then** it uses the same frame/pointer style but with a gold (#d4a853) border instead of white, and remains always-visible regardless of density limits.
+5. **Given** any marker (frame + pointer stem), **When** the user clicks/taps anywhere on it, **Then** the photo viewer opens — the entire marker is one unified tap target.
+
+---
+
 ### Edge Cases
 
 - What happens when both remaining panels (Controls, Photo Wall) are open simultaneously on mobile? Panels must not fully obscure the map. (Trip Feed is hidden via CSS.)
 - What happens when the Photo Viewer is opened while all panels are visible? The viewer overlay must appear above everything.
 - What happens when the browser window is resized from desktop to mobile width? Panel layouts and z-index behavior must remain correct.
 - What happens with the "View on Google Photos" link on mobile? The tap target should be large enough to reliably hit.
+- What happens when a cluster marker's pointer stem overlaps another marker at high density? Pointer always points straight down; ViewportSampler grid spacing (150px cells) provides natural separation.
+- What happens during zoom transitions when cluster counts change? Markers should animate smoothly using existing fade-in/fade-out transitions, with size tier updating on each viewport recalculation.
 
 ## Requirements *(mandatory)*
 
@@ -150,6 +178,12 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 - **FR-015**: The Photo Wall collapsed state on mobile SHOULD show enough content for at least two rows of thumbnails.
 - **FR-016**: The Photo Wall drag handle SHOULD be visually prominent enough to be discoverable.
 - **FR-023**: The legacy straight-line route rendering code (`index.html:924-968`) MUST be removed. The smart route builder (`route-builder.js`) is the sole route renderer. The route toggle in Map Layers MUST control the smart routes layer.
+- **FR-024**: Photo markers with 2+ photos in a cell MUST render as a white-bordered frame with a downward-pointing stem whose tip is anchored at the representative photo's GPS coordinate (Apple Maps style).
+- **FR-025**: Photo markers with exactly 1 photo in a cell MUST render as a white-bordered frame with no pointer stem, centered over the photo's GPS location.
+- **FR-026**: Photo marker frame size MUST follow 4 discrete tiers based on photo count in the cell (1 photo = small, 2-5 = medium, 6-15 = large, 16+ = extra-large). Exact pixel values defined during implementation.
+- **FR-027**: Favorite photo markers MUST use the same frame/pointer style as regular markers but with a gold (#d4a853) border instead of white. Favorites remain always-visible and exempt from ViewportSampler density limits.
+- **FR-028**: The entire marker area (photo frame + pointer stem) MUST be a single unified click/tap target that opens the photo viewer.
+- **FR-029**: Pointer stems MUST always point straight down. No smart angling or offset based on nearby markers.
 
 ### Assumptions
 
@@ -178,3 +212,8 @@ The Photo Wall is usable and comfortable on small screens. The collapsed state s
 - **SC-013**: A fast downward flick (>400px/s) on the Photo Wall from collapsed state snaps to fully hidden and shows the gold reopen button.
 - **SC-014**: The gold reopen button is visible and tappable after every Photo Wall close action (X, drag-to-close) on both viewports.
 - **SC-015**: Only one set of route polylines is rendered on the map (no duplicate legacy lines). The route toggle in Map Layers controls visibility of the smart routes.
+- **SC-016**: All clustered markers (2+ photos) display a white-bordered frame with a downward pointer stem anchored at the GPS coordinate.
+- **SC-017**: All single-photo markers display a white-bordered frame with no pointer stem, centered on GPS location.
+- **SC-018**: Marker sizes visually differentiate across 4 discrete tiers corresponding to cluster count ranges.
+- **SC-019**: Favorite markers display gold (#d4a853) borders with the same frame/pointer style, and are always visible regardless of density.
+- **SC-020**: Clicking/tapping anywhere on a marker (frame or stem) opens the photo viewer.
