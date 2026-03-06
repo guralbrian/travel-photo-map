@@ -40,3 +40,14 @@ venv/
 *~
 .DS_Store
 Thumbs.db
+
+# Playwright MCP logs & screenshots
+.playwright-mcp/
+*.png
+
+# Tool configs (Gemini, MCP)
+.gemini/
+.mcp.json
+
+# Claude worktrees
+.claude/worktrees/
