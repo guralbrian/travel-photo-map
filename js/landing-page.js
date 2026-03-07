@@ -257,7 +257,7 @@
             }
             photoHtml += '</div>';
             if (photos.length > MAX_THUMBNAILS) {
-                photoHtml += '<button class="detail-photos-more" data-region-index="' + index + '">+' + (photos.length - MAX_THUMBNAILS) + ' more \u2014 view on map</button>';
+                photoHtml += '<button class="detail-photos-more" data-region-index="' + index + '">View on map</button>';
             }
         }
 
@@ -301,6 +301,23 @@
             mapBtns[b].addEventListener('click', function () {
                 var idx = parseInt(this.getAttribute('data-region-index'), 10);
                 enterMapFromDetail(idx);
+            });
+        }
+
+        // Wire photo thumbnail clicks → open photo viewer
+        var photoGrid = _detailEl.querySelector('.detail-photos-grid');
+        if (photoGrid && photos.length > 0) {
+            photoGrid.addEventListener('click', function (e) {
+                var img = e.target;
+                if (img.tagName !== 'IMG') return;
+                var imgs = photoGrid.querySelectorAll('img');
+                var clickedIndex = 0;
+                for (var i = 0; i < imgs.length; i++) {
+                    if (imgs[i] === img) { clickedIndex = i; break; }
+                }
+                if (window.photoViewer) {
+                    window.photoViewer.open(photos, clickedIndex, img);
+                }
             });
         }
 

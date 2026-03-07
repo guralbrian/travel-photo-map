@@ -15,6 +15,12 @@
 - Q: Navigation model between landing page and map? → A: Same page, show/hide — landing page and map live in the same HTML; transitioning hides one, shows the other.
 - Q: Photo display format in detail view? → A: Thumbnail grid — compact grid of photo thumbnails, scrollable if many.
 
+### Session 2026-03-07
+
+- Q: What happens when user closes the photo viewer opened from a region detail thumbnail? → A: Return to region detail view — the detail stays open behind the viewer.
+- Q: What should happen to the "+N more" overflow button now that thumbnails open the viewer? → A: Keep it as a "View on map" shortcut only — navigates to the map zoomed to that region.
+- Q: How should the landing page build the photo array for the viewer? → A: Filter manifest.json photos by region date range — same source the map uses, ensuring format compatibility.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Trip Stats Intro Screen (Priority: P1)
@@ -65,6 +71,8 @@ When a visitor clicks or taps a region card, it "flips out" (expands with an eng
 3. **Given** a region detail view is open, **When** looking at the content, **Then** it includes a list of places visited with corresponding dates.
 4. **Given** a region detail view is open, **When** looking at the content, **Then** it displays a map centered on that region's location.
 5. **Given** a region detail view is open, **When** looking at the content, **Then** it shows a compact, scrollable thumbnail grid of the photos taken during that leg of the trip.
+5a. **Given** a region detail view is open, **When** the visitor clicks a photo thumbnail, **Then** the immersive photo viewer opens showing that photo with the ability to navigate through the region's photos.
+5b. **Given** the photo viewer was opened from a region detail thumbnail, **When** the visitor closes the photo viewer, **Then** they return to the region detail view which remains in its expanded state.
 6. **Given** a region detail view is open, **When** the visitor clicks a close/back control, **Then** the full-page takeover collapses and the card grid is restored with a smooth animation.
 
 ---
@@ -105,6 +113,8 @@ The visitor can navigate from the landing page into the full interactive map exp
 - **FR-008**: The detail view MUST include a list of places visited with dates.
 - **FR-009**: The detail view MUST include a map showing the region's location.
 - **FR-010**: The detail view MUST display photos from that trip leg as a compact, scrollable thumbnail grid.
+- **FR-010a**: Clicking a photo thumbnail in the detail view MUST open the existing immersive photo viewer (`window.photoViewer.open`) with the region's photo array, starting at the clicked photo. Closing the viewer MUST return the user to the region detail view (detail remains expanded).
+- **FR-010b**: When a region has more than 30 photos, the overflow button MUST read "View on map" (not "+N more") and navigate to the map view zoomed to that region.
 - **FR-011**: The detail view MUST provide a way to close/collapse back to the card grid.
 - **FR-012**: The landing page MUST provide a clear way to navigate into the full interactive map experience via a same-page show/hide transition (landing hides, map reveals).
 - **FR-013**: The landing page MUST be responsive across desktop (1440px+) and mobile (375px+) viewports.

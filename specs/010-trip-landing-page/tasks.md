@@ -191,3 +191,47 @@ Task T017: "Implement detail close/collapse animation"
 ### Recommended Execution: Sequential
 
 This is a single-developer project. Execute phases 1-7 in order, committing after each phase checkpoint. Each phase builds directly on the previous.
+
+---
+
+## Phase 8: Region Detail Photo Viewer Integration (Priority: P1)
+
+**Goal**: Make photo thumbnails in the region detail view clickable, opening the existing immersive photo viewer. Change the overflow button to a "View on map" shortcut.
+
+**Independent Test**: Open a region detail view, click any photo thumbnail — the immersive photo viewer opens at that photo. Navigate through photos with swipe/arrows. Close viewer — detail view remains expanded. For regions with >30 photos, the overflow button reads "View on map" and navigates to the map zoomed to that region.
+
+**Depends on**: Phase 5 (US3 detail view) — all tasks complete.
+
+### Implementation for Phase 8
+
+- [X] T026 [P] [US3] Add clickable thumbnail styles in `css/landing-page.css` — add `cursor: pointer` to `.detail-photos-grid img`, add hover state with subtle scale or brightness change (`transform: scale(1.05)` or `filter: brightness(1.1)` on hover with `transition: transform 0.15s ease`), ensure touch targets are large enough (min 44x44px per constitution III)
+- [X] T027 [US3] Add delegated click handler for photo thumbnails in `js/landing-page.js` — in the detail view rendering function (near line 256), after building the photo grid HTML, attach a click listener on `.detail-photos-grid` that: (a) identifies the clicked `<img>` element, (b) determines its index among sibling `<img>` elements, (c) gets the full photo array from `getPhotosForRegion(region)`, (d) calls `window.photoViewer.open(photos, clickedIndex, imgElement)` where `imgElement` is the clicked `<img>` for animation origin
+- [X] T028 [US3] Change overflow button text in `js/landing-page.js` — modify the overflow button creation (near line 260) from `'+' + (photos.length - MAX_THUMBNAILS) + ' more \u2014 view on map'` to just `'View on map'`. Keep the existing `data-region-index` attribute and existing click handler that navigates to the map.
+- [X] T029 Visual verification at 1440px: open region detail, click a thumbnail — verify photo viewer opens, navigate photos, close viewer — verify detail view remains expanded and interactive
+- [X] T030 Visual verification at 375px: repeat T029 on mobile viewport — verify touch targets are adequate, photo viewer opens/closes correctly, detail view stays open
+
+**Checkpoint**: Photo thumbnails in region details open the immersive viewer. Overflow button reads "View on map". Closing the viewer returns to the detail view.
+
+---
+
+## Dependencies & Execution Order (Phase 8)
+
+- **T026** (CSS): Independent — can start immediately
+- **T027** (click handler): Core task — depends on T026 for visual affordance
+- **T028** (overflow button): Independent of T027 — can parallel with T026
+- **T029, T030** (verification): Depend on T027 and T028 being complete
+
+### Parallel Opportunities (Phase 8)
+
+```bash
+# T026 and T028 can run in parallel (CSS file vs JS, different code sections):
+Task T026: "Add clickable thumbnail styles in css/landing-page.css"  # [P]
+Task T028: "Change overflow button text in js/landing-page.js"
+
+# Then T027 (core click handler):
+Task T027: "Add delegated click handler for photo thumbnails in js/landing-page.js"
+
+# Finally, sequential verification:
+Task T029: "Visual verification at 1440px"
+Task T030: "Visual verification at 375px"
+```

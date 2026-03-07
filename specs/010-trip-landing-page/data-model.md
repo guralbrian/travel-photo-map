@@ -36,11 +36,14 @@ Used for the thumbnail grid in the detail view. Photos are filtered by matching 
 
 | Field     | Type   | Used by landing page | Description                    |
 | --------- | ------ | -------------------- | ------------------------------ |
-| thumbnail | string | yes                  | Thumbnail URL for grid display |
-| web_url   | string | yes                  | High-res URL (hero fallback)   |
-| date      | string | yes                  | For date-range filtering       |
-| lat       | number | no                   | Not used in landing page       |
-| lng       | number | no                   | Not used in landing page       |
+| thumbnail | string | yes                  | Thumbnail URL for grid display            |
+| url       | string | yes                  | Full photo path (passed to photo viewer)  |
+| web_url   | string | yes                  | High-res URL (hero fallback, viewer use)  |
+| caption   | string | yes                  | Caption text (passed to photo viewer)     |
+| tags      | array  | yes                  | Tag array (passed to photo viewer)        |
+| date      | string | yes                  | For date-range filtering                  |
+| lat       | number | no                   | Not used directly in landing page         |
+| lng       | number | no                   | Not used directly in landing page         |
 
 ## Entity: Trip Summary (static)
 
@@ -67,4 +70,5 @@ Trip Summary (static, 1)
 2. Landing page module reads `regions[]` to build cards (name, date range from days, summary, heroPhoto).
 3. On card click, detail view reads region's days for the places/dates list.
 4. Detail view filters `manifest.json` photos by date range for thumbnail grid.
-5. Mini-map centers on region's `lat`/`lng`.
+5. On thumbnail click, the full region photo array (from step 4) is passed to `window.photoViewer.open(photos, clickedIndex, imgElement)`.
+6. Mini-map centers on region's `lat`/`lng`.

@@ -4,6 +4,8 @@
 /* ── Z-index layer ── */
 :root {
     --z-landing: 2500;
+    --z-viewer: 3000;
+    --z-viewer-controls: 3001;
 }
 
 /* ══════════════════════════════════════════
@@ -389,11 +391,16 @@
     object-fit: cover;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.05);
-    transition: transform var(--duration-fast) ease;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+    transition: transform var(--duration-fast) ease,
+                filter var(--duration-fast) ease;
 }
 
 .detail-photos-grid img:hover {
     transform: scale(1.05);
+    filter: brightness(1.15);
 }
 
 .detail-photos-more {
