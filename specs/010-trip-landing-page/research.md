@@ -44,6 +44,37 @@
 - Reuse PhotoWall component: Overkill for a preview grid. PhotoWall uses justified layout with aspect ratios, scrubber, and drag — none of which are needed here.
 - Infinite scroll: Unnecessary for a preview. Cap at 30 with an escape hatch to the full app.
 
+## R4b: Thumbnail Click → Photo Viewer Integration
+
+**Decision**: Add a delegated click handler on `.detail-photos-grid` that catches `<img>` clicks, determines the photo index from the element's sibling position, and calls `window.photoViewer.open(photos, index, imgElement)`.
+
+**Rationale**: The photo viewer at `js/photo-viewer.js:674-697` exposes `window.photoViewer.open(photos, startIndex, sourceElement)`. The manifest photo objects returned by `getPhotosForRegion()` in `landing-page.js:58-63` already have the correct shape (url, thumbnail, caption, tags, web_url) — no transformation needed. Event delegation on the grid container is more efficient than attaching handlers to each `<img>` (up to 30 per region). The `sourceElement` parameter enables the viewer's open/close animation to originate from the clicked thumbnail.
+
+**Alternatives considered**:
+- Individual click handlers per `<img>`: Rejected — creates up to 30 listeners per detail open.
+- Dispatching a custom event instead of calling the API directly: Rejected — unnecessary indirection.
+- `data-index` attributes on each `<img>`: Viable but unnecessary — sibling index is sufficient.
+
+## R4c: Overflow Button Change
+
+**Decision**: Change the overflow button text from `"+N more — view on map"` to `"View on map"`. Keep the existing `data-region-index` attribute and click handler that navigates to the map.
+
+**Rationale**: Since thumbnails now open the viewer with the full photo array (all photos, not just the displayed 30), users can swipe through all photos in the viewer. The "+N more" count is no longer meaningful. The button's value is now purely as a map navigation shortcut.
+
+**Alternatives considered**:
+- Removing the button entirely: Rejected — the map navigation shortcut is still valuable.
+- Showing all thumbnails (removing the 30 cap): Rejected — would cause layout/performance issues for regions with 60+ photos.
+
+## R4d: Photo Viewer Z-Index Layering
+
+**Decision**: Override `--z-viewer` from 2000 to 3000 in `landing-page.css` `:root` block, ensuring the photo viewer overlay sits above the landing page detail view (`--z-landing: 2500`).
+
+**Rationale**: The photo viewer uses `z-index: var(--z-viewer)` which was set to 2000 in `photo-wall.css`. The landing page detail uses `z-index: var(--z-landing): 2500`. Without the override, the viewer opens behind the detail view and is invisible. Overriding the CSS custom property in `landing-page.css` (loaded after `photo-wall.css`) is the least invasive fix — no changes to `photo-viewer.js` or `photo-viewer.css` needed.
+
+**Alternatives considered**:
+- Modifying `photo-wall.css` directly to raise `--z-viewer`: Rejected — could affect other stacking contexts.
+- Setting inline z-index on the viewer DOM when opening from landing: Rejected — requires modifying `photo-viewer.js`.
+
 ## R5: Itinerary Data Extension
 
 **Decision**: Add two new optional fields to each region object in `data/itinerary.json`:

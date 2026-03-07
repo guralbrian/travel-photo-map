@@ -22,6 +22,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-20
 - Static JSON — new `data/itinerary.json`, existing `data/manifest.json` + `data/trip_segments.json` (001-trip-region-nav)
 - Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored in `js/`) (010-trip-landing-page)
 - Static JSON — extends existing `data/itinerary.json` with `summary` and `heroPhoto` fields per region; reads existing `data/manifest.json` for photos (010-trip-landing-page)
+- Vanilla JavaScript (ES5-compatible IIFE in landing-page.js), CSS3, HTML5 + Leaflet.js (vendored), photo-viewer.js (existing global `window.photoViewer`) (010-trip-landing-page)
+- N/A — reads existing `data/manifest.json` and `data/itinerary.json` at runtime (010-trip-landing-page)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -46,9 +48,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 010-trip-landing-page: Added Vanilla JavaScript (ES5-compatible IIFE in landing-page.js), CSS3, HTML5 + Leaflet.js (vendored), photo-viewer.js (existing global `window.photoViewer`)
 - 010-trip-landing-page: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (existing, vendored in `js/`)
 - 001-trip-region-nav: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (vendored in `js/`), existing modules: photo-wall.js, photo-viewer.js, route-builder.js, ViewportSampler.js, Leaflet.Photo.js
-- 009-ux-ui-audit: Added Vanilla JavaScript (ES2020+), CSS3, HTML5 + Leaflet.js (vendored in `js/`), no new libraries
 
 
 <!-- MANUAL ADDITIONS START -->

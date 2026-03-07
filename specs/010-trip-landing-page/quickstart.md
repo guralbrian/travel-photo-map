@@ -64,6 +64,8 @@ After starting the local server:
 3. **Skip**: Reload, then click/tap during intro — should skip immediately to the grid.
 4. **Card grid**: Verify 8 cards with region names, dates, and hero photos.
 5. **Card detail**: Click a card — should expand to fullscreen detail with summary, places/dates, map, and photos.
-6. **Close detail**: Click back/close — should collapse back to the grid.
-7. **Enter map**: Click "Explore the map" — landing page should hide, revealing the full map app.
-8. **Mobile**: Resize to 375px width and repeat steps 1-7.
+6. **Photo viewer from detail**: Click a photo thumbnail — immersive photo viewer should open. Swipe/arrow to navigate through the region's photos. Close viewer — should return to the detail view (still expanded).
+7. **Overflow button**: If a region has >30 photos, verify the button reads "View on map" (not "+N more"). Click it — should transition to map zoomed to that region.
+8. **Close detail**: Click back/close — should collapse back to the grid.
+9. **Enter map**: Click "Explore the map" — landing page should hide, revealing the full map app.
+10. **Mobile**: Resize to 375px width and repeat steps 1-9.
