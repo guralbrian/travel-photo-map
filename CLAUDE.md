@@ -27,6 +27,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-20
 - Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (existing, vendored) (011-fix-video-playback)
 - Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies (011-fix-video-playback)
 - N/A — reads `data/manifest.json` at runtime (011-fix-video-playback)
+- Vanilla JavaScript (ES5-compatible IIFEs), CSS3, HTML5 + Leaflet.js (vendored in `js/`), no new dependencies (012-fix-mobile-nav-ux)
+- N/A — pure UI changes, no data persistence (012-fix-mobile-nav-ux)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -51,9 +53,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 012-fix-mobile-nav-ux: Added Vanilla JavaScript (ES5-compatible IIFEs), CSS3, HTML5 + Leaflet.js (vendored in `js/`), no new dependencies
 - 011-fix-video-playback: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies
 - 011-fix-video-playback: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (existing, vendored)
-- 010-trip-landing-page: Added Vanilla JavaScript (ES5-compatible IIFE in landing-page.js), CSS3, HTML5 + Leaflet.js (vendored), photo-viewer.js (existing global `window.photoViewer`)
 
 
 <!-- MANUAL ADDITIONS START -->

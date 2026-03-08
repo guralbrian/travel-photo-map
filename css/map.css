@@ -714,6 +714,15 @@ html, body {
     font-size: var(--font-md);
     font-weight: 600;
     color: var(--color-text);
+    flex: 1;
+}
+
+/* Accent bar to distinguish Feed from Photo Wall on mobile */
+@media (max-width: 768px) {
+    .feed-header {
+        border-left: 3px solid var(--color-accent, #d4a853);
+        padding-left: 13px;
+    }
 }
 
 .feed-close {
@@ -737,7 +746,6 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 4px 0;
-    pointer-events: none;
 }
 .feed-entries.hidden { display: none; }
 
@@ -764,7 +772,6 @@ html, body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     cursor: pointer;
     transition: background 0.2s ease;
-    pointer-events: auto;
 }
 
 .feed-entry:hover {
@@ -886,15 +893,25 @@ html, body {
     border-bottom-color: var(--color-accent);
 }
 
-/* Feed drag handle (mobile) */
+/* Feed drag handle */
 .feed-drag-handle {
-    width: 40px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
+    width: var(--panel-handle-width, 48px);
+    height: var(--panel-handle-height, 8px);
+    background: var(--panel-handle-color, rgba(255, 255, 255, 0.4));
+    border-radius: var(--panel-handle-radius, 4px);
     margin: 8px auto 4px;
     flex-shrink: 0;
-    display: none;
+    display: block;
+    cursor: grab;
+    /* 44px touch target via padding */
+    padding: 18px 0;
+    background-clip: content-box;
+}
+
+.feed-drag-handle:active {
+    cursor: grabbing;
+    background-color: var(--panel-handle-hover, rgba(255, 255, 255, 0.6));
+    background-clip: content-box;
 }
 
 /* ──── Mobile: bottom sheet ──── */
@@ -978,43 +995,57 @@ html, body {
         font-size: 20px;
     }
 
-    /* Feed sidebar → bottom sheet on mobile */
-    .feed-toggle {
-        display: none;
-    }
-
+    /* Feed sidebar → bottom sheet on mobile (managed by PanelSnap) */
     .feed-sidebar {
         top: auto;
         left: 0;
         right: 0;
         bottom: 0;
         width: 100%;
-        height: 85vh;
         border-radius: 12px 12px 0 0;
         animation: none;
-        transform: translateY(calc(100% - 60px));
-        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        touch-action: none;
     }
 
+    /* Desktop hidden class override: on mobile, hidden = translateY off-screen */
     .feed-sidebar.hidden {
-        transform: translateY(100%);
+        transform: translateX(0);
         opacity: 1;
     }
 
-    .feed-sidebar.feed-sheet-collapsed {
-        transform: translateY(calc(100% - 60px));
+    /* PanelSnap state classes for feed sidebar */
+    .feed-sidebar--collapsed {
+        height: var(--wall-collapsed-height, 30vh);
     }
 
-    .feed-sidebar.feed-sheet-half {
-        transform: translateY(50%);
+    .feed-sidebar--half {
+        height: 50vh;
     }
 
-    .feed-sidebar.feed-sheet-full {
-        transform: translateY(0);
+    .feed-sidebar--full {
+        height: 100vh;
+        border-radius: 0;
+        z-index: 1003;
+    }
+
+    .feed-sidebar--hidden {
+        transform: translateY(100%) !important;
+        pointer-events: none;
+    }
+
+    .feed-sidebar--animating {
+        transition: height var(--panel-snap-duration, 250ms) var(--panel-snap-easing, cubic-bezier(0.22, 1, 0.36, 1)),
+                    border-radius var(--panel-snap-duration, 250ms) var(--panel-snap-easing, cubic-bezier(0.22, 1, 0.36, 1)),
+                    transform var(--panel-snap-duration, 250ms) var(--panel-snap-easing, cubic-bezier(0.22, 1, 0.36, 1));
     }
 
     .feed-drag-handle {
         display: block;
+    }
+
+    /* Old feed toggle button hidden on mobile — replaced by panel-toggle-btn */
+    .feed-toggle {
+        display: none;
     }
 }
 

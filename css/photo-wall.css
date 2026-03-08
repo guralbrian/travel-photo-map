@@ -111,6 +111,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 44px;
     padding: 10px 0 6px;
     cursor: grab;
     flex-shrink: 0;
@@ -124,15 +125,16 @@
 }
 
 .photo-wall-handle-bar {
-    width: 48px;
-    height: 8px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.30);
+    width: var(--panel-handle-width, 48px);
+    height: var(--panel-handle-height, 8px);
+    border-radius: var(--panel-handle-radius, 4px);
+    background: var(--panel-handle-color, rgba(255, 255, 255, 0.4));
     transition: background 200ms;
 }
 
-.photo-wall-handle:hover .photo-wall-handle-bar {
-    background: rgba(255, 255, 255, 0.4);
+.photo-wall-handle:hover .photo-wall-handle-bar,
+.photo-wall-handle:active .photo-wall-handle-bar {
+    background: var(--panel-handle-hover, rgba(255, 255, 255, 0.6));
 }
 
 /* ── Header ─────────────────────────────────────────────────────────── */

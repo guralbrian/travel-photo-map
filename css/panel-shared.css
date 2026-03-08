@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════════════════════════
+   Shared Panel Tokens & Styles
+   Used by both Trip Feed and Photo Wall bottom panels.
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+    --panel-handle-width: 48px;
+    --panel-handle-height: 8px;
+    --panel-handle-radius: 4px;
+    --panel-handle-color: rgba(255, 255, 255, 0.4);
+    --panel-handle-hover: rgba(255, 255, 255, 0.6);
+    --panel-toggle-size: 44px;
+    --panel-snap-duration: 250ms;
+    --panel-snap-easing: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Toggle Buttons ─────────────────────────────────────────── */
+
+.panel-toggle-btn {
+    position: fixed;
+    z-index: var(--z-panel-toggle, 1002);
+    width: auto;
+    min-width: var(--panel-toggle-size);
+    height: var(--panel-toggle-size);
+    padding: 0 14px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(20, 20, 28, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: rgba(255, 255, 255, 0.9);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    transition: background 0.2s ease, transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.panel-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.panel-toggle-btn.visible {
+    display: flex;
+}
+
+/* Position: bottom-right, stacked vertically */
+.panel-toggle-btn[data-panel="photo-wall"] {
+    bottom: 16px;
+    right: 16px;
+}
+
+.panel-toggle-btn[data-panel="trip-feed"] {
+    bottom: 68px;
+    right: 16px;
+}
+
+/* Hide toggle buttons on desktop — panels live side-by-side */
+@media (min-width: 769px) {
+    .panel-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* ── Shared Drag Handle ─────────────────────────────────────── */
+
+.panel-drag-handle {
+    width: var(--panel-handle-width);
+    height: var(--panel-handle-height);
+    background: var(--panel-handle-color);
+    border-radius: var(--panel-handle-radius);
+    margin: 8px auto 4px;
+    flex-shrink: 0;
+    cursor: grab;
+    /* Ensure 44px touch target via padding on the wrapper */
+}
+
+.panel-drag-handle:active {
+    cursor: grabbing;
+    background: var(--panel-handle-hover);
+}

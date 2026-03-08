@@ -153,8 +153,11 @@
             if (_gridVisible) {
                 document.body.appendChild(_gridEl);
                 _gridEl.classList.add('region-grid--overlay');
+                // Dismiss on backdrop tap (click outside region cards)
+                _gridEl.addEventListener('click', _onOverlayBackdropClick);
             } else {
                 _gridEl.classList.remove('region-grid--overlay');
+                _gridEl.removeEventListener('click', _onOverlayBackdropClick);
                 _feedEntries.parentNode.insertBefore(_gridEl, _feedEntries);
             }
         }
@@ -215,10 +218,15 @@
             _travelRouteLayerRef.layer = newRoutes;
         }
 
-        // On mobile, ensure feed sidebar is visible for itinerary
-        var feedSidebar = document.getElementById('feed-sidebar');
-        if (feedSidebar && window.innerWidth <= 768) {
-            feedSidebar.classList.remove('hidden');
+        // On mobile, switch to Trip Feed panel for itinerary viewing
+        if (window.innerWidth <= 768) {
+            document.dispatchEvent(new CustomEvent('panel:activate', {
+                detail: { panel: 'trip-feed' }
+            }));
+        } else {
+            // Desktop: just ensure feed sidebar is visible
+            var feedSidebar = document.getElementById('feed-sidebar');
+            if (feedSidebar) feedSidebar.classList.remove('hidden');
         }
     }
 
@@ -296,6 +304,21 @@
         if (fullRoutes) {
             fullRoutes.addTo(_map);
             _travelRouteLayerRef.layer = fullRoutes;
+        }
+
+        // On mobile, switch back to Photo Wall (default panel)
+        if (window.innerWidth <= 768) {
+            document.dispatchEvent(new CustomEvent('panel:activate', {
+                detail: { panel: 'photo-wall' }
+            }));
+        }
+    }
+
+    /* ── Backdrop click: dismiss overlay when tapping outside region cards ── */
+    function _onOverlayBackdropClick(e) {
+        // Only dismiss if click target is the overlay itself (not a child)
+        if (e.target === _gridEl || e.target.classList.contains('region-grid-inner')) {
+            toggleGrid();
         }
     }
 

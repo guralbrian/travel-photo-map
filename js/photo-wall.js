@@ -206,131 +206,8 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       PanelSnap
+       PanelSnap — now provided by panel-manager.js (window.PanelSnap)
     ═══════════════════════════════════════════════════════════════ */
-    /**
-     * Manages drag-to-snap behaviour for the photo wall panel.
-     * Uses Pointer Events for unified mouse + touch handling.
-     */
-    function PanelSnap({ panelEl, handleEl, collapseBtn, onStateChange }) {
-        this._panel = panelEl;
-        this._handle = handleEl;
-        this._onStateChange = onStateChange || (() => {});
-        this.currentState = 'collapsed';
-        this._dragging = false;
-        this._startY = 0;
-        this._startHeight = 0;
-        this._velocitySamples = [];
-
-        // Bind handlers
-        this._onPointerDown = this._onPointerDown.bind(this);
-        this._onPointerMove = this._onPointerMove.bind(this);
-        this._onPointerUp   = this._onPointerUp.bind(this);
-
-        if (handleEl) {
-            handleEl.addEventListener('pointerdown', this._onPointerDown);
-        }
-        if (collapseBtn) {
-            collapseBtn.addEventListener('click', e => {
-                e.stopPropagation();
-                // Already collapsed → close fully; otherwise collapse to strip
-                if (this.currentState === 'collapsed') {
-                    this.snapTo('hidden');
-                } else {
-                    this.snapTo('collapsed');
-                }
-            });
-        }
-    }
-
-    PanelSnap.prototype.snapTo = function (state) {
-        this.currentState = state;
-        this._panel.classList.add('photo-wall-panel--animating');
-        this._panel.classList.remove(
-            'photo-wall-panel--collapsed',
-            'photo-wall-panel--half',
-            'photo-wall-panel--full',
-            'photo-wall-panel--hidden'
-        );
-        this._panel.classList.add(`photo-wall-panel--${state}`);
-        this._panel.style.height = ''; // let CSS class take over
-
-        // Z-index: above everything in full-screen mode
-        this._panel.style.zIndex = (state === 'full') ? '1003' : '';
-
-        setTimeout(() => {
-            this._panel.classList.remove('photo-wall-panel--animating');
-        }, 280);
-
-        this._onStateChange(state);
-    };
-
-    PanelSnap.prototype._onPointerDown = function (e) {
-        this._dragging = true;
-        this._startY = e.clientY;
-        this._startHeight = this._panel.offsetHeight;
-        this._velocitySamples = [{ y: e.clientY, t: Date.now() }];
-        this._panel.classList.remove('photo-wall-panel--animating');
-        this._handle.setPointerCapture(e.pointerId);
-
-        document.addEventListener('pointermove', this._onPointerMove);
-        document.addEventListener('pointerup',   this._onPointerUp);
-        document.addEventListener('pointercancel', this._onPointerUp);
-    };
-
-    PanelSnap.prototype._onPointerMove = function (e) {
-        if (!this._dragging) return;
-        const deltaY = this._startY - e.clientY;
-        const newH = Math.max(40, Math.min(window.innerHeight, this._startHeight + deltaY));
-        this._panel.style.height = newH + 'px';
-
-        this._velocitySamples.push({ y: e.clientY, t: Date.now() });
-        if (this._velocitySamples.length > 6) this._velocitySamples.shift();
-    };
-
-    PanelSnap.prototype._onPointerUp = function () {
-        if (!this._dragging) return;
-        this._dragging = false;
-
-        document.removeEventListener('pointermove', this._onPointerMove);
-        document.removeEventListener('pointerup',   this._onPointerUp);
-        document.removeEventListener('pointercancel', this._onPointerUp);
-
-        // Compute velocity (px/s, positive = moving downward)
-        let velocity = 0;
-        if (this._velocitySamples.length >= 2) {
-            const first = this._velocitySamples[0];
-            const last  = this._velocitySamples[this._velocitySamples.length - 1];
-            const dt = last.t - first.t;
-            if (dt > 0) velocity = (last.y - first.y) / dt * 1000;
-        }
-
-        const currentH = this._panel.offsetHeight;
-        const vh = window.innerHeight;
-        const collapsedH = vh * 0.30;
-        const halfH      = vh * 0.50;
-
-        let target;
-        if (velocity > 400) {
-            // Fast swipe down: full→half, half→collapsed, collapsed→hidden
-            target = (this.currentState === 'full') ? 'half' : (this.currentState === 'half') ? 'collapsed' : 'hidden';
-        } else if (velocity < -400) {
-            // Fast swipe up
-            target = (this.currentState === 'collapsed') ? 'half' : 'full';
-        } else {
-            // Nearest snap point
-            const midColHalf = collapsedH + (halfH - collapsedH) * 0.5;
-            const midHalfFull = halfH + (vh - halfH) * 0.5;
-            if (currentH >= midHalfFull) {
-                target = 'full';
-            } else if (currentH >= midColHalf) {
-                target = 'half';
-            } else {
-                target = 'collapsed';
-            }
-        }
-        this.snapTo(target);
-    };
 
     /* ═══════════════════════════════════════════════════════════════
        DateScrubber
@@ -434,16 +311,27 @@
         // Build layout
         this._buildLayout();
 
-        // Snap panel
-        this._snap = new PanelSnap({
+        // Snap panel (uses shared PanelSnap from panel-manager.js)
+        this._snap = new window.PanelSnap({
             panelEl:    container,
             handleEl:   this._handleEl,
             collapseBtn: this._collapseBtn,
+            statePrefix: 'photo-wall-panel',
             onStateChange: state => {
                 this._onSnapStateChange(state);
                 document.dispatchEvent(new CustomEvent('photo-wall:state-changed', {
                     detail: { state }
                 }));
+                // Notify panel coordinator
+                if (state !== 'hidden') {
+                    document.dispatchEvent(new CustomEvent('panel:activate', {
+                        detail: { panel: 'photo-wall' }
+                    }));
+                } else {
+                    document.dispatchEvent(new CustomEvent('panel:deactivate', {
+                        detail: { panel: 'photo-wall' }
+                    }));
+                }
             }
         });
         container.classList.add('photo-wall-panel--collapsed');
@@ -516,11 +404,17 @@
             });
         }
 
-        // Wire reopen button (shown when panel is fully dismissed)
+        // Register with panel coordinator
         const reopenBtn = document.getElementById('photo-wall-reopen-btn');
+        if (window.panelCoordinator) {
+            window.panelCoordinator.register('photo-wall', this._snap, reopenBtn);
+        }
+        // Wire reopen button to coordinator
         if (reopenBtn) {
             reopenBtn.addEventListener('click', () => {
-                this._snap.snapTo('collapsed');
+                document.dispatchEvent(new CustomEvent('panel:activate', {
+                    detail: { panel: 'photo-wall' }
+                }));
             });
         }
     }
@@ -843,11 +737,7 @@
             this._container.style.zIndex = '';
         }
 
-        // Show reopen button only when panel is fully dismissed
-        const reopenBtn = document.getElementById('photo-wall-reopen-btn');
-        if (reopenBtn) {
-            reopenBtn.classList.toggle('visible', state === 'hidden');
-        }
+        // Toggle button visibility is now managed by PanelCoordinator
 
         // Re-render after animation completes (panel height changed)
         setTimeout(() => {

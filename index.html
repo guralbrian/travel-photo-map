@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/Leaflet.Photo.css">
     <link rel="stylesheet" href="css/map.css">
     <link rel="stylesheet" href="css/photo-viewer.css">
+    <link rel="stylesheet" href="css/panel-shared.css">
     <link rel="stylesheet" href="css/photo-wall.css">
     <link rel="stylesheet" href="css/landing-page.css">
 </head>
@@ -54,9 +55,14 @@
         <div class="feed-entries" id="feed-entries"></div>
     </div>
 
-    <!-- Photo wall reopen button (visible when panel is fully dismissed) -->
-    <button class="photo-wall-reopen-btn" id="photo-wall-reopen-btn" aria-label="Open photo wall">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    <!-- Panel toggle buttons (mobile: switch between panels) -->
+    <button class="panel-toggle-btn" id="trip-feed-toggle-btn" data-panel="trip-feed" aria-label="Open trip feed">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg>
+        Feed
+    </button>
+    <button class="panel-toggle-btn photo-wall-reopen-btn" id="photo-wall-reopen-btn" data-panel="photo-wall" aria-label="Open photo wall">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        Photos
     </button>
 
     <!-- Photo wall panel -->
@@ -81,10 +87,11 @@
 
     <script src="js/leaflet.js"></script>
     <script src="js/Leaflet.Photo.js"></script>
-    <!-- <script src="js/ForceLayout.js"></script> -->
+
     <script src="js/ViewportSampler.js"></script>
     <script src="js/route-builder.js"></script>
     <script src="js/photo-viewer.js"></script>
+    <script src="js/panel-manager.js"></script>
     <script src="js/photo-wall.js"></script>
     <script src="js/region-nav.js"></script>
     <script src="js/landing-page.js"></script>
@@ -499,27 +506,71 @@
             var feedEntries = document.getElementById('feed-entries');
             var activeFeedDate = null;
 
-            function toggleFeedSidebar() {
-                var isHidden = feedSidebar.classList.toggle('hidden');
-                feedToggle.style.display = isHidden ? '' : 'none';
-                // On medium viewports, auto-collapse control panel when feed opens
-                if (!isHidden && window.innerWidth >= 769 && window.innerWidth < 1280) {
-                    var cp = document.querySelector('.control-panel');
-                    if (cp && !cp.classList.contains('hidden')) {
-                        cp.classList.add('hidden');
-                        var pt = document.querySelector('.panel-toggle');
-                        if (pt) { pt.classList.remove('open'); pt.style.display = ''; }
-                    }
-                }
-            }
-
-            feedToggle.addEventListener('click', toggleFeedSidebar);
-            feedClose.addEventListener('click', toggleFeedSidebar);
-
             // Prevent map interaction behind feed sidebar
             L.DomEvent.disableClickPropagation(feedSidebar);
             L.DomEvent.disableScrollPropagation(feedSidebar);
-            L.DomEvent.disableClickPropagation(feedToggle);
+            if (feedToggle) L.DomEvent.disableClickPropagation(feedToggle);
+
+            // Prevent wheel events from reaching map
+            feedSidebar.addEventListener('wheel', function (e) { e.stopPropagation(); }, { passive: false });
+
+            // Wire PanelSnap for feed sidebar (replaces old touch handlers)
+            var feedPanelSnap = new window.PanelSnap({
+                panelEl: feedSidebar,
+                handleEl: feedSidebar.querySelector('.feed-drag-handle'),
+                collapseBtn: feedClose,
+                statePrefix: 'feed-sidebar',
+                onStateChange: function (state) {
+                    document.dispatchEvent(new CustomEvent('trip-feed:state-changed', {
+                        detail: { state: state }
+                    }));
+                    if (state !== 'hidden') {
+                        document.dispatchEvent(new CustomEvent('panel:activate', {
+                            detail: { panel: 'trip-feed' }
+                        }));
+                    } else {
+                        document.dispatchEvent(new CustomEvent('panel:deactivate', {
+                            detail: { panel: 'trip-feed' }
+                        }));
+                    }
+                }
+            });
+
+            // Register with panel coordinator
+            var feedToggleBtn = document.getElementById('trip-feed-toggle-btn');
+            if (window.panelCoordinator) {
+                window.panelCoordinator.register('trip-feed', feedPanelSnap, feedToggleBtn);
+            }
+
+            // Wire toggle buttons to coordinator
+            if (feedToggleBtn) {
+                feedToggleBtn.addEventListener('click', function () {
+                    document.dispatchEvent(new CustomEvent('panel:activate', {
+                        detail: { panel: 'trip-feed' }
+                    }));
+                });
+            }
+
+            // Desktop: old feed toggle button still works
+            if (feedToggle) {
+                feedToggle.addEventListener('click', function () {
+                    if (window.innerWidth > 768) {
+                        var isHidden = feedSidebar.classList.toggle('hidden');
+                        feedToggle.style.display = isHidden ? '' : 'none';
+                    } else {
+                        document.dispatchEvent(new CustomEvent('panel:activate', {
+                            detail: { panel: 'trip-feed' }
+                        }));
+                    }
+                });
+            }
+
+            // Default state on mobile: Trip Feed starts hidden
+            if (window.innerWidth <= 768) {
+                feedSidebar.classList.remove('hidden');
+                feedPanelSnap.snapTo('hidden');
+                if (feedToggleBtn) feedToggleBtn.classList.add('visible');
+            }
 
             function buildFeed() {
                 var keys = Object.keys(dateIndex).sort();
@@ -614,10 +665,10 @@
                 if (window.innerWidth <= 768) {
                     padLeft = 20;
                     padRight = 20;
-                    // Auto-collapse bottom sheet to half on entry tap
-                    feedSidebar.classList.remove('feed-sheet-full');
-                    feedSidebar.classList.remove('feed-sheet-collapsed');
-                    feedSidebar.classList.add('feed-sheet-half');
+                    // Auto-snap to half on entry tap
+                    if (feedPanelSnap.currentState === 'full') {
+                        feedPanelSnap.snapTo('half');
+                    }
                 }
 
                 map.flyToBounds(bounds, {
@@ -670,102 +721,7 @@
                 }
             }
 
-            // ──── Feed Bottom Sheet (Mobile Touch Gestures) ────
-            (function () {
-                var sheet = feedSidebar;
-                var handle = sheet.querySelector('.feed-drag-handle');
-                var header = sheet.querySelector('.feed-header');
-                var startY = 0, startTranslateY = 0, currentY = 0, isDragging = false;
-                var sheetHeight = 0;
-                var COLLAPSED_OFFSET = 0; // computed dynamically
-                var HALF_OFFSET = 0;
-
-                function getSheetState() {
-                    if (sheet.classList.contains('feed-sheet-full')) return 'full';
-                    if (sheet.classList.contains('feed-sheet-half')) return 'half';
-                    return 'collapsed';
-                }
-
-                function setSheetState(state) {
-                    sheet.classList.remove('feed-sheet-collapsed', 'feed-sheet-half', 'feed-sheet-full');
-                    sheet.classList.add('feed-sheet-' + state);
-                    sheet.style.transform = '';
-                }
-
-                function getCurrentTranslateY() {
-                    var st = window.getComputedStyle(sheet);
-                    var matrix = st.transform || st.webkitTransform;
-                    if (matrix && matrix !== 'none') {
-                        var values = matrix.split('(')[1].split(')')[0].split(',');
-                        return parseFloat(values[5]) || 0;
-                    }
-                    return 0;
-                }
-
-                function onTouchStart(e) {
-                    if (window.innerWidth > 768) return;
-                    isDragging = true;
-                    startY = e.touches[0].clientY;
-                    sheetHeight = sheet.offsetHeight;
-                    COLLAPSED_OFFSET = sheetHeight - 60;
-                    HALF_OFFSET = sheetHeight * 0.5;
-                    startTranslateY = getCurrentTranslateY();
-                    sheet.style.transition = 'none';
-                }
-
-                function onTouchMove(e) {
-                    if (!isDragging || window.innerWidth > 768) return;
-                    currentY = e.touches[0].clientY;
-                    var deltaY = currentY - startY;
-                    var newY = startTranslateY + deltaY;
-                    // Clamp: don't go above 0 (fully open) or below sheetHeight (hidden)
-                    newY = Math.max(0, Math.min(sheetHeight, newY));
-                    sheet.style.transform = 'translateY(' + newY + 'px)';
-                    e.preventDefault();
-                }
-
-                function onTouchEnd() {
-                    if (!isDragging || window.innerWidth > 768) return;
-                    isDragging = false;
-                    sheet.style.transition = '';
-
-                    var finalY = getCurrentTranslateY();
-                    var velocity = currentY - startY; // positive = swiped down
-
-                    // Snap to nearest state based on position and velocity
-                    if (velocity > 80) {
-                        // Fast swipe down
-                        var state = getSheetState();
-                        if (state === 'full') setSheetState('half');
-                        else setSheetState('collapsed');
-                    } else if (velocity < -80) {
-                        // Fast swipe up
-                        var state2 = getSheetState();
-                        if (state2 === 'collapsed') setSheetState('half');
-                        else setSheetState('full');
-                    } else {
-                        // Snap to nearest position
-                        if (finalY < HALF_OFFSET * 0.5) {
-                            setSheetState('full');
-                        } else if (finalY < COLLAPSED_OFFSET * 0.75) {
-                            setSheetState('half');
-                        } else {
-                            setSheetState('collapsed');
-                        }
-                    }
-                }
-
-                if (handle) {
-                    handle.addEventListener('touchstart', onTouchStart, { passive: true });
-                    handle.addEventListener('touchmove', onTouchMove, { passive: false });
-                    handle.addEventListener('touchend', onTouchEnd, { passive: true });
-                }
-                if (header) {
-                    header.addEventListener('touchstart', onTouchStart, { passive: true });
-                    header.addEventListener('touchmove', onTouchMove, { passive: false });
-                    header.addEventListener('touchend', onTouchEnd, { passive: true });
-                }
-            })();
+            // Old touch handlers removed — PanelSnap handles drag gestures via Pointer Events
 
             // ──── Feed Narratives ────
             function renderFeedNarratives() {
@@ -927,8 +883,7 @@
                     }
                     // On mobile, start in collapsed state
                     if (window.innerWidth <= 768) {
-                        feedSidebar.classList.add('feed-sheet-collapsed');
-                    }
+                        }
 
                     // Draw intercity travel route using photo geotags
                     travelRouteLayer = buildSmartRoutes(allPhotos, tripSegments, map);
@@ -999,10 +954,6 @@
                                 if (wallPanel) wallPanel.style.visibility = '';
                                 var reopenBtn = document.getElementById('photo-wall-reopen-btn');
                                 if (reopenBtn) reopenBtn.style.visibility = '';
-                                // On mobile, start collapsed
-                                if (window.innerWidth <= 768) {
-                                    feedSidebar.classList.add('feed-sheet-collapsed');
-                                }
                                 // Invalidate map size after landing page hides
                                 setTimeout(function () {
                                     map.invalidateSize();
