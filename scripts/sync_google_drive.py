@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
@@ -99,13 +100,16 @@ def list_drive_media(service, folder_id):
     query = f"'{folder_id}' in parents and trashed = false"
 
     while True:
-        response = service.files().list(
-            q=query,
-            spaces='drive',
-            fields='nextPageToken, files(id, name, mimeType, modifiedTime, size, webContentLink)',
-            pageToken=page_token,
-            pageSize=1000,
-        ).execute()
+        def _list_page(pt=page_token):
+            return service.files().list(
+                q=query,
+                spaces='drive',
+                fields='nextPageToken, files(id, name, mimeType, modifiedTime, size, webContentLink)',
+                pageToken=pt,
+                pageSize=1000,
+            ).execute()
+
+        response = retry_on_rate_limit(lambda: _list_page(page_token))
 
         for f in response.get('files', []):
             if f.get('mimeType') in MEDIA_MIMETYPES:
@@ -148,6 +152,35 @@ def save_sync_cache(cache_path, cache):
         json.dump(cache, f, indent=2)
 
 
+def retry_on_rate_limit(func, max_retries=5):
+    """Retry a function with exponential backoff on rate limit errors.
+
+    Args:
+        func: Callable to execute.
+        max_retries: Maximum number of retries.
+
+    Returns:
+        Result of func().
+
+    Raises:
+        The last exception if all retries are exhausted.
+    """
+    from googleapiclient.errors import HttpError
+
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except HttpError as e:
+            if e.resp.status in (429, 403) and attempt < max_retries:
+                wait = 2 ** attempt + 1
+                print(f"\n  Rate limited (HTTP {e.resp.status}), "
+                      f"retrying in {wait}s (attempt {attempt + 1}/{max_retries})...",
+                      flush=True)
+                time.sleep(wait)
+            else:
+                raise
+
+
 def download_file(service, file_id, dest_path):
     """Download a file from Google Drive.
 
@@ -157,14 +190,16 @@ def download_file(service, file_id, dest_path):
         dest_path: Local destination path.
     """
     from googleapiclient.http import MediaIoBaseDownload
-    import io
 
-    request = service.files().get_media(fileId=file_id)
-    with open(dest_path, 'wb') as f:
-        downloader = MediaIoBaseDownload(f, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
+    def _download():
+        request = service.files().get_media(fileId=file_id)
+        with open(dest_path, 'wb') as f:
+            downloader = MediaIoBaseDownload(f, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+    retry_on_rate_limit(_download)
 
 
 def get_shareable_link(service, file_id):
@@ -178,10 +213,13 @@ def get_shareable_link(service, file_id):
         Shareable URL string, or empty string on failure.
     """
     try:
-        file_meta = service.files().get(
-            fileId=file_id,
-            fields='webViewLink'
-        ).execute()
+        def _get_link():
+            return service.files().get(
+                fileId=file_id,
+                fields='webViewLink'
+            ).execute()
+
+        file_meta = retry_on_rate_limit(_get_link)
         return file_meta.get('webViewLink', '')
     except Exception:
         return ''
@@ -342,6 +380,9 @@ def sync(folder_id, photo_dir, notes_file, credentials_file, token_file,
             'size': df.get('size', ''),
         }
         downloaded += 1
+
+        # Brief pause between files to avoid rate limits
+        time.sleep(0.5)
 
     # Save updated state
     save_sync_cache(cache_path, new_cache)

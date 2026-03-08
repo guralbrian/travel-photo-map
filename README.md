@@ -1,126 +1,257 @@
-# Travel Photo Map
+# Europe 2026 — Travel Photo Map
 
-A static Leaflet map that displays your geotagged travel photos as clustered markers. Drop photos in, run a script, and deploy anywhere as static files (GitHub Pages, Netlify, etc.).
+An interactive map of Brian and Rachel's 42-day trip across London, Copenhagen, Heidelberg, Munich, Prague, Dresden, Berlin, and Hamburg. 429 photos, 35 videos, 9 regions, 5 countries — January 26 to March 9, 2026.
 
-## Prerequisites
+**[Explore the map](https://guralbrian.github.io/travel-photo-map/)**
 
-- Python 3.10+
-- Geotagged photos (JPG/TIFF with GPS EXIF data)
+---
 
-## Quick Start
+## Contents
+
+- [How to Explore](#how-to-explore)
+- [The Route](#the-route)
+- [Features](#features)
+- [For Developers](#for-developers)
+  - [Architecture](#architecture)
+  - [Tech Stack](#tech-stack)
+  - [Project Structure](#project-structure)
+  - [Local Setup](#local-setup)
+  - [Data Pipeline](#data-pipeline)
+  - [Cloud Backend](#cloud-backend)
+  - [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Map Layers](#map-layers)
+
+---
+
+## How to Explore
+
+**Landing page** — When you open the app you'll see trip stats and a grid of region cards with hero photos. Tap any region to see its photos, places, and day-by-day notes, or hit "Explore the Map" to jump straight to the map.
+
+**The map** — Photos appear as markers on an interactive map. The app intelligently thins them out so the map doesn't get cluttered — zoom in and more appear. Click any photo marker to open it full-screen.
+
+**Photo viewer** — Swipe left and right to flip through photos. Pinch to zoom in (up to 5x), double-tap to quick-zoom, swipe down to close. Videos play inline with a loading preview. On desktop, use arrow keys and scroll to zoom.
+
+**Photo wall** — Drag up the bottom panel to see every photo in a scrollable chronological grid organized by date. Use the scrubber on the right edge to jump to a specific date. Tap any photo to fly to its location on the map.
+
+**Regions sidebar** — Open the sidebar to browse by city. Each region expands into a day-by-day itinerary with notes about what we did, who we met, and where we went.
+
+**Map styles** — Switch between 10 map styles (satellite, terrain, dark mode, and more) using the controls panel. Toggle travel route lines and Google Timeline paths on and off.
+
+---
+
+## The Route
+
+| # | Region | Dates | Highlights |
+|---|--------|-------|------------|
+| 1 | London | Jan 27–29 | Festival of Genomics at ExCeL, networking |
+| 2 | Copenhagen (1) | Jan 30 – Feb 3 | Ashnikko concert, waterfront hot baths, –20°C |
+| 3 | Heidelberg | Feb 3–8 | EMBL, Philosophenweg, Bürgstadt & Miltenberg |
+| 4 | Munich | Feb 9–13 | Helmholtz visit, Lost Weekend, long walks |
+| 5 | Prague | Feb 13–15 | Naplavka market, Charles Bridge, Petrin Hill |
+| 6 | Dresden / Meissen | Feb 16–17 | Zwinger, porcelain Manufactory, Cathedral |
+| 7 | Berlin / Hamburg | Feb 17–19 | Kreuzberg, Schanzenviertel thrifting |
+| 8 | Copenhagen (2) | Feb 20 – Mar 9 | KU/CBMR networking, BII, long stay |
+
+---
+
+## Features
+
+- Landing page with animated intro, region cards, and hero slideshow
+- Viewport-based photo density sampling (adapts to zoom level, Apple Maps style)
+- Immersive photo viewer with pinch zoom (5x), swipe navigation, and FLIP open/close animations
+- Video playback via Google Drive iframe embeds with thumbnail loading state and spinner
+- Draggable photo wall — justified chronological grid with date scrubber
+- Region navigation sidebar with day-by-day itinerary notes
+- Smart route lines between cities (chronological clustering + RDP simplification)
+- Google Timeline overlay — walking, driving, cycling, and transit paths from Location History
+- 10 map tile layers (street, satellite, terrain, dark, topo, and more)
+- Cloud backend for favorites, captions, and tags (Firebase Auth + Firestore)
+- Fully responsive — mobile-first touch targets with desktop hover enhancements
+
+---
+
+## For Developers
+
+### Architecture
+
+Single-page app with no build tools, no bundler, and no framework. The UI is vanilla JavaScript split between ES5-compatible IIFEs (photo viewer, landing page, region nav) and ES2020 modules (cloud data, Firebase SDK). All third-party dependencies are vendored in `js/` — there's no `package.json` or `node_modules`. The whole thing deploys as static files.
+
+Each feature is a self-contained module that attaches to the Leaflet map instance or global state. `ViewportSampler.js` handles intelligent photo density on the map. `route-builder.js` generates travel polylines between cities. `cloud-data.js` manages Firestore reads/writes with an offline localStorage queue.
+
+### Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Map | Leaflet.js 1.9 + MarkerCluster (vendored) |
+| UI | Vanilla JavaScript, CSS3, HTML5 |
+| Fonts | Inter (Google Fonts CDN) |
+| Backend | Firebase Auth + Firestore Lite SDK v11.6.0 (vendored) |
+| Data pipeline | Python 3.10+ (Pillow, PyYAML, google-api-python-client) |
+| Hosting | Static files — GitHub Pages, Netlify, any web server |
+
+### Project Structure
+
+```
+travel-photo-map/
+├── index.html                    # Single-page app entry point
+├── css/
+│   ├── map.css                   # Map controls, timeline slider, layout
+│   ├── photo-viewer.css          # Fullscreen photo/video viewer
+│   ├── photo-wall.css            # Bottom-panel photo grid
+│   ├── landing-page.css          # Landing page + region cards
+│   ├── leaflet.css               # Vendored Leaflet styles
+│   ├── Leaflet.Photo.css         # Photo marker styles
+│   └── MarkerCluster*.css        # Cluster marker styles
+├── js/
+│   ├── landing-page.js           # Trip intro, region cards, detail views
+│   ├── photo-viewer.js           # Viewer: zoom, swipe, video, FLIP animations
+│   ├── photo-wall.js             # Draggable panel with justified photo grid
+│   ├── region-nav.js             # Sidebar: trip legs, itinerary, region filtering
+│   ├── route-builder.js          # Smart route polylines between cities
+│   ├── ViewportSampler.js        # Viewport-based photo density sampling
+│   ├── Leaflet.Photo.js          # Custom photo marker Leaflet plugin
+│   ├── cloud-data.js             # Firestore CRUD: favorites, captions, tags
+│   ├── auth.js                   # Firebase Auth UI + session handling
+│   ├── firebase-*.js             # Vendored Firebase SDK modules
+│   ├── leaflet.js                # Vendored Leaflet
+│   └── leaflet.markercluster.js  # Vendored MarkerCluster plugin
+├── data/
+│   ├── manifest.json             # 464 photo/video entries (auto-generated)
+│   ├── trip_segments.json        # 8 city segments with dates + colors
+│   ├── itinerary.json            # Day-by-day notes for 9 regions
+│   ├── annotations.json          # Map annotation markers
+│   ├── notes.yaml                # Captions, tags, Google Drive links
+│   ├── timeline.json             # Google Timeline paths (gitignored)
+│   └── location_overrides.yaml   # Manual lat/lng corrections
+├── scripts/
+│   ├── process_photos.py         # Extract EXIF GPS, generate thumbnails, build manifest
+│   ├── sync_google_drive.py      # Sync photos from shared Drive folder
+│   ├── parse_timeline.py         # Parse Google Takeout location history
+│   ├── init_firestore.py         # Seed Firestore collections
+│   └── upload_thumbnails.py      # Upload thumbnails to Firebase Storage
+├── firebase/
+│   ├── firestore.rules           # Firestore security rules
+│   └── storage.rules             # Cloud Storage security rules
+├── hero/                          # Hero images for landing page region cards
+├── thumbs/                        # Generated thumbnails
+├── photos/                        # Original photos (gitignored)
+├── specs/                         # Feature specification documents
+└── requirements.txt               # Python dependencies
+```
+
+### Local Setup
+
+The app works out of the box — all data files are already committed. No Python needed unless you want to process new photos.
 
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Add geotagged photos to the photos/ directory
-cp ~/my-photos/*.jpg photos/
-
-# Process photos (extract GPS, generate thumbnails, build manifest)
-python scripts/process_photos.py
-
-# Preview locally
+git clone https://github.com/guralbrian/travel-photo-map.git
+cd travel-photo-map
 python3 -m http.server 8000
 # Open http://localhost:8000
 ```
 
-## Google Drive Photo Sync
+### Data Pipeline
 
-Instead of manually copying photos, you can sync from a shared Google Drive folder. This is useful when multiple people upload to a shared folder.
+#### Processing Photos
 
-### One-Time Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com), create a project
-2. Enable the **Google Drive API**
-3. Create OAuth 2.0 credentials (Application type: **Desktop app**)
-4. Download `credentials.json` to the project root
-5. Run the setup flow:
+Extract GPS coordinates from EXIF data, generate thumbnails, and build `data/manifest.json`:
 
 ```bash
-python scripts/sync_google_drive.py --setup
-```
-
-This opens a browser for OAuth consent and saves `token.json` locally. Both files are gitignored.
-
-### Syncing Photos
-
-```bash
-# Sync from a shared Drive folder (find the folder ID in the Drive URL)
-python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID
-
-# Preview what would be downloaded
-python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --dry-run
-
-# Force re-download everything
-python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --force
-
-# Then process as usual
+pip install -r requirements.txt
 python scripts/process_photos.py
 ```
 
-The sync script downloads new photos to `photos/` and records Drive shareable links in `data/notes.yaml` under `google_photos_url`.
+Options: `--photo-dir` (default: `photos/`), `--thumb-dir` (default: `thumbs/`), `--thumb-width` (default: 200), `--output` (default: `data/manifest.json`).
 
-## Google Timeline Overlay
+#### Google Drive Sync
 
-Display your travel paths and visited places on the map using Google Timeline data.
+Sync photos from a shared Google Drive folder instead of copying them manually.
 
-### Export from Google Takeout
+**One-time setup:**
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com) and enable the Google Drive API
+2. Create OAuth 2.0 Desktop credentials, download `credentials.json` to the project root
+3. Run `python scripts/sync_google_drive.py --setup` to authorize
 
-1. Go to [Google Takeout](https://takeout.google.com)
-2. Select **Location History** only
-3. Choose JSON format
-4. Download and extract the archive
+**Syncing:**
+```bash
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --dry-run   # preview
+python scripts/sync_google_drive.py --folder-id YOUR_FOLDER_ID --force     # re-download all
+python scripts/process_photos.py                                            # then rebuild manifest
+```
 
-### Parse and Display
+#### Google Timeline Overlay
+
+Display travel paths and visited places from Google Location History:
+
+1. Export Location History from [Google Takeout](https://takeout.google.com) (JSON format)
+2. Parse and generate `data/timeline.json`:
 
 ```bash
-# Parse all timeline data
 python scripts/parse_timeline.py \
     --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History
 
 # Filter by date range
 python scripts/parse_timeline.py \
-    --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History \
+    --takeout-dir ~/Takeout/... \
     --start 2026-01-28 --end 2026-02-08
 
 # Simplify paths for smoother rendering
 python scripts/parse_timeline.py \
-    --takeout-dir ~/Takeout/Location\ History/Semantic\ Location\ History \
+    --takeout-dir ~/Takeout/... \
     --simplify 0.0001
 ```
 
-This creates `data/timeline.json`. The map automatically renders:
-- **Travel Paths**: Colored polylines by activity type (green=walking, blue=driving, orange=cycling, purple=transit)
-- **Visited Places**: Pink circle markers with name, address, and duration
+The map renders colored polylines by activity type (green = walking, blue = driving, orange = cycling, purple = transit) and pink circle markers for visited places. Both can be toggled on/off. If `timeline.json` is missing, the map works normally without it.
 
-Both overlays can be toggled on/off via the layer control (top-right corner). If `timeline.json` is missing, the map works normally without timeline data.
+#### Captions and Tags
 
-## Adding Captions and Tags
-
-Create `data/notes.yaml` to add captions and tags to your photos:
+Add captions and tags to photos via `data/notes.yaml`:
 
 ```yaml
 IMG_1234.jpg:
-  caption: Sunset over Santorini
-  tags: [greece, sunset, travel]
+  caption: Sunset over the Vltava
+  tags: [prague, sunset]
   google_photos_url: https://photos.app.goo.gl/example123
-
-DSC_5678.jpg:
-  caption: Street food in Bangkok
-  tags: [thailand, food]
 ```
 
-If a `google_photos_url` is provided, clicking the popup image will open the full-resolution photo on Google Photos in a new tab.
+### Cloud Backend
 
-## Map Layers
+The app uses Firebase for optional cloud features (favorites, caption editing, tag editing). The Firebase config file (`js/firebase-config.js`) is gitignored — copy from the example and fill in your project credentials. Without it, the app runs fine in read-only mode with all local data.
 
-The map includes a layer switcher (top-right corner) with ten base map styles:
+### Deployment
+
+No build step. Push to GitHub and enable Pages:
+
+1. Go to Settings > Pages
+2. Set source to "Deploy from a branch", select `main` / `/ (root)`
+3. Live at `https://<username>.github.io/<repo-name>/`
+
+Works equally well on Netlify, Vercel, or any static file host. Just make sure `thumbs/` and `data/manifest.json` are up to date before deploying.
+
+---
+
+## Troubleshooting
+
+**No markers appear on the map** — Make sure photos have GPS EXIF data. Check with: `python -c "from PIL import Image; img=Image.open('photos/test.jpg'); print(img.getexif().get_ifd(0x8825))"`. Photos at (0, 0) are automatically skipped.
+
+**Thumbnails appear rotated** — The processing script reads the EXIF orientation tag and auto-rotates. If a photo has no orientation tag, the thumbnail matches the raw pixel orientation.
+
+**Large photo collection** — Original photos in `photos/` are gitignored. Only thumbnails and the manifest are tracked. Adjust `--thumb-width` for quality vs. file size.
+
+---
+
+<details>
+<summary><strong>Map Layers</strong></summary>
+
+The map includes 10 base map styles, all free with no API key required:
 
 | Layer | Provider | Description |
 |-------|----------|-------------|
 | Street Map | OpenStreetMap | Standard street map (default) |
-| Humanitarian | OpenStreetMap France / HOT | Humanitarian-focused style |
-| Terrain | OpenTopoMap | Topographic map with contour lines |
+| Humanitarian | OSM France / HOT | Humanitarian-focused style |
+| Terrain | OpenTopoMap | Topographic with contour lines |
 | Satellite (Esri) | Esri World Imagery | Satellite/aerial photography |
 | Esri Street | Esri | Detailed street map |
 | CartoDB Positron | CARTO | Light, minimal style |
@@ -129,68 +260,4 @@ The map includes a layer switcher (top-right corner) with ten base map styles:
 | USGS Topo | U.S. Geological Survey | US topographic map |
 | USGS Imagery | U.S. Geological Survey | US satellite imagery |
 
-All tile providers are free and require no API key.
-
-## Script Options
-
-```
-python scripts/process_photos.py --help
-
-  --photo-dir    Directory with original photos (default: photos/)
-  --thumb-dir    Directory for thumbnails (default: thumbs/)
-  --thumb-width  Thumbnail width in pixels (default: 200)
-  --output       Output manifest path (default: data/manifest.json)
-```
-
-## Project Structure
-
-```
-travel-photo-map/
-├── index.html                 # Map page
-├── photos/                    # Original photos (gitignored)
-├── thumbs/                    # Generated thumbnails
-├── data/
-│   ├── manifest.json          # Photo metadata (auto-generated)
-│   ├── annotations.json       # Annotation markers (auto-generated)
-│   ├── notes.yaml             # Optional captions/tags
-│   └── timeline.json          # Timeline overlay (auto-generated, gitignored)
-├── js/                        # Vendored JS libraries
-│   ├── leaflet.js
-│   ├── leaflet.markercluster.js
-│   └── Leaflet.Photo.js
-├── css/                       # Vendored CSS + custom styles
-│   ├── leaflet.css
-│   ├── MarkerCluster.css
-│   ├── MarkerCluster.Default.css
-│   ├── Leaflet.Photo.css
-│   ├── map.css
-│   └── images/                # Leaflet marker icons
-├── scripts/
-│   ├── process_photos.py      # Photo processing script
-│   ├── sync_google_drive.py   # Google Drive sync script
-│   └── parse_timeline.py      # Google Timeline parser
-├── requirements.txt
-└── .gitignore
-```
-
-## Deploying to GitHub Pages
-
-1. Push this repo to GitHub
-2. Go to Settings > Pages
-3. Set source to "Deploy from a branch", select `main` / `/ (root)`
-4. Your map will be live at `https://<username>.github.io/<repo-name>/`
-
-Make sure to run `process_photos.py` before pushing so that `thumbs/` and `data/manifest.json` are up to date.
-
-## Troubleshooting
-
-**No markers appear on the map**
-- Ensure your photos have GPS EXIF data. Check with: `python -c "from PIL import Image; img=Image.open('photos/test.jpg'); print(img.getexif().get_ifd(0x8825))"`
-- Photos at (0, 0) (null island) are automatically skipped
-
-**Thumbnails appear rotated**
-- The script reads the EXIF orientation tag and auto-rotates. If a photo has no orientation tag, the thumbnail matches the raw pixel orientation.
-
-**Large photo collection**
-- Original photos in `photos/` are gitignored by default. Only thumbnails and the manifest are tracked.
-- For very large collections, consider increasing `--thumb-width` for better quality or decreasing it for smaller file sizes.
+</details>
