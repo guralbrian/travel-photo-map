@@ -107,11 +107,13 @@
         var target;
         if (velocity > 400) {
             target = (this.currentState === 'full') ? 'half' : (this.currentState === 'half') ? 'collapsed' : 'hidden';
-        } else if (velocity < -400) {
+        } else if (velocity < -250 && this.currentState === 'half') {
+            target = 'full';
+        } else if (velocity < -300) {
             target = (this.currentState === 'collapsed') ? 'half' : 'full';
         } else {
             var midColHalf = collapsedH + (halfH - collapsedH) * 0.5;
-            var midHalfFull = halfH + (vh - halfH) * 0.5;
+            var midHalfFull = halfH + (vh - halfH) * 0.35;
             if (currentH >= midHalfFull) {
                 target = 'full';
             } else if (currentH >= midColHalf) {
@@ -275,10 +277,80 @@
     };
 
     /* ═══════════════════════════════════════════════════════════════
+       ViewNav — perpetual nav buttons for switching between views.
+       Tracks current view: 'map', 'photo-wall', 'landing'
+       Shows two buttons for the views that aren't current.
+    ═══════════════════════════════════════════════════════════════ */
+
+    function ViewNav() {
+        this._currentView = 'landing';  // start on landing page
+        this._buttons = {};
+        this._callbacks = {};
+    }
+
+    ViewNav.prototype.init = function () {
+        this._buttons = {
+            'photo-wall': document.getElementById('photo-wall-reopen-btn'),
+            'region-intro': document.getElementById('region-intro-toggle-btn')
+        };
+
+        var self = this;
+        // Track when photo-wall becomes active
+        document.addEventListener('panel:activate', function (e) {
+            if (e.detail && e.detail.panel === 'photo-wall') {
+                self.setView('photo-wall');
+            }
+        });
+        // Track when photo-wall is deactivated (back to map)
+        document.addEventListener('panel:deactivate', function (e) {
+            if (e.detail && e.detail.panel === 'photo-wall' && self._currentView === 'photo-wall') {
+                self.setView('map');
+            }
+        });
+
+        this._updateVisibility();
+    };
+
+    ViewNav.prototype.setView = function (view) {
+        this._currentView = view;
+        this._updateVisibility();
+    };
+
+    ViewNav.prototype.getView = function () {
+        return this._currentView;
+    };
+
+    ViewNav.prototype.onNavigate = function (view, callback) {
+        this._callbacks[view] = callback;
+    };
+
+    ViewNav.prototype._updateVisibility = function () {
+        // Only show on mobile
+        if (window.innerWidth > 768) return;
+
+        for (var id in this._buttons) {
+            var btn = this._buttons[id];
+            if (!btn) continue;
+
+            if (this._currentView === 'landing') {
+                // On landing page, hide nav buttons (landing has its own nav)
+                btn.classList.remove('visible');
+            } else if (id === 'photo-wall') {
+                // Show photo button when NOT in photo-wall
+                btn.classList.toggle('visible', this._currentView !== 'photo-wall');
+            } else if (id === 'region-intro') {
+                // Show region button when NOT on landing
+                btn.classList.toggle('visible', this._currentView !== 'landing');
+            }
+        }
+    };
+
+    /* ═══════════════════════════════════════════════════════════════
        Expose globally
     ═══════════════════════════════════════════════════════════════ */
     window.PanelSnap = PanelSnap;
     window.PanelCoordinator = PanelCoordinator;
     window.panelCoordinator = new PanelCoordinator();
+    window.viewNav = new ViewNav();
 
 }());

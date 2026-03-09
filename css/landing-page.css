@@ -360,7 +360,8 @@
     color: var(--color-accent);
     font-weight: 600;
     white-space: nowrap;
-    min-width: 56px;
+    min-width: 90px;
+    flex-shrink: 0;
 }
 
 .detail-places__notes {
@@ -479,5 +480,10 @@
 
     .landing-intro__hint {
         bottom: 20px;
+    }
+
+    .detail-places__item {
+        flex-direction: column;
+        gap: 4px;
     }
 }

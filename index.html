@@ -62,7 +62,9 @@
     </button>
     <button class="panel-toggle-btn photo-wall-reopen-btn" id="photo-wall-reopen-btn" data-panel="photo-wall" aria-label="Open photo wall">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        Photos
+    </button>
+    <button class="panel-toggle-btn" id="region-intro-toggle-btn" data-panel="region-intro" aria-label="Open region intro">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     </button>
 
     <!-- Photo wall panel -->
@@ -963,8 +965,22 @@
                                         map.flyTo([opts.region.center.lat, opts.region.center.lng], zoomLevel, { duration: 0.8 });
                                     }
                                 }, 100);
+                                // Update view nav state
+                                if (window.viewNav) window.viewNav.setView('map');
                             }
                         });
+                    }
+
+                    // Initialize view nav buttons
+                    if (window.viewNav) {
+                        window.viewNav.init();
+                        // Wire region-intro button to reopen landing
+                        var regionIntroBtn = document.getElementById('region-intro-toggle-btn');
+                        if (regionIntroBtn) {
+                            regionIntroBtn.addEventListener('click', function () {
+                                if (window.reopenLanding) window.reopenLanding();
+                            });
+                        }
                     }
 
                     // Build unique sorted dates

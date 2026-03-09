@@ -2,6 +2,17 @@
 
 Auto-generated from all feature plans. Last updated: 2026-02-20
 
+## Project Overview
+
+This is a travel photo map app built with HTML/CSS/JavaScript and Leaflet.js. Photos are sourced from Google Drive. The app uses static hosting via GitHub Pages.
+
+## Git Workflow
+
+- Always use feature branch → PR → merge workflow. Never commit directly to main. When pushing changes, create a PR using `gh` CLI (`gh pr create --fill && gh pr merge --merge`).
+- The `gh` CLI is installed and available. Always use it for PR creation and merging. Do not fall back to manual URLs.
+- When the user says 'commit and push' or 'deploy', they mean: stage all changes, commit with a descriptive message, push the branch, create a PR via gh CLI, and merge it. Do NOT start a local server unless explicitly asked.
+- Always check which branch you're on before any git operations. Run `git branch --show-current` first.
+
 ## Active Technologies
 - Vanilla JavaScript (ES5-compatible), CSS3, HTML5 + Leaflet.js (existing), Firebase SDK v11.6.0 (existing, vendored) (004-trip-feed)
 - Firestore `dailyNarratives/all` document (new); existing `manifest.json` and `trip_segments.json` for photo/segment data (004-trip-feed)
@@ -57,6 +68,10 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - 011-fix-video-playback: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies
 - 011-fix-video-playback: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (existing, vendored)
 
+
+## Testing
+
+- After implementing changes, test in the browser using the Playwright MCP before declaring work complete. Watch for: CSS z-index/positioning issues, gesture/pointer event interception, and browser caching of stale assets.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

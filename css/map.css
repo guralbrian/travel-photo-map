@@ -917,7 +917,7 @@ html, body {
 /* ──── Mobile: bottom sheet ──── */
 @media (max-width: 768px) {
     .panel-toggle {
-        top: 10px;
+        top: 110px;
         left: 10px;
         bottom: auto;
         right: auto;

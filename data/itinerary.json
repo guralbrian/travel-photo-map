@@ -11,21 +11,21 @@
       "days": [
         { "date": "2026-01-26", "notes": "Cancelled inbound flight due to sleet" },
         { "date": "2026-01-27", "notes": "Shop for winter gear + bag for Rachel. Red eye RDU-LHR, flew out on AA 174 at 8:45 PM" },
-        { "date": "2026-01-28", "notes": "Landed LHR 9:20 AM. Rachel, Sarah, Brian split — Sarah picked up posters, B/R checked in to hotel near ExCel/Docklands. Festival of Genomics at ExCeL. Exhausted, then delirious. Networking" },
-        { "date": "2026-01-29", "notes": "Networking + talks + posters @ FoGo. Met Jan-Phillip Molla(?). Connected with Eleni (Lifebit), Rachael De Vries (novoSTAR/Ole Winther lab)" }
+        { "date": "2026-01-28", "notes": "Landed LHR 9:20 AM. Rachel and Brian split from Sarah, who picked up posters elsewhere in London. B/R checked in to hotel, and shortly later Sarah arrived before they all went to ExCel/Docklands for Festival of Genomics. Exhausted, then delirious. Networking" },
+        { "date": "2026-01-29", "notes": "Networking + talks + posters @ FoG. Met Jan-Philip Mallm (PI at DKFZ). Connected with Eleni (Lifebit), Rachael De Vries (novoSTAR/Ole Winther lab)" }
       ]
     },
     {
       "name": "Copenhagen (Visit 1)",
       "lat": 55.6761,
       "lng": 12.5683,
-      "summary": "",
+      "summary": "A quick, freezing, relaxing visit before all the trains in Germany",
       "heroPhoto": "hero/copenhagen-1.jpg",
       "days": [
-        { "date": "2026-01-30", "notes": "Fly to Copenhagen from LGW. Meet Luis @ Vestamager. Sent cold emails to CPH contacts. Ashnikko concert in evening" },
-        { "date": "2026-01-31", "notes": "Relax. Freezing (-20C + wind). Hot baths on waterfront in eve" },
+        { "date": "2026-01-30", "notes": "Fly to Copenhagen from LGW. Met Lid @ Vestamager station by their house. Sent cold emails to CPH contacts. Ashnikko concert in evening." },
+        { "date": "2026-01-31", "notes": "Relax. Freezing (-10C + wind). Hot baths on waterfront in evening." },
         { "date": "2026-02-01", "notes": "Sarah leaves. See city" },
-        { "date": "2026-02-02", "notes": "Coffee with Rachael De Vries near Nørreport (before 2pm)" },
+        { "date": "2026-02-02", "notes": "Brian has coffee with Rachael De Vries near Nørreport" },
         { "date": "2026-02-03", "notes": "Train CPH central → Heidelberg (8:08 AM–6:23 PM). Breakfast of bread + cheese next to station, long ride w/ delays via Hamburg, Frankfurt, Mannheim" }
       ]
     },
@@ -33,14 +33,14 @@
       "name": "Heidelberg",
       "lat": 49.3988,
       "lng": 8.6724,
-      "summary": "",
+      "summary": "Intro to Germany and family history through the Grimm family",
       "heroPhoto": "hero/baden-wurttemberg.jpg",
       "days": [
         { "date": "2026-02-03", "notes": "Arrived Heidelberg. Picked up by Günther + met family" },
-        { "date": "2026-02-04", "notes": "EMBL w/ Bishoy" },
-        { "date": "2026-02-05", "notes": "Town + University library for working. Foggy" },
-        { "date": "2026-02-06", "notes": "Breakfast w/ Bishoy. Meetings @ DKFZ. Drive to Bürgstadt w/ Günther, walk Burg + Miltenberg, eat @ The Giant(?)" },
-        { "date": "2026-02-07", "notes": "Walk Bürgstadt. Val, Greta, Diana arrive. Drive to Gerolzahn, Reudental, tried Schneeball (snowball pastry). Drive home to Heidelberg in eve" },
+        { "date": "2026-02-04", "notes": "EMBL w/ Bishoy, beautiful but foggy" },
+        { "date": "2026-02-05", "notes": "Town + University library for working. Foggy again" },
+        { "date": "2026-02-06", "notes": "Breakfast w/ Bishoy. Meetings @ DKFZ. Drive to Bürgstadt w/ Günther, walk Burg + Miltenberg in evening, eat @ The Giant (self proclaimed oldest restaurant in Germany)" },
+        { "date": "2026-02-07", "notes": "Walk Bürgstadt. Val, Greta, Diana arrive. Drive to Gerolzahn and Reudental. Said Schneeball much to everyone's amuzement). Drive home to Heidelberg in eve" },
         { "date": "2026-02-08", "notes": "Relaxed day @ Grimm household. Files, ancestry tree, delayed Heidelberg walk for Valentin, walked Philosophenweg trail" }
       ]
     },
@@ -48,12 +48,12 @@
       "name": "Munich",
       "lat": 48.1351,
       "lng": 11.5820,
-      "summary": "",
+      "summary": "Rainy Bavarian weather for work and networking",
       "heroPhoto": "hero/munich.jpg",
       "days": [
         { "date": "2026-02-09", "notes": "Train Heidelberg → München (9:13 AM–12:10 PM). Staying with Aliona and Nick. Made gumbo for dinner, settled in on foldout couch" },
-        { "date": "2026-02-10", "notes": "Rachel and Brian into the city for remote work and sightseeing — Karlsplatz, Maxvorstadt. Worked out of Lost Weekend coffee shop. Dinner with Anne-Sophie Pipen, Canadian expat postdoc (Aliona connection) re: Munich life and immigration" },
-        { "date": "2026-02-11", "notes": "Similar day. Cleaned Aliona + Nick's place while Rachel worked on paper and remote job application. Applied late to Fran's A-SOuRCCE postdoc at BRIC Copenhagen" },
+        { "date": "2026-02-10", "notes": "Rachel and Brian into the city for remote work and sightseeing — Karlsplatz, Maxvorstadt. Worked out of Lost Weekend coffee shop. Met Irish professory for dinner at Spanish restaurant" },
+        { "date": "2026-02-11", "notes": "Similar day. Cleaned Aliona + Nick's place while Rachel worked on paper and remote job application. Applied late to Fran's A-SOuRCCE postdoc at BRIC Copenhagen. Dinner with Anne-Sophie Pipen, Canadian expat postdoc (Aliona connection) re: Munich life and immigration" },
         { "date": "2026-02-12", "notes": "Early commute (~1 hr) to Helmholtz Munich to meet Matthias Heinig (PI) and students — hadn't had a native English speaker visit in a long time. Rainy, dreary return commute. Walked toward city center, hopped a tram, got off in a nice area, walked several miles back with photos and döner. Chatted with Aliona + Nick in evening" },
         { "date": "2026-02-13", "notes": "Train München → Praha (~11 AM–5:30 PM). Met Ammi and Lid at Airbnb near Vyšehrad/Pankrác. Subway to Vietnamese restaurant for dinner" }
       ]
@@ -62,11 +62,11 @@
       "name": "Prague",
       "lat": 50.0755,
       "lng": 14.4378,
-      "summary": "",
+      "summary": "A true vacation and break",
       "heroPhoto": "hero/prague.jpg",
       "days": [
-        { "date": "2026-02-14", "notes": "Náplavka farmers market — mulled wine, halušky, other local favorites. Walked around the city: Vyšehrad, Old Town, Charles Bridge, Malá Strana, Prague Castle, Petřín Hill. 72-hour Lítačka pass. Porcelain pricing ahead of Meissen" },
-        { "date": "2026-02-15", "notes": "Prague with Ammi and Lid" }
+        { "date": "2026-02-14", "notes": "Náplavka farmers market — mulled wine, halušky, other local favorites. Walked around the city: Vyšehrad, Old Town, Charles Bridge, Malá Strana, Prague Castle, Petřín Hill. 72-hour Lítačka pass" },
+        { "date": "2026-02-15", "notes": "Prague with Ammi and Lid, Ammi takes lead." }
       ]
     },
     {
@@ -77,7 +77,7 @@
       "heroPhoto": "hero/dresden-meissen.jpg",
       "days": [
         { "date": "2026-02-16", "notes": "Train Praha → Dresden (12:31–2:50 PM, direct). Stayed at Hotel Friedrichstadt" },
-        { "date": "2026-02-17", "notes": "Dresden sightseeing (Zwinger, Frauenkirche). S-Bahn to Meißen — grandmother's streets, Markt, porcelain shops, Manufactory, Cathedral hilltop. Train to Berlin in evening" }
+        { "date": "2026-02-17", "notes": "Dresden sightseeing (Zwinger, Frauenkirche). S-Bahn to Meißen, grandmother's streets, Markt, porcelain shops, and requested Omi's birth records from town hall. Train to Berlin in evening" }
       ]
     },
     {
@@ -87,8 +87,8 @@
       "summary": "",
       "heroPhoto": "hero/berlin-hamburg.jpg",
       "days": [
-        { "date": "2026-02-17", "notes": "Arrived Berlin evening. Kindred rental in Kreuzberg" },
-        { "date": "2026-02-18", "notes": "Explored Kreuzberg. Shopped for roller bag/carry-on (needed more luggage capacity)" }
+        { "date": "2026-02-17", "notes": "Arrived Berlin evening. Kindred rental in Kreuzberg. Low energy day with lots of work from home"},
+        { "date": "2026-02-18", "notes": "Explored Kreuzberg. Shopped for roller bag/carry-on (needed more luggage capacity and the old bag had worn to pieces" }
       ]
     },
     {

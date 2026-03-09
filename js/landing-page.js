@@ -271,7 +271,7 @@
 
         _detailEl.innerHTML =
             '<div class="detail-header">' +
-                '<h2 class="detail-header__title">' + region.label + '<span class="detail-header__dates">' + dateRange + '</span></h2>' +
+                '<h2 class="detail-header__title">' + region.label + ' <span class="detail-header__dates">&middot; ' + dateRange + '</span></h2>' +
                 '<div class="detail-header__actions">' +
                     '<button class="detail-map-btn" data-region-index="' + index + '">View on map</button>' +
                     '<button class="detail-close-btn">Back</button>' +
@@ -502,7 +502,23 @@
         }
     }
 
+    function reopenLanding() {
+        if (!_container) return;
+        _container.style.display = '';
+        _container.classList.remove('landing--hidden');
+        // Close any open detail
+        closeDetail();
+        // Show grid
+        if (_gridWrap) {
+            _gridWrap.style.opacity = '';
+            _gridWrap.style.pointerEvents = '';
+            _gridWrap.classList.add('landing-grid-wrap--visible');
+        }
+        if (window.viewNav) window.viewNav.setView('landing');
+    }
+
     /* ── Export ── */
     window.initLandingPage = initLandingPage;
+    window.reopenLanding = reopenLanding;
 
 })();
