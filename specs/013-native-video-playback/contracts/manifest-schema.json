@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Video Manifest Entry",
+  "description": "Schema for a single video entry in data/manifest.json. Describes the video-specific shape after the native-video-playback migration.",
+  "type": "object",
+  "required": [
+    "lat",
+    "lng",
+    "url",
+    "thumbnail",
+    "caption",
+    "date",
+    "datetime",
+    "tags",
+    "google_photos_url",
+    "web_url",
+    "type"
+  ],
+  "properties": {
+    "lat": {
+      "type": "number",
+      "description": "Latitude of the video's capture location",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "lng": {
+      "type": "number",
+      "description": "Longitude of the video's capture location",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "url": {
+      "type": "string",
+      "description": "Local path to the source video file relative to the project root",
+      "pattern": "^photos/.+\\.(MP4|MOV|mp4|mov)$"
+    },
+    "thumbnail": {
+      "type": "string",
+      "description": "Firebase Storage URL for the video's poster frame (still image extracted from video)",
+      "format": "uri"
+    },
+    "caption": {
+      "type": "string",
+      "description": "Caption text for the video (may be empty)"
+    },
+    "date": {
+      "type": "string",
+      "description": "Capture date in YYYY-MM-DD format",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "datetime": {
+      "type": "string",
+      "description": "Capture datetime in ISO 8601 format (YYYY-MM-DDTHH:MM:SS)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of tags associated with the video"
+    },
+    "google_photos_url": {
+      "type": "string",
+      "description": "Original Google Drive view URL, retained for reference",
+      "format": "uri"
+    },
+    "web_url": {
+      "type": "string",
+      "description": "Direct Firebase Storage streaming URL for the 720p MP4 variant. Must be a publicly accessible, streamable MP4 URL (not a Google Drive preview URL).",
+      "format": "uri",
+      "pattern": "^https://firebasestorage\\.googleapis\\.com/.+\\.mp4\\?alt=media.*$"
+    },
+    "web_url_full": {
+      "type": "string",
+      "description": "Direct Firebase Storage streaming URL for the full-resolution MP4 variant. Optional but expected for all processed videos. If absent, the quality toggle in the viewer is hidden.",
+      "format": "uri",
+      "pattern": "^https://firebasestorage\\.googleapis\\.com/.+\\.mp4\\?alt=media.*$"
+    },
+    "type": {
+      "type": "string",
+      "const": "video",
+      "description": "Media type discriminator, always 'video' for video entries"
+    }
+  },
+  "additionalProperties": false
+}

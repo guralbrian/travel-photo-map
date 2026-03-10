@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
 from PIL import Image, ExifTags
@@ -392,6 +393,107 @@ def create_video_thumbnail(filepath, thumb_path, thumb_width):
         )
 
 
+FIREBASE_STORAGE_MARKER = "firebasestorage.googleapis.com"
+
+
+def build_public_url(bucket_name, storage_path):
+    """Build the public download URL for a Firebase Storage object."""
+    encoded_path = urllib.parse.quote(storage_path, safe="")
+    return (
+        f"https://firebasestorage.googleapis.com/v0/b/{bucket_name}"
+        f"/o/{encoded_path}?alt=media"
+    )
+
+
+def upload_video_to_firebase(local_path, storage_path, bucket):
+    """Upload a video file to Firebase Storage.
+
+    Args:
+        local_path: Path to the local MP4 file.
+        storage_path: Destination path in Firebase Storage (e.g., 'videos/720p/file.mp4').
+        bucket: Firebase Storage bucket object.
+
+    Returns:
+        Public URL string, or None if upload fails.
+    """
+    try:
+        blob = bucket.blob(storage_path)
+        blob.upload_from_filename(str(local_path), content_type="video/mp4")
+        return build_public_url(bucket.name, storage_path)
+    except Exception as e:
+        print(f"  Error uploading {local_path}: {e}", file=sys.stderr)
+        return None
+
+
+def transcode_video(source_path, output_dir):
+    """Transcode a video to web-optimized MP4 variants (720p + full-res).
+
+    Args:
+        source_path: Path to the source video file.
+        output_dir: Directory to write transcoded files into.
+
+    Returns:
+        Tuple of (path_720p, path_full) or (None, None) if transcoding fails.
+    """
+    source_path = Path(source_path)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    stem = source_path.stem
+    path_720p = output_dir / f'{stem}_720p.mp4'
+    path_full = output_dir / f'{stem}_full.mp4'
+
+    # 720p variant: H.264 Main, CRF 24, AAC 128k, faststart
+    try:
+        result = subprocess.run(
+            [
+                'ffmpeg', '-y', '-i', str(source_path),
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '24',
+                '-profile:v', 'main', '-level', '3.1',
+                '-vf', 'scale=-2:720',
+                '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
+                '-movflags', '+faststart',
+                '-pix_fmt', 'yuv420p',
+                str(path_720p)
+            ],
+            capture_output=True, text=True, timeout=600
+        )
+        if result.returncode != 0:
+            print(f"  Error transcoding 720p: {result.stderr[:200]}", file=sys.stderr)
+            return (None, None)
+    except Exception as e:
+        print(f"  Error transcoding 720p: {e}", file=sys.stderr)
+        return (None, None)
+
+    # Full-res variant: H.264 High, CRF 20, original resolution, AAC 192k, faststart
+    try:
+        result = subprocess.run(
+            [
+                'ffmpeg', '-y', '-i', str(source_path),
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+                '-profile:v', 'high', '-level', '4.1',
+                '-c:a', 'aac', '-b:a', '192k', '-ac', '2',
+                '-movflags', '+faststart',
+                '-pix_fmt', 'yuv420p',
+                str(path_full)
+            ],
+            capture_output=True, text=True, timeout=600
+        )
+        if result.returncode != 0:
+            print(f"  Error transcoding full-res: {result.stderr[:200]}", file=sys.stderr)
+            # Clean up 720p if full-res fails
+            if path_720p.exists():
+                path_720p.unlink()
+            return (None, None)
+    except Exception as e:
+        print(f"  Error transcoding full-res: {e}", file=sys.stderr)
+        if path_720p.exists():
+            path_720p.unlink()
+        return (None, None)
+
+    return (path_720p, path_full)
+
+
 def load_notes(data_dir):
     """Load optional notes.yaml for captions, tags, and annotations.
 
@@ -501,14 +603,17 @@ def merge_notes_into_entry(entry, notes, filename):
         tags = [t.strip() for t in tags.split(',')]
     entry['tags'] = tags
     entry['google_photos_url'] = file_notes.get('google_photos_url', '')
+    # Preserve Firebase streaming URLs for videos; only derive Drive URLs as fallback
     if entry.get('type') == 'video':
-        entry['web_url'] = derive_video_web_url(entry['google_photos_url'])
+        if not (entry.get('web_url', '').startswith('https://firebasestorage')):
+            entry['web_url'] = derive_video_web_url(entry['google_photos_url'])
     else:
         entry['web_url'] = derive_web_url(entry['google_photos_url'])
     return entry
 
 
-def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
+def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False,
+                    firebase_key=None, firebase_bucket=None):
     """Process all photos and generate manifest.
 
     Args:
@@ -517,6 +622,8 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
         thumb_width: Thumbnail width in pixels.
         output_path: Path for the output manifest JSON.
         force: If True, bypass cache and reprocess everything.
+        firebase_key: Path to Firebase service account key JSON (for video upload).
+        firebase_bucket: Firebase Storage bucket name (for video upload).
     """
     photo_dir = Path(photo_dir)
     thumb_dir = Path(thumb_dir)
@@ -527,6 +634,9 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     thumb_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Transcoded video output directory
+    transcode_dir = data_dir / 'transcoded'
+
     notes, annotations = load_notes(data_dir)
     manifest = []
 
@@ -534,6 +644,22 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
     has_ffmpeg = shutil.which('ffmpeg') is not None and shutil.which('ffprobe') is not None
     if not has_ffmpeg:
         print("Warning: ffmpeg/ffprobe not found. Videos will be skipped.", file=sys.stderr)
+
+    # Initialize Firebase for video upload if credentials provided
+    fb_bucket = None
+    if firebase_key and firebase_bucket and os.path.exists(firebase_key):
+        try:
+            import firebase_admin
+            from firebase_admin import credentials as fb_credentials, storage as fb_storage
+            if not firebase_admin._apps:
+                cred = fb_credentials.Certificate(firebase_key)
+                firebase_admin.initialize_app(cred, {"storageBucket": firebase_bucket})
+            fb_bucket = fb_storage.bucket()
+            print(f"Firebase Storage initialized: {firebase_bucket}")
+        except Exception as e:
+            print(f"Warning: Firebase init failed, video upload disabled: {e}", file=sys.stderr)
+    elif firebase_key or firebase_bucket:
+        print("Warning: Both --firebase-key and --firebase-bucket required for video upload.", file=sys.stderr)
 
     # Cache setup
     cache_path = data_dir / '.process_cache.json'
@@ -588,7 +714,38 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             # Reuse cached entry but re-merge notes for caption/tag changes
             entry = existing_manifest[photo_url].copy()
             entry = merge_notes_into_entry(entry, notes, filename)
-            new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            # Preserve video streaming URLs from cache
+            if file_is_video and cached_entry.get('transcoded'):
+                entry['web_url'] = cached_entry.get('video_720p_url', entry.get('web_url', ''))
+                entry['web_url_full'] = cached_entry.get('video_full_url', '')
+            # Transcode cached video that hasn't been transcoded yet
+            elif file_is_video and fb_bucket and has_ffmpeg and not cached_entry.get('transcoded'):
+                print(f"  Transcoding (cached, first-time) {filename}...")
+                path_720p, path_full = transcode_video(filepath, transcode_dir)
+                if path_720p and path_full:
+                    stem = filepath.stem
+                    url_720p = upload_video_to_firebase(
+                        path_720p, f'videos/720p/{stem}.mp4', fb_bucket)
+                    url_full = upload_video_to_firebase(
+                        path_full, f'videos/full/{stem}.mp4', fb_bucket)
+                    if url_720p:
+                        entry['web_url'] = url_720p
+                        if url_full:
+                            entry['web_url_full'] = url_full
+                        cached_entry = cached_entry.copy()
+                        cached_entry['transcoded'] = True
+                        cached_entry['video_720p_url'] = url_720p
+                        cached_entry['video_full_url'] = url_full or ''
+                        print(f"  Uploaded video: {stem}")
+                    if path_720p.exists():
+                        path_720p.unlink()
+                    if path_full.exists():
+                        path_full.unlink()
+                else:
+                    print(f"  Warning: transcoding failed for {filename}", file=sys.stderr)
+            new_cache[filename] = cached_entry.copy() if isinstance(cached_entry, dict) else {'mtime': file_mtime, 'size': file_size}
+            new_cache[filename]['mtime'] = file_mtime
+            new_cache[filename]['size'] = file_size
             # Check if photo was excluded
             if entry is None:
                 print(f"  Skipping (excluded): {filename}")
@@ -657,6 +814,43 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
                 continue
 
+            # Transcode and upload video if Firebase is configured
+            video_720p_url = ''
+            video_full_url = ''
+            transcoded = False
+            if fb_bucket and has_ffmpeg:
+                # Check if already transcoded in cache
+                if (cached_entry and cached_entry.get('transcoded')
+                        and cached_entry.get('video_720p_url')):
+                    video_720p_url = cached_entry['video_720p_url']
+                    video_full_url = cached_entry.get('video_full_url', '')
+                    transcoded = True
+                    print(f"  Using cached video URLs for {filename}")
+                else:
+                    print(f"  Transcoding {filename}...")
+                    path_720p, path_full = transcode_video(filepath, transcode_dir)
+                    if path_720p and path_full:
+                        stem = filepath.stem
+                        url_720p = upload_video_to_firebase(
+                            path_720p, f'videos/720p/{stem}.mp4', fb_bucket)
+                        url_full = upload_video_to_firebase(
+                            path_full, f'videos/full/{stem}.mp4', fb_bucket)
+                        if url_720p:
+                            video_720p_url = url_720p
+                            video_full_url = url_full or ''
+                            transcoded = True
+                            print(f"  Uploaded video: {stem}")
+                        # Clean up local transcoded files
+                        if path_720p.exists():
+                            path_720p.unlink()
+                        if path_full.exists():
+                            path_full.unlink()
+                    else:
+                        print(f"  Warning: transcoding failed for {filename}, using Drive URL", file=sys.stderr)
+
+            # Use Firebase streaming URL if available, fall back to Drive preview
+            web_url = video_720p_url if video_720p_url else derive_video_web_url(google_photos_url)
+
             entry = {
                 'lat': round(lat, 6),
                 'lng': round(lng, 6),
@@ -667,11 +861,19 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
                 'datetime': dt.isoformat() if dt else '',
                 'tags': tags,
                 'google_photos_url': google_photos_url,
-                'web_url': derive_video_web_url(google_photos_url),
+                'web_url': web_url,
                 'type': 'video',
             }
+            if video_full_url:
+                entry['web_url_full'] = video_full_url
+
             manifest.append(entry)
-            new_cache[filename] = {'mtime': file_mtime, 'size': file_size}
+            cache_entry = {'mtime': file_mtime, 'size': file_size}
+            if transcoded:
+                cache_entry['transcoded'] = True
+                cache_entry['video_720p_url'] = video_720p_url
+                cache_entry['video_full_url'] = video_full_url
+            new_cache[filename] = cache_entry
             processed += 1
             print(f"  OK (video): ({lat:.4f}, {lng:.4f}) {date}")
         else:
@@ -803,6 +1005,34 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             new_cache[filename] = {'mtime': stat.st_mtime, 'size': stat.st_size}
             continue
 
+        # Transcode and upload interpolated videos
+        video_720p_url = ''
+        video_full_url = ''
+        transcoded = False
+        if file_is_video and fb_bucket and has_ffmpeg:
+            print(f"  Transcoding (interpolated) {filename}...")
+            path_720p, path_full = transcode_video(filepath, transcode_dir)
+            if path_720p and path_full:
+                stem = filepath.stem
+                url_720p = upload_video_to_firebase(
+                    path_720p, f'videos/720p/{stem}.mp4', fb_bucket)
+                url_full = upload_video_to_firebase(
+                    path_full, f'videos/full/{stem}.mp4', fb_bucket)
+                if url_720p:
+                    video_720p_url = url_720p
+                    video_full_url = url_full or ''
+                    transcoded = True
+                    print(f"  Uploaded video: {stem}")
+                if path_720p.exists():
+                    path_720p.unlink()
+                if path_full.exists():
+                    path_full.unlink()
+
+        if file_is_video:
+            web_url = video_720p_url if video_720p_url else derive_video_web_url(google_photos_url)
+        else:
+            web_url = derive_web_url(google_photos_url)
+
         entry = {
             'lat': round(lat, 6),
             'lng': round(lng, 6),
@@ -813,12 +1043,20 @@ def process_photos(photo_dir, thumb_dir, thumb_width, output_path, force=False):
             'datetime': dt.isoformat() if dt else '',
             'tags': tags,
             'google_photos_url': google_photos_url,
-            'web_url': derive_web_url(google_photos_url),
+            'web_url': web_url,
             'type': 'video' if file_is_video else 'photo',
         }
+        if file_is_video and video_full_url:
+            entry['web_url_full'] = video_full_url
+
         manifest.append(entry)
         stat = filepath.stat()
-        new_cache[filename] = {'mtime': stat.st_mtime, 'size': stat.st_size}
+        cache_entry = {'mtime': stat.st_mtime, 'size': stat.st_size}
+        if transcoded:
+            cache_entry['transcoded'] = True
+            cache_entry['video_720p_url'] = video_720p_url
+            cache_entry['video_full_url'] = video_full_url
+        new_cache[filename] = cache_entry
         interpolated += 1
         gap_min = int(gap // 60)
         label = 'video, ' if file_is_video else ''
@@ -865,9 +1103,18 @@ def main():
         '--force', action='store_true',
         help='Bypass cache and reprocess all photos'
     )
+    parser.add_argument(
+        '--firebase-key', default=None,
+        help='Path to Firebase service account key JSON (enables video transcoding + upload)'
+    )
+    parser.add_argument(
+        '--firebase-bucket', default=None,
+        help='Firebase Storage bucket name (e.g., travel-photo-map-e0bf4.firebasestorage.app)'
+    )
     args = parser.parse_args()
 
-    process_photos(args.photo_dir, args.thumb_dir, args.thumb_width, args.output, args.force)
+    process_photos(args.photo_dir, args.thumb_dir, args.thumb_width, args.output, args.force,
+                   args.firebase_key, args.firebase_bucket)
 
 
 if __name__ == '__main__':

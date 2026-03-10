@@ -10,6 +10,14 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // Videos: publicly readable (served via <video> elements in the viewer).
+    // Two subdirectories: 720p/ (default) and full/ (opt-in high quality).
+    // Uploads via Admin SDK only.
+    match /videos/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Deny all other paths by default.
     match /{allPaths=**} {
       allow read, write: if false;
