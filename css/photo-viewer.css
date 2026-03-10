@@ -84,8 +84,7 @@
 }
 
 .pv-media img,
-.pv-media video,
-.pv-media iframe {
+.pv-media video {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -360,64 +359,108 @@
     border-radius: 8px;
 }
 
-/* ── Video (iframe embed) ── */
+/* ── Video (native player) ── */
 .pv-video-wrap {
     position: relative;
     width: 100%;
     max-width: calc((100vh - 120px) * 16 / 9);
-    max-height: calc(100vw * 9 / 16);
-    background-color: #000;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: auto;
 }
 
-.pv-video-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top: 3px solid rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
-    animation: pv-spin 0.8s linear infinite;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1;
-}
-
-@keyframes pv-spin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-.pv-video-wrap.pv-video-loaded .pv-video-spinner {
-    display: none;
-}
-
-.pv-iframe {
+.pv-video-player {
     width: 100%;
-    height: 100%;
-    border: none;
-    pointer-events: auto;
+    max-height: 80vh;
+    object-fit: contain;
     background: #000;
+    touch-action: none;
+    pointer-events: auto;
+}
+
+/* ── Video overlay controls (gear + download) ── */
+.pv-video-overlay {
     position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 300ms ease;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 3;
+    pointer-events: auto;
 }
 
-.pv-video-wrap.pv-video-loaded .pv-iframe {
-    opacity: 1;
+.pv-video-gear,
+.pv-video-download {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    color: white;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, opacity 0.2s ease;
 }
 
-/* ── Swipe zones (edge overlays for touch nav around iframe) ── */
+.pv-video-gear:hover,
+.pv-video-download:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.pv-video-download {
+    font-size: var(--font-lg);
+    font-weight: 400;
+}
+
+/* ── Download button (overlay, next to fav) ── */
+.pv-dl {
+    position: absolute;
+    top: 12px;
+    right: 112px;
+    z-index: var(--z-viewer-controls);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    color: white;
+    font-size: var(--font-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, opacity 0.2s ease;
+}
+
+.pv-dl:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Video error link ── */
+.pv-error-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-size: var(--font-base);
+    margin-top: 12px;
+    display: inline-block;
+}
+.pv-error-link:hover {
+    text-decoration: underline;
+}
+
+/* ── Swipe zones (edge overlays for touch nav around video) ── */
 .pv-swipe-zone {
     position: absolute;
-    z-index: 2;
+    z-index: 4;
     pointer-events: auto;
     touch-action: pan-x pan-y;
 }
@@ -467,7 +510,10 @@
 
     .pv-video-wrap {
         max-width: calc(100dvh * 16 / 9);
-        max-height: calc(100vw * 9 / 16);
+    }
+
+    .pv-video-player {
+        max-height: 100dvh;
     }
 
     .pv-swipe-zone--left,
@@ -483,6 +529,10 @@
     .pv-fav {
         top: max(12px, env(safe-area-inset-top));
         right: max(64px, calc(52px + env(safe-area-inset-right)));
+    }
+    .pv-dl {
+        top: max(12px, env(safe-area-inset-top));
+        right: max(112px, calc(100px + env(safe-area-inset-right)));
     }
     .pv-info {
         padding-bottom: max(20px, env(safe-area-inset-bottom));
@@ -507,14 +557,16 @@
    ══════════════════════════════════════════════════ */
 @media (min-width: 769px) and (hover: hover) {
     .pv-media img,
-    .pv-media video,
-    .pv-media iframe {
+    .pv-media video {
         max-width: 90vw;
         max-height: 90vh;
     }
 
     .pv-video-wrap {
         max-width: calc(90vh * 16 / 9);
-        max-height: calc(90vw * 9 / 16);
+    }
+
+    .pv-video-player {
+        max-height: 90vh;
     }
 }

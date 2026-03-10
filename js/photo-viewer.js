@@ -32,7 +32,7 @@
     };
 
     // ── DOM refs ──
-    var $ov, $wrap, $media, $close, $prev, $next, $info, $fav;
+    var $ov, $wrap, $media, $close, $prev, $next, $info, $fav, $dl;
     var $cap, $capEd, $capIn, $tagEd, $tagChips, $tagIn;
 
     // ── Helpers ──
@@ -55,6 +55,7 @@
             '</div>' +
             '<button class="pv-close pv-ctrl" aria-label="Close">&times;</button>' +
             '<button class="pv-fav pv-ctrl" aria-label="Favorite">&#9734;</button>' +
+            '<button class="pv-dl pv-ctrl" aria-label="Download" style="display:none">&#8681;</button>' +
             '<button class="pv-nav pv-prev pv-ctrl" aria-label="Previous">&#8249;</button>' +
             '<button class="pv-nav pv-next pv-ctrl" aria-label="Next">&#8250;</button>' +
             '<div class="pv-info pv-ctrl">' +
@@ -81,6 +82,7 @@
         $next = $ov.querySelector('.pv-next');
         $info = $ov.querySelector('.pv-info');
         $fav = $ov.querySelector('.pv-fav');
+        $dl = $ov.querySelector('.pv-dl');
         $cap = $ov.querySelector('.pv-cap');
         $capEd = $ov.querySelector('.pv-cap-ed');
         $capIn = $ov.querySelector('.pv-cap-in');
@@ -92,6 +94,19 @@
         $close.addEventListener('click', function (e) { e.stopPropagation(); close(); });
         $prev.addEventListener('click', function (e) { e.stopPropagation(); nav(-1); });
         $next.addEventListener('click', function (e) { e.stopPropagation(); nav(1); });
+
+        $dl.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var url = $dl.dataset.url;
+            if (!url) return;
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = '';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
 
         $fav.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -234,12 +249,9 @@
     }
 
     function finalize() {
-        // Stop video
+        // Stop video and release resources (FR-007)
         var vid = $media.querySelector('video');
         if (vid) { vid.pause(); vid.removeAttribute('src'); vid.load(); }
-        // Stop iframe (Google Drive embed)
-        var ifr = $media.querySelector('iframe');
-        if (ifr) { ifr.src = 'about:blank'; }
 
         $ov.style.display = 'none';
         $ov.classList.remove('pv-closing', 'pv-anim', 'pv-open', 'pv-fade', 'pv-controls-visible');
@@ -316,7 +328,6 @@
     function ptrDown(e) {
         if (!S.open) return;
         if (e.target.closest('.pv-ctrl')) return;
-        if (e.target.tagName === 'IFRAME') return;
         e.preventDefault();
 
         try { $wrap.setPointerCapture(e.pointerId); } catch (_) {}
@@ -469,6 +480,10 @@
         var p = S.photos[i];
         resetZoom(); cancelLoads();
 
+        // Stop any playing video before switching (FR-007, rapid nav cleanup)
+        var oldVid = $media.querySelector('video');
+        if (oldVid) { oldVid.pause(); oldVid.removeAttribute('src'); oldVid.load(); }
+
         $prev.style.display = i <= 0 ? 'none' : '';
         $next.style.display = i >= S.photos.length - 1 ? 'none' : '';
 
@@ -489,6 +504,10 @@
 
         $media.innerHTML = '';
         $media.appendChild(img);
+
+        // Download button for photos — FR-015
+        updDownloadBtn(p.web_url);
+
         S.loaded = false;
 
         if (p.web_url) {
@@ -510,41 +529,99 @@
     }
 
     function renderVideo(p) {
-        var old = $media.querySelector('iframe');
-        if (old) { old.src = 'about:blank'; }
+        // Clean up any previous video
+        var oldVid = $media.querySelector('video');
+        if (oldVid) { oldVid.pause(); oldVid.removeAttribute('src'); oldVid.load(); }
+
+        // Hide overlay download button (video has its own inline download)
+        updDownloadBtn(null);
 
         if (!p.web_url) { errPlaceholder('video'); return; }
 
-        // 16:9 wrapper with thumbnail background
+        // Video wrapper for positioning overlays
         var wrap = document.createElement('div');
         wrap.className = 'pv-video-wrap';
-        if (p.thumbnail) {
-            wrap.style.backgroundImage = 'url(' + p.thumbnail + ')';
+
+        // Native video element
+        var video = document.createElement('video');
+        video.className = 'pv-video-player';
+        video.setAttribute('controls', '');
+        video.setAttribute('playsinline', '');
+        video.setAttribute('preload', 'metadata');
+        if (p.thumbnail) video.poster = p.thumbnail;
+
+        var source = document.createElement('source');
+        source.src = p.web_url;
+        source.type = 'video/mp4';
+        video.appendChild(source);
+
+        // Error handling (FR-009)
+        video.addEventListener('error', function () {
+            var msg = document.createElement('div');
+            msg.className = 'pv-error';
+            msg.innerHTML = 'Video unavailable';
+            if (p.google_photos_url) {
+                msg.innerHTML += '<br><a class="pv-error-link" href="' + p.google_photos_url +
+                    '" target="_blank" rel="noopener noreferrer">View on Google Drive</a>';
+            }
+            wrap.innerHTML = '';
+            wrap.appendChild(msg);
+        });
+
+        wrap.appendChild(video);
+
+        // Overlay controls container (gear icon + download button)
+        var overlay = document.createElement('div');
+        overlay.className = 'pv-video-overlay';
+
+        // Quality toggle (gear icon) — FR-012
+        if (p.web_url_full) {
+            var gearBtn = document.createElement('button');
+            gearBtn.className = 'pv-video-gear pv-ctrl';
+            gearBtn.setAttribute('aria-label', 'Switch quality');
+            gearBtn.textContent = '720p';
+            gearBtn.dataset.quality = '720p';
+            gearBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var currentTime = video.currentTime;
+                var wasPlaying = !video.paused;
+                var newQuality = gearBtn.dataset.quality === '720p' ? 'full' : '720p';
+                var newSrc = newQuality === '720p' ? p.web_url : p.web_url_full;
+                source.src = newSrc;
+                video.load();
+                video.addEventListener('loadedmetadata', function onMeta() {
+                    video.removeEventListener('loadedmetadata', onMeta);
+                    video.currentTime = currentTime;
+                    if (wasPlaying) video.play().catch(function () {});
+                });
+                gearBtn.dataset.quality = newQuality;
+                gearBtn.textContent = newQuality === '720p' ? '720p' : 'Full';
+                // Update download button URL
+                var dlBtn = wrap.querySelector('.pv-video-download');
+                if (dlBtn) dlBtn.dataset.url = newSrc;
+            });
+            overlay.appendChild(gearBtn);
         }
-        // Force 16:9 aspect ratio via padding trick as fallback
-        wrap.style.aspectRatio = '16 / 9';
 
-        // Loading spinner
-        var spinner = document.createElement('div');
-        spinner.className = 'pv-video-spinner';
-        wrap.appendChild(spinner);
+        // Download button — FR-013
+        var dlBtn = document.createElement('button');
+        dlBtn.className = 'pv-video-download pv-ctrl';
+        dlBtn.setAttribute('aria-label', 'Download video');
+        dlBtn.innerHTML = '&#8681;'; // ⇩ down arrow
+        dlBtn.dataset.url = p.web_url;
+        dlBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var a = document.createElement('a');
+            a.href = dlBtn.dataset.url;
+            a.download = '';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+        overlay.appendChild(dlBtn);
 
-        // Iframe
-        var iframe = document.createElement('iframe');
-        iframe.className = 'pv-iframe';
-        iframe.src = p.web_url;
-        iframe.allow = 'autoplay; encrypted-media';
-        iframe.allowFullscreen = true;
-        iframe.setAttribute('frameborder', '0');
-
-        var loadTimer = setTimeout(function () { errPlaceholder('video'); }, 15000);
-        iframe.onload = function () {
-            clearTimeout(loadTimer);
-            wrap.classList.add('pv-video-loaded');
-        };
-        iframe.onerror = function () { clearTimeout(loadTimer); errPlaceholder('video'); };
-
-        wrap.appendChild(iframe);
+        wrap.appendChild(overlay);
 
         // Edge-zone swipe overlays for touch navigation
         var zones = ['left', 'right', 'top'];
@@ -650,6 +727,15 @@
                 emit('photoviewer:tag-edit', { photoId: pid(ph), tags: cur });
                 renderTagChips(ph); renderTags(ph);
             });
+        }
+    }
+
+    function updDownloadBtn(url) {
+        if (url) {
+            $dl.dataset.url = url;
+            $dl.style.display = '';
+        } else {
+            $dl.style.display = 'none';
         }
     }
 
