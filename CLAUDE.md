@@ -42,6 +42,8 @@ This is a travel photo map app built with HTML/CSS/JavaScript and Leaflet.js. Ph
 - N/A — pure UI changes, no data persistence (012-fix-mobile-nav-ux)
 - Vanilla JavaScript (ES5-compatible IIFEs for frontend), Python 3.10+ (processing pipeline) + Leaflet.js (vendored), ffmpeg/ffprobe (CLI, already available for thumbnails), Firebase Storage SDK v11 (vendored) (013-native-video-playback)
 - Firebase Storage (Spark free tier: 5 GB storage, 1 GB/day downloads) for transcoded video files; local `data/manifest.json` for metadata (013-native-video-playback)
+- Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored) (015-shared-trip-model)
+- N/A — reads existing `data/manifest.json`, `data/trip_segments.json`, `data/itinerary.json` at runtime (015-shared-trip-model)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -66,9 +68,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 015-shared-trip-model: Added Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored)
 - 013-native-video-playback: Added Vanilla JavaScript (ES5-compatible IIFEs for frontend), Python 3.10+ (processing pipeline) + Leaflet.js (vendored), ffmpeg/ffprobe (CLI, already available for thumbnails), Firebase Storage SDK v11 (vendored)
 - 012-fix-mobile-nav-ux: Added Vanilla JavaScript (ES5-compatible IIFEs), CSS3, HTML5 + Leaflet.js (vendored in `js/`), no new dependencies
-- 011-fix-video-playback: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies
 
 
 ## Testing

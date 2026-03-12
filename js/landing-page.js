@@ -8,18 +8,6 @@
     var TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
     var TILE_ATTR = '&copy; OpenStreetMap contributors, &copy; CARTO';
 
-    /* ── Region label mapping (matches region-nav.js REGION_SECTIONS) ── */
-    var REGION_SECTIONS = [
-        { label: 'UK',                    jsonRegions: ['UK - London'] },
-        { label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
-        { label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
-        { label: 'Munich',                jsonRegions: ['Munich'] },
-        { label: 'Prague',                jsonRegions: ['Prague'] },
-        { label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
-        { label: 'Berlin / Hamburg',       jsonRegions: ['Berlin', 'Hamburg'] },
-        { label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
-    ];
-
     /* ── Module state ── */
     var _container = null;      // #landing-page
     var _introEl = null;
@@ -71,61 +59,6 @@
         // Fallback: cycle through a palette
         var palette = ['#d4a853','#5b8c6e','#7a6cb5','#c75c5c','#5c8ac7','#c7895c','#5cc7b8','#c75c96'];
         return palette[Math.floor(Math.random() * palette.length)];
-    }
-
-    /* ══════════════════════════════════════
-       Build region data from itinerary
-       ══════════════════════════════════════ */
-
-    function buildRegions(itineraryData) {
-        if (!itineraryData || !itineraryData.regions) return [];
-
-        var regionMap = {};
-        itineraryData.regions.forEach(function (r) {
-            regionMap[r.name] = r;
-        });
-
-        return REGION_SECTIONS.map(function (cfg) {
-            var days = [];
-            var lats = [], lngs = [];
-            var summary = '';
-            var heroPhoto = '';
-
-            cfg.jsonRegions.forEach(function (name) {
-                var r = regionMap[name];
-                if (!r) return;
-                lats.push(r.lat);
-                lngs.push(r.lng);
-                if (r.summary) summary = r.summary;
-                if (r.heroPhoto) heroPhoto = r.heroPhoto;
-                r.days.forEach(function (d) {
-                    days.push({ date: d.date, notes: d.notes || '' });
-                });
-            });
-
-            // Sort and deduplicate days
-            days.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-            var seen = {};
-            days = days.filter(function (d) {
-                if (seen[d.date]) return false;
-                seen[d.date] = true;
-                return true;
-            });
-
-            var avgLat = lats.reduce(function (s, v) { return s + v; }, 0) / (lats.length || 1);
-            var avgLng = lngs.reduce(function (s, v) { return s + v; }, 0) / (lngs.length || 1);
-
-            return {
-                label: cfg.label,
-                jsonRegions: cfg.jsonRegions,
-                center: { lat: avgLat, lng: avgLng },
-                startDate: days.length ? days[0].date : '',
-                endDate: days.length ? days[days.length - 1].date : '',
-                days: days,
-                summary: summary,
-                heroPhoto: heroPhoto
-            };
-        });
     }
 
     /* ══════════════════════════════════════
@@ -480,8 +413,8 @@
         _onEnterMap = opts.onEnterMap || null;
         _mainMap = opts.map || null;
 
-        // Build region data
-        _regions = buildRegions(opts.itineraryData);
+        // Read region data from shared model
+        _regions = window.TripModel.getRegions();
 
         // Grab grid wrap ref early (before intro can dismiss)
         _gridWrap = _container.querySelector('.landing-grid-wrap');

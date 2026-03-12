@@ -323,87 +323,6 @@
 
     var tripSegments = [];
 
-    function assignPhotosToTripSegments(photos, segments) {
-        // Sort photos by datetime or date
-        var sorted = photos.slice().sort(function (a, b) {
-            var aTime = a.datetime || a.date || '';
-            var bTime = b.datetime || b.date || '';
-            return aTime.localeCompare(bTime);
-        });
-
-        // Parse segment boundaries
-        var parsedSegments = segments.map(function (seg, idx) {
-            return {
-                index: idx,
-                name: seg.name,
-                start: new Date(seg.start),
-                end: new Date(seg.end),
-                color: seg.color,
-                lat: seg.lat,
-                lng: seg.lng,
-                photos: []
-            };
-        });
-
-        // Assign each photo to a segment
-        for (var i = 0; i < sorted.length; i++) {
-            var photo = sorted[i];
-            var photoTime = null;
-
-            // Try to parse datetime first, fall back to date
-            if (photo.datetime) {
-                photoTime = new Date(photo.datetime);
-            } else if (photo.date) {
-                // Date-only: assume noon for comparison
-                photoTime = new Date(photo.date + 'T12:00:00');
-            }
-
-            if (!photoTime || isNaN(photoTime.getTime())) {
-                // No valid time, skip assignment
-                photo.cityIndex = -1;
-                photo.cityName = 'Unknown';
-                photo.cityColor = '#999';
-                continue;
-            }
-
-            // Find matching segment
-            var matched = false;
-            for (var s = 0; s < parsedSegments.length; s++) {
-                var seg = parsedSegments[s];
-                if (photoTime >= seg.start && photoTime < seg.end) {
-                    photo.cityIndex = s;
-                    photo.cityName = seg.name;
-                    photo.cityColor = seg.color;
-                    seg.photos.push(photo);
-                    matched = true;
-                    break;
-                }
-            }
-
-            if (!matched) {
-                photo.cityIndex = -1;
-                photo.cityName = 'Unknown';
-                photo.cityColor = '#999';
-            }
-        }
-
-        // Build cluster-like structure for compatibility
-        var clusters = parsedSegments.map(function (seg) {
-            var dates = seg.photos.map(function (p) { return p.date || ''; }).filter(function (d) { return d; }).sort();
-            return {
-                photos: seg.photos,
-                centroidLat: seg.lat,
-                centroidLng: seg.lng,
-                cityName: seg.name,
-                color: seg.color,
-                startDate: dates[0] || '',
-                endDate: dates[dates.length - 1] || ''
-            };
-        });
-
-        return clusters;
-    }
-
     function formatDateShort(isoDate) {
         if (!isoDate) return '';
         var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1052,31 +971,9 @@
             }
 
             allPhotos = photos;
-            cityClusters = assignPhotosToTripSegments(allPhotos, tripSegments);
-
-            // Build dateIndex: group photos by date for feed sidebar
-            dateIndex = {};
-            for (var di = 0; di < allPhotos.length; di++) {
-                var p = allPhotos[di];
-                var d = p.date;
-                if (!d) continue;
-                if (!dateIndex[d]) {
-                    dateIndex[d] = {
-                        photos: [],
-                        segmentName: p.cityName || 'Unknown',
-                        segmentColor: p.cityColor || '#999',
-                        segmentIndex: p.cityIndex != null ? p.cityIndex : -1
-                    };
-                }
-                dateIndex[d].photos.push(p);
-            }
-            // Sort photos within each date by datetime
-            var dateKeys = Object.keys(dateIndex).sort();
-            for (var dk = 0; dk < dateKeys.length; dk++) {
-                dateIndex[dateKeys[dk]].photos.sort(function (a, b) {
-                    return (a.datetime || a.date || '').localeCompare(b.datetime || b.date || '');
-                });
-            }
+            window.TripModel.init(itineraryData, allPhotos, tripSegments);
+            cityClusters = window.TripModel.getClusters();
+            dateIndex = window.TripModel.getDateIndex();
 
             filteredPhotos = allPhotos;
             rebuildPhotoLayer();

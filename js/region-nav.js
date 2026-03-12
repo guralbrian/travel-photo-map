@@ -4,18 +4,6 @@
 (function () {
     'use strict';
 
-    /* ── Config: 8 user-facing sections mapped to JSON region names ── */
-    var REGION_SECTIONS = [
-        { label: 'UK',                   jsonRegions: ['UK - London'] },
-        { label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
-        { label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
-        { label: 'Munich',               jsonRegions: ['Munich'] },
-        { label: 'Prague',               jsonRegions: ['Prague'] },
-        { label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
-        { label: 'Berlin / Hamburg',     jsonRegions: ['Berlin', 'Hamburg'] },
-        { label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
-    ];
-
     /* ── Module state ── */
     var _map = null;
     var _allPhotos = null;
@@ -64,54 +52,7 @@
                months[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
     }
 
-    /* ── T007: Build RegionSection objects from itinerary JSON ── */
-
-    function buildRegionSections(itineraryData) {
-        if (!itineraryData || !itineraryData.regions) return [];
-
-        var regionMap = {};
-        itineraryData.regions.forEach(function (r) {
-            regionMap[r.name] = r;
-        });
-
-        return REGION_SECTIONS.map(function (cfg) {
-            var days = [];
-            var lats = [], lngs = [];
-
-            cfg.jsonRegions.forEach(function (name) {
-                var r = regionMap[name];
-                if (!r) return;
-                lats.push(r.lat);
-                lngs.push(r.lng);
-                r.days.forEach(function (d) {
-                    days.push({ date: d.date, notes: d.notes || '' });
-                });
-            });
-
-            // Sort days chronologically and deduplicate by date
-            days.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-            var seen = {};
-            days = days.filter(function (d) {
-                if (seen[d.date]) return false;
-                seen[d.date] = true;
-                return true;
-            });
-
-            var avgLat = lats.reduce(function (s, v) { return s + v; }, 0) / (lats.length || 1);
-            var avgLng = lngs.reduce(function (s, v) { return s + v; }, 0) / (lngs.length || 1);
-
-            return {
-                label: cfg.label,
-                jsonRegions: cfg.jsonRegions,
-                center: { lat: avgLat, lng: avgLng },
-                startDate: days.length ? days[0].date : '',
-                endDate: days.length ? days[days.length - 1].date : '',
-                days: days
-            };
-        });
-    }
-
-    /* ── T008: Render the 2x4 region grid ── */
+    /* ── Render the 2x4 region grid ── */
 
     function renderRegionGrid(container, sections) {
         container.innerHTML = '';
@@ -329,7 +270,7 @@
         var grid = document.createElement('div');
         grid.className = 'region-grid-inner';
 
-        REGION_SECTIONS.forEach(function (cfg) {
+        window.TripModel.getRegions().forEach(function (cfg) {
             var panel = document.createElement('div');
             panel.className = 'region-panel region-panel--disabled';
             panel.innerHTML =
@@ -357,9 +298,9 @@
         _travelRouteLayerRef = opts.travelRouteLayerRef;
         _filteredPhotosRef = opts.filteredPhotos;
 
-        // Build sections from itinerary data
-        if (opts.itineraryData) {
-            _sections = buildRegionSections(opts.itineraryData);
+        // Read sections from shared model
+        _sections = window.TripModel.getRegions();
+        if (_sections.length && _sections[0].startDate) {
             renderRegionGrid(_gridEl, _sections);
         } else {
             console.warn('[region-nav] Itinerary data not available — showing fallback grid');
