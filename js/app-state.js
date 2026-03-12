@@ -85,9 +85,17 @@
         onChange: function (key, callback) {
             if (!_hasKey(key)) {
                 console.warn('[appState] Unknown key: ' + key);
-                return;
+                return function () {};
             }
             _listeners[key].push(callback);
+            var removed = false;
+            return function () {
+                if (removed) return;
+                var arr = _listeners[key];
+                var idx = arr.indexOf(callback);
+                if (idx !== -1) arr.splice(idx, 1);
+                removed = true;
+            };
         }
     };
 }());

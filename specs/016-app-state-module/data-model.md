@@ -20,13 +20,14 @@ A fixed-schema key-value store. No persistence — lives only in memory for the 
 
 ### StateListener
 
-A callback registered for a specific key. Not persisted — exists only as function references in memory.
+A callback registered for a specific key. Not persisted — exists only as function references in memory. Registration returns an unsubscribe function for cleanup.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `key` | `string` | The state key being observed |
 | `callback` | `function(newValue, oldValue)` | Invoked synchronously when the key's value changes |
 | `registration order` | `integer` (implicit) | Callbacks fire in the order they were registered |
+| `unsubscribe` | `function()` | Returned by `onChange()`. Removes this listener when called. Idempotent. |
 
 ## Relationships
 

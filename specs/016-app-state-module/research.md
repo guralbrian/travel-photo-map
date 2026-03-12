@@ -51,3 +51,21 @@
 **Decision**: Each integration point adds a single `window.appState.set()` call alongside existing logic. Existing closure variables, custom events, and DOM class manipulations remain untouched.
 
 **Rationale**: This feature is about making state observable and shareable, not about refactoring existing code. Keeping the existing mechanisms ensures zero risk of behavioral regression. Future phases can migrate consumers to read from `appState` instead of local state, but that is out of scope here.
+
+## R7: Listener Unsubscribe Mechanism
+
+**Decision**: `onChange(key, callback)` returns a function that, when called, removes the callback from the listener array for that key. The returned function is idempotent — calling it multiple times has no additional effect.
+
+**Rationale**: Modules that mount/unmount (e.g., the upcoming mobile map interaction policy module) need to clean up listeners to prevent memory leaks and stale callback execution. Returning an unsubscribe function is the simplest pattern — callers don't need to retain a reference to the original callback for identity matching.
+
+**Alternatives considered**:
+- **`offChange(key, callback)` method**: Requires callers to pass the exact same function reference used for registration. Rejected: error-prone with anonymous functions or bound functions.
+- **No unsubscribe (permanent listeners)**: Simplest but leaks memory if modules are re-initialized. Rejected: the mobile interaction policy feature will need to register/unregister listeners on `mapInteractive`.
+
+**Implementation**: Store the callback reference, splice it from the array on unsubscribe. Mark the unsubscribe function as "spent" after first call to make it idempotent.
+
+## R8: Viewport-Agnostic Default for `mapInteractive`
+
+**Decision**: `mapInteractive` defaults to `false` regardless of viewport width. Consuming code (e.g., the interaction policy module or `app.js`) is responsible for setting it to `true` on desktop viewports during initialization.
+
+**Rationale**: The app-state module should be a pure data store with no viewport awareness. Keeping initialization simple and deterministic makes the module testable and predictable. The viewport-dependent logic belongs in the consuming module that owns the interaction policy.

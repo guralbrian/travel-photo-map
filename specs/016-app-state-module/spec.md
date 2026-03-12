@@ -75,12 +75,13 @@ As a developer, I need to subscribe to state changes on specific keys so that mo
 
 **Why this priority**: Without a subscription mechanism, modules would need to poll appState or rely on the same ad-hoc event patterns this feature is meant to improve.
 
-**Independent Test**: Can be tested by registering a callback via `appState.onChange('activePanel', callback)`, changing the active panel, and verifying the callback fires with the new value.
+**Independent Test**: Can be tested by registering a callback via `var unsub = appState.onChange('activePanel', callback)`, changing the active panel, verifying the callback fires, then calling `unsub()` and verifying the callback no longer fires on subsequent changes.
 
 **Acceptance Scenarios**:
 
 1. **Given** a callback is registered for `'activePanel'`, **When** the active panel changes, **Then** the callback is invoked with the new value and the previous value.
 2. **Given** a callback is registered, **When** the state is set to the same value it already holds, **Then** the callback is NOT invoked (no spurious notifications).
+3. **Given** a callback is registered and the returned unsubscribe function is called, **When** the state key changes, **Then** the callback is NOT invoked.
 
 ---
 
@@ -91,11 +92,18 @@ As a developer, I need to subscribe to state changes on specific keys so that mo
 - What happens if multiple callbacks are registered for the same key? All callbacks should fire in registration order.
 - What happens if a callback throws an error? Other registered callbacks for the same key should still execute.
 
+## Clarifications
+
+### Session 2026-03-11
+
+- Q: Should `onChange` return an unsubscribe function, or should a separate `offChange(key, callback)` method be added? → A: `onChange` returns an unsubscribe function.
+- Q: Should `app-state.js` be viewport-aware for `mapInteractive` initialization, or should consuming code handle it? → A: Consuming code sets the value; `mapInteractive` defaults to `false`.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a `window.appState` global with `get(key)`, `set(key, value)`, `getAll()`, and `onChange(key, callback)` methods.
+- **FR-001**: System MUST provide a `window.appState` global with `get(key)`, `set(key, value)`, `getAll()`, and `onChange(key, callback)` methods. `onChange` MUST return an unsubscribe function that, when called, removes the registered callback from the listener list for that key.
 - **FR-002**: System MUST manage these state keys: `activePanel`, `activeRegionId`, `visibleDateRange`, `viewerOpen`, `mapInteractive`, and `baseLayer`.
 - **FR-003**: System MUST initialize state with sensible defaults: `activePanel: null`, `activeRegionId: null`, `visibleDateRange: { min: null, max: null }`, `viewerOpen: false`, `mapInteractive: false`, `baseLayer: 'Humanitarian'`.
 - **FR-004**: System MUST invoke registered `onChange` callbacks only when a value actually changes (not on no-op sets).
@@ -125,4 +133,5 @@ As a developer, I need to subscribe to state changes on specific keys so that mo
 
 - The app loads scripts in a defined order where `app-state.js` is loaded before modules that depend on it (i.e., before `app.js` and other UI modules).
 - The six managed keys (`activePanel`, `activeRegionId`, `visibleDateRange`, `viewerOpen`, `mapInteractive`, `baseLayer`) are sufficient for the current cross-module coordination needs. `mapInteractive` and `baseLayer` are included in the schema but will be fully integrated in future phases.
+- `mapInteractive` defaults to `false`. The app-state module has no viewport awareness; consuming code (e.g., the interaction policy module or `app.js`) is responsible for setting `mapInteractive: true` on desktop viewports during initialization.
 - Equality checks for `visibleDateRange` will compare the `min` and `max` properties individually (shallow comparison), not reference equality on the object.

@@ -45,6 +45,7 @@ This is a travel photo map app built with HTML/CSS/JavaScript and Leaflet.js. Ph
 - Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored) (015-shared-trip-model)
 - N/A — reads existing `data/manifest.json`, `data/trip_segments.json`, `data/itinerary.json` at runtime (015-shared-trip-model)
 - N/A — in-memory only, no persistence (016-app-state-module)
+- Vanilla JavaScript (ES5-compatible IIFE) + None (standalone module, no framework or library dependencies) (016-app-state-module)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -69,9 +70,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 016-app-state-module: Added Vanilla JavaScript (ES5-compatible IIFE) + None (standalone module, no framework or library dependencies)
 - 016-app-state-module: Added Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored)
 - 015-shared-trip-model: Added Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored)
-- 013-native-video-playback: Added Vanilla JavaScript (ES5-compatible IIFEs for frontend), Python 3.10+ (processing pipeline) + Leaflet.js (vendored), ffmpeg/ffprobe (CLI, already available for thumbnails), Firebase Storage SDK v11 (vendored)
 
 
 ## Testing

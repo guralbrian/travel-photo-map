@@ -35,13 +35,16 @@ window.appState.getAll()
 window.appState.get('activePanel')  // → 'photo-wall'
 ```
 
-### Verify change subscription:
+### Verify change subscription + unsubscribe:
 ```js
-window.appState.onChange('viewerOpen', function(newVal, oldVal) {
+var unsub = window.appState.onChange('viewerOpen', function(newVal, oldVal) {
   console.log('viewer:', oldVal, '→', newVal);
 });
 // Click a photo to open viewer → logs "viewer: false → true"
 // Close viewer → logs "viewer: true → false"
+
+unsub(); // Remove listener
+// Open/close viewer again → no log output
 ```
 
 ### Verify no behavioral changes:
@@ -57,8 +60,9 @@ window.appState.onChange('viewerOpen', function(newVal, oldVal) {
 window.appState.get(key)              // → current value
 window.appState.set(key, value)       // → updates value, fires listeners if changed
 window.appState.getAll()              // → shallow copy of all state
-window.appState.onChange(key, callback) // → registers listener for key changes
+window.appState.onChange(key, callback) // → returns unsubscribe function
                                        //   callback(newValue, oldValue)
+                                       //   var unsub = onChange(...); unsub();
 ```
 
 ## Managed Keys

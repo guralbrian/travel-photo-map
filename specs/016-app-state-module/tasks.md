@@ -1,11 +1,11 @@
 # Tasks: Lightweight App State Module
 
 **Input**: Design documents from `/specs/016-app-state-module/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/app-state-api.md
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md
 
 **Tests**: Not requested — manual browser verification via Playwright MCP in Polish phase.
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**Organization**: Tasks grouped by user story. US1–US4 integrations are in separate files and can proceed in parallel after the foundational phase.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -13,70 +13,68 @@
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
+---
+
 ## Phase 1: Setup
 
-**Purpose**: Add the script tag so app-state.js is loaded in the correct position
+**Purpose**: Add the script tag so app-state.js loads in the correct position
 
-- [x] T001 Add `<script src="js/app-state.js"></script>` tag in `index.html` after the `route-builder.js` script tag and before the `photo-viewer.js` script tag, per the load order in plan.md
+- [x] T001 Add `<script src="js/app-state.js"></script>` tag in `index.html` after the `route-builder.js` script tag and before the `photo-viewer.js` script tag, per the load order in research.md R5
 
 ---
 
-## Phase 2: Foundational (Core Module)
+## Phase 2: Foundational — Core State Module
 
-**Purpose**: Create the app-state.js module with full API — this also satisfies US5 (Change Subscription)
+**Purpose**: Create the app-state module with full API including unsubscribe support. Also satisfies US5 (Change Subscription).
 
-**CRITICAL**: No integration tasks can begin until this phase is complete
+**CRITICAL**: No integration tasks can begin until this phase is complete.
 
-- [x] T002 Create `js/app-state.js` as an ES5-compatible IIFE that exposes `window.appState` with the following implementation per `contracts/app-state-api.md`:
-  - Closure-scoped `_state` object initialized with defaults from `data-model.md`: `activePanel: null`, `activeRegionId: null`, `visibleDateRange: { min: null, max: null }`, `viewerOpen: false`, `mapInteractive: false`, `baseLayer: 'Humanitarian'`
+- [x] T002 Create `js/app-state.js` as an ES5-compatible IIFE exposing `window.appState` with:
+  - Closure-scoped `_state` object initialized with defaults per FR-003: `activePanel: null`, `activeRegionId: null`, `visibleDateRange: { min: null, max: null }`, `viewerOpen: false`, `mapInteractive: false`, `baseLayer: 'Humanitarian'`
   - Closure-scoped `_listeners` object mapping each key to an empty array
-  - `get(key)` — returns `_state[key]` if key exists in schema, else `console.warn` + return `undefined`
-  - `set(key, value)` — validates key exists, performs change detection (property-level for `visibleDateRange`, strict `===` for all others per `data-model.md` Change Detection Rules), updates `_state[key]`, fires all `_listeners[key]` callbacks with `(newValue, oldValue)` each wrapped in try/catch per research.md R3
-  - `getAll()` — returns shallow copy of `_state` (copy `visibleDateRange` as new object)
-  - `onChange(key, callback)` — validates key exists, pushes callback to `_listeners[key]`
-  - Invalid key handling: `console.warn('[appState] Unknown key: ' + key)` per research.md R4
+  - `get(key)` — returns `_state[key]` if key exists, else `console.warn` + return `undefined` (R4)
+  - `set(key, value)` — validates key, performs change detection (property-level for `visibleDateRange`, strict `===` for others per R2), updates value, fires listeners with `(newValue, oldValue)` each wrapped in try/catch (R3)
+  - `getAll()` — returns shallow copy (copy `visibleDateRange` as new object)
+  - `onChange(key, callback)` — validates key, pushes callback to listeners array
+  - Invalid key handling: `console.warn('[appState] Unknown key: ' + key)` (R4)
 
-**Checkpoint**: `window.appState` is available in the browser console. `getAll()` returns defaults. `set()`/`get()`/`onChange()` work correctly.
+- [x] T003 Update `onChange` in `js/app-state.js` to return an idempotent unsubscribe function per FR-001 clarification and R7: when called, the returned function splices the callback from the `_listeners[key]` array. Subsequent calls to the same unsubscribe function are no-ops. This enables modules to clean up listeners without holding callback references.
+
+**Checkpoint**: `window.appState` available in console. `getAll()` returns defaults. `set()`/`get()` work. `onChange()` returns an unsubscribe function that removes the listener when called.
 
 ---
 
-## Phase 3: User Story 1 — Panel State Tracking (Priority: P1)
+## Phase 3: User Story 1 — Panel State Tracking (Priority: P1) MVP
 
-**Goal**: Track active panel through appState alongside existing panel:activate/panel:deactivate events
+**Goal**: `appState.get('activePanel')` always reflects the currently visible panel
 
-**Independent Test**: Open app, switch panels (photo-wall, trip-feed), verify `window.appState.get('activePanel')` reflects current panel. Verify `panel:activate`/`panel:deactivate` custom events still fire.
+**Independent Test**: Open app, switch panels (photo-wall, trip-feed), verify `window.appState.get('activePanel')` in console matches the visible panel. Verify `panel:activate`/`panel:deactivate` custom events still fire.
 
-### Implementation for User Story 1
+- [x] T004 [US1] Integrate activePanel tracking in `js/panel-manager.js`: In `PanelCoordinator.activate(panelId)`, add `if (window.appState) window.appState.set('activePanel', panelId)` after the existing activation logic. In the deactivation path, add `if (window.appState) window.appState.set('activePanel', null)`. Existing `panel:activate`/`panel:deactivate` events remain untouched (R6, FR-007).
 
-- [x] T003 [US1] Integrate activePanel tracking in `js/panel-manager.js`: In the `PanelCoordinator.activate(panelId)` method, add `window.appState.set('activePanel', panelId)` after the existing `_activePanel = panelId` assignment. In the deactivation path (when a panel is deactivated and no replacement is activated), add `window.appState.set('activePanel', null)`. Do NOT remove existing `panel:activate`/`panel:deactivate` event dispatching — appState writes are additive per research.md R6
-
-**Checkpoint**: Panel switches update `appState.get('activePanel')`. Custom events still fire normally.
+**Checkpoint**: Panel switches update `appState.get('activePanel')`. Custom events still fire.
 
 ---
 
 ## Phase 4: User Story 2 — Shared Visible Date Range (Priority: P1)
 
-**Goal**: Track timeline date range through appState so any module can read it
+**Goal**: `appState.get('visibleDateRange')` returns the current timeline filter range
 
-**Independent Test**: Adjust timeline slider, verify `window.appState.get('visibleDateRange')` returns `{ min: '<ISO date>', max: '<ISO date>' }` matching the slider position.
+**Independent Test**: Adjust timeline slider, verify `window.appState.get('visibleDateRange')` returns `{ min: '<ISO date>', max: '<ISO date>' }` matching slider position.
 
-### Implementation for User Story 2
+- [x] T005 [P] [US2] Integrate visibleDateRange in `js/app.js`: In `applyTimelineFilter()`, add `if (window.appState) window.appState.set('visibleDateRange', { min: minDate, max: maxDate })`. Also add initial set in the init sequence after `uniqueDates` is populated, setting the full range.
 
-- [x] T004 [P] [US2] Integrate visibleDateRange tracking in `js/app.js`: In the `applyTimelineFilter()` function, after computing the start and end dates from the slider values + `uniqueDates` array, add `window.appState.set('visibleDateRange', { min: startDate, max: endDate })` where startDate/endDate are the ISO date strings derived from `uniqueDates[handleMin.value]` and `uniqueDates[handleMax.value]`. Also add an initial `window.appState.set('visibleDateRange', ...)` call after the timeline is first built (after the `uniqueDates` array is populated and slider defaults are set), so appState reflects the initial full range on load
-
-**Checkpoint**: Timeline slider updates `appState.get('visibleDateRange')`. Initial page load shows full date range.
+**Checkpoint**: Timeline slider and initial load update `appState.get('visibleDateRange')`.
 
 ---
 
 ## Phase 5: User Story 3 — Region Selection Tracking (Priority: P2)
 
-**Goal**: Track selected region through appState
+**Goal**: `appState.get('activeRegionId')` returns the currently selected region ID
 
-**Independent Test**: Select a region from the navigation, verify `window.appState.get('activeRegionId')` returns the region's stable ID. Deselect, verify it returns `null`.
+**Independent Test**: Select a region, verify `window.appState.get('activeRegionId')` returns the region's stable ID. Deselect, verify it returns `null`.
 
-### Implementation for User Story 3
-
-- [x] T005 [P] [US3] Integrate activeRegionId tracking in `js/region-nav.js`: In the `selectRegion(index)` function, after setting `_activeIndex = index`, add `window.appState.set('activeRegionId', section.id)` where `section` is `_sections[index]` (the region object from TripModel which has a stable `.id` property). In `deselectRegion()`, after setting `_activeIndex = -1`, add `window.appState.set('activeRegionId', null)`
+- [x] T006 [P] [US3] Integrate activeRegionId in `js/region-nav.js`: In `selectRegion(index)`, add `if (window.appState) window.appState.set('activeRegionId', section.id)`. In `deselectRegion()`, add `if (window.appState) window.appState.set('activeRegionId', null)`.
 
 **Checkpoint**: Region select/deselect updates `appState.get('activeRegionId')`.
 
@@ -84,31 +82,35 @@
 
 ## Phase 6: User Story 4 — Viewer Open/Closed State (Priority: P2)
 
-**Goal**: Track photo viewer open/closed state through appState
+**Goal**: `appState.get('viewerOpen')` reflects whether the photo viewer is currently open
 
-**Independent Test**: Open a photo in the viewer, verify `window.appState.get('viewerOpen')` returns `true`. Close the viewer, verify it returns `false`.
+**Independent Test**: Open a photo, verify `window.appState.get('viewerOpen')` returns `true`. Close viewer, verify it returns `false`.
 
-### Implementation for User Story 4
-
-- [x] T006 [P] [US4] Integrate viewerOpen tracking in `js/photo-viewer.js`: In the open handler (where `S.open = true` is set), add `window.appState.set('viewerOpen', true)` immediately after. In the close handler (where `S.open = false` is set), add `window.appState.set('viewerOpen', false)` immediately after
+- [x] T007 [P] [US4] Integrate viewerOpen in `js/photo-viewer.js`: In the open handler, add `if (window.appState) window.appState.set('viewerOpen', true)`. In the close handler, add `if (window.appState) window.appState.set('viewerOpen', false)`.
 
 **Checkpoint**: Viewer open/close updates `appState.get('viewerOpen')`.
 
 ---
 
-## Phase 7: Polish & Verification
+## Phase 7: User Story 5 — Change Subscription (Priority: P2)
 
-**Purpose**: Verify no visual or behavioral regressions across the full app
+**Goal**: Modules can subscribe to state changes via `onChange` and unsubscribe when done
 
-- [x] T007 Browser verification: Start local server (`python3 -m http.server 8000`), open app in Playwright at desktop (1440px) and mobile (375px) widths. Verify:
-  - Map loads with photo markers
-  - Panel transitions (trip-feed, photo-wall) work as before
-  - Timeline slider filters photos
-  - Region navigation selects/deselects regions
-  - Photo viewer opens and closes
-  - `window.appState.getAll()` in console shows correct state after each interaction
-  - No console errors from app-state.js
-  - No visual differences from before
+**Independent Test**: `var unsub = appState.onChange('activePanel', cb)` → switch panels → verify callback fires with `(newVal, oldVal)` → call `unsub()` → switch panels again → verify callback does NOT fire.
+
+**Note**: US5 core onChange mechanism delivered by T002. Unsubscribe addition delivered by T003. No additional integration tasks needed.
+
+**Checkpoint**: Verified through console testing per quickstart.md.
+
+---
+
+## Phase 8: Polish & Verification
+
+**Purpose**: Verify no visual or behavioral regressions across viewports
+
+- [x] T008 Playwright screenshot verification at 375px mobile width — confirm panel transitions, timeline slider, region nav, and photo viewer work identically (FR-009, SC-003)
+- [x] T009 Playwright screenshot verification at 1440px desktop width — confirm desktop behavior unchanged
+- [x] T010 Run full quickstart.md validation in browser console: verify `getAll()` output, panel tracking, change subscription with unsubscribe, and all behavioral preservation checks
 
 ---
 
@@ -116,65 +118,52 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies — can start immediately
-- **Foundational (Phase 2)**: Depends on Phase 1 (script tag must exist for module to load)
-- **User Stories (Phases 3–6)**: All depend on Phase 2 completion
-  - US1 (T003), US2 (T004), US3 (T005), US4 (T006) can proceed **in parallel** — they touch different files with no cross-dependencies
-- **Polish (Phase 7)**: Depends on all user story phases being complete
+- **Setup (Phase 1)**: No dependencies — start immediately
+- **Foundational (Phase 2)**: Depends on Phase 1 — BLOCKS all user stories
+- **User Stories (Phases 3–6)**: All depend on Phase 2. US1–US4 can proceed **in parallel** (different files)
+- **US5 (Phase 7)**: Delivered by Phase 2 (T002 + T003) — no additional work
+- **Polish (Phase 8)**: Depends on all user stories complete
 
 ### User Story Dependencies
 
-- **US1 (Panel State)**: Depends only on Phase 2. Touches `panel-manager.js` only.
-- **US2 (Date Range)**: Depends only on Phase 2. Touches `app.js` only.
-- **US3 (Region Selection)**: Depends only on Phase 2. Touches `region-nav.js` only.
-- **US4 (Viewer State)**: Depends only on Phase 2. Touches `photo-viewer.js` only.
-- **US5 (Change Subscription)**: Satisfied by Phase 2 (built into core module).
+- **US1 (Panel State)**: Phase 2 only. Touches `panel-manager.js`.
+- **US2 (Date Range)**: Phase 2 only. Touches `app.js`.
+- **US3 (Region Selection)**: Phase 2 only. Touches `region-nav.js`.
+- **US4 (Viewer State)**: Phase 2 only. Touches `photo-viewer.js`.
+- **US5 (Change Subscription)**: Built into core module (T002 + T003).
 
 ### Parallel Opportunities
 
 ```text
-Sequential: T001 → T002 (must complete before any integration)
+Sequential: T001 → T002 → T003 (setup + core module + unsubscribe)
 
-Parallel batch (after T002):
-  T003 (panel-manager.js)  ─┐
-  T004 (app.js)             ├─ all touch different files
-  T005 (region-nav.js)      │
-  T006 (photo-viewer.js)   ─┘
+Parallel batch (after T003):
+  T004 (panel-manager.js)  ─┐
+  T005 (app.js)             ├─ all touch different files
+  T006 (region-nav.js)      │
+  T007 (photo-viewer.js)   ─┘
 
-Sequential: T007 (verification after all integrations)
-```
-
----
-
-## Parallel Example: User Stories 1–4
-
-```bash
-# After T002 completes, launch all integrations in parallel:
-Task: "T003 [US1] Integrate activePanel tracking in js/panel-manager.js"
-Task: "T004 [US2] Integrate visibleDateRange tracking in js/app.js"
-Task: "T005 [US3] Integrate activeRegionId tracking in js/region-nav.js"
-Task: "T006 [US4] Integrate viewerOpen tracking in js/photo-viewer.js"
+Sequential: T008 → T009 → T010 (verification)
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US1 + US2 Only)
+### MVP First (US1 + US2 — both P1)
 
 1. Complete Phase 1: Setup (T001)
-2. Complete Phase 2: Foundational (T002)
-3. Complete Phase 3: US1 — Panel State (T003)
-4. Complete Phase 4: US2 — Date Range (T004)
+2. Complete Phase 2: Foundational (T002, T003)
+3. Complete Phase 3: US1 — Panel State (T004)
+4. Complete Phase 4: US2 — Date Range (T005)
 5. **STOP and VALIDATE**: `appState.getAll()` shows panel and date range tracking
-6. Remaining stories add incremental value
 
 ### Full Delivery (Recommended — Small Feature)
 
-1. T001 → T002 (sequential setup)
-2. T003 + T004 + T005 + T006 (parallel integrations)
-3. T007 (verification)
-4. Total: 7 tasks, ~30 minutes implementation time
+1. T001 → T002 → T003 (sequential setup)
+2. T004 + T005 + T006 + T007 (parallel integrations)
+3. T008 + T009 + T010 (verification)
+4. Total: 10 tasks across 8 phases
 
 ---
 
@@ -182,6 +171,7 @@ Task: "T006 [US4] Integrate viewerOpen tracking in js/photo-viewer.js"
 
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
-- US5 (Change Subscription) has no dedicated phase — it is built into the core module (T002)
-- All integration tasks (T003–T006) are single `appState.set()` calls added to existing code — additive, not replacement
-- No test tasks generated — verification is manual via Playwright in T007
+- US5 has no dedicated implementation tasks — it is built into the core module (T002 + T003)
+- All integration tasks (T004–T007) are additive `appState.set()` calls — existing logic untouched (R6)
+- Tasks T001, T002, T004–T007 are already complete from prior implementation. Remaining: T003 (unsubscribe), T008–T010 (verification).
+- `mapInteractive` and `baseLayer` keys are in the schema but NOT integrated in this feature — reserved for future phases
