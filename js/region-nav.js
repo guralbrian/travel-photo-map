@@ -111,6 +111,7 @@
         if (!section) return;
 
         _activeIndex = index;
+        if (window.appState) window.appState.set('activeRegionId', section.id);
 
         // Save current map bounds for restore
         _savedMapBounds = _map.getBounds();
@@ -216,6 +217,7 @@
 
     function deselectRegion() {
         _activeIndex = -1;
+        if (window.appState) window.appState.set('activeRegionId', null);
 
         // Hide itinerary, show grid
         _itineraryEl.classList.add('hidden');
