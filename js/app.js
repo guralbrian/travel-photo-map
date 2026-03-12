@@ -77,38 +77,65 @@
     var currentBaseLayer = humanitarian;
 
     // ──── Popup Helpers ────
-    function buildPopupHTML(photo) {
-        var html = '<div class="photo-popup">';
+    var el = domHelpers.el, text = domHelpers.text;
+
+    function createPopupElement(photo) {
+        var mediaEl;
         if (photo.type === 'video') {
             if (photo.web_url) {
-                html += '<iframe class="popup-video-iframe" src="' + photo.web_url + '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+                mediaEl = el('iframe', {className: 'popup-video-iframe', src: photo.web_url, allow: 'autoplay; encrypted-media', allowfullscreen: 'true'});
             } else {
-                html += '<video controls preload="metadata"><source src="' + photo.url + '"></video>';
+                mediaEl = el('video', {controls: 'true', preload: 'metadata'},
+                    el('source', {src: photo.url})
+                );
             }
         } else {
-            html += '<img src="' + photo.thumbnail + '" alt="' + (photo.caption || 'Photo') + '" onerror="this.onerror=null;this.style.background=\'#2a2a2e\';this.style.minHeight=\'120px\';this.alt=\'Photo unavailable\'">';
+            mediaEl = el('img', {
+                src: photo.thumbnail,
+                alt: photo.caption || 'Photo',
+                onerror: function () {
+                    this.onerror = null;
+                    this.style.background = '#2a2a2e';
+                    this.style.minHeight = '120px';
+                    this.alt = 'Photo unavailable';
+                }
+            });
         }
-        if (photo.google_photos_url) {
-            html += '<a href="' + photo.google_photos_url + '" target="_blank" rel="noopener noreferrer" class="photo-link">View on Google Photos</a>';
-        }
-        html += '<div class="popup-info">';
+
         var _popupCaption = window.cloudData ? window.cloudData.getEffectiveCaption(window.cloudData.getPhotoId(photo), photo.caption) : (photo.caption || '');
+        var _popupTags = window.cloudData ? window.cloudData.getEffectiveTags(window.cloudData.getPhotoId(photo), photo.tags) : (photo.tags || []);
+
+        var infoChildren = [];
         if (_popupCaption) {
-            html += '<p class="popup-caption">' + _popupCaption + '</p>';
+            infoChildren.push(el('p', {className: 'popup-caption'}, text(_popupCaption)));
         }
         if (photo.date) {
-            html += '<p class="popup-date">' + photo.date + '</p>';
+            infoChildren.push(el('p', {className: 'popup-date'}, text(photo.date)));
         }
-        var _popupTags = window.cloudData ? window.cloudData.getEffectiveTags(window.cloudData.getPhotoId(photo), photo.tags) : (photo.tags || []);
         if (_popupTags && _popupTags.length > 0) {
-            html += '<div class="popup-tags">';
+            var tagEls = [];
             for (var i = 0; i < _popupTags.length; i++) {
-                html += '<span class="popup-tag">' + _popupTags[i] + '</span>';
+                tagEls.push(el('span', {className: 'popup-tag'}, text(_popupTags[i])));
             }
-            html += '</div>';
+            var tagsDiv = el('div', {className: 'popup-tags'});
+            for (var j = 0; j < tagEls.length; j++) {
+                tagsDiv.appendChild(tagEls[j]);
+            }
+            infoChildren.push(tagsDiv);
         }
-        html += '</div></div>';
-        return html;
+
+        var infoDiv = el('div', {className: 'popup-info'});
+        for (var k = 0; k < infoChildren.length; k++) {
+            infoDiv.appendChild(infoChildren[k]);
+        }
+
+        var popupDiv = el('div', {className: 'photo-popup'}, mediaEl);
+        if (photo.google_photos_url) {
+            popupDiv.appendChild(el('a', {href: photo.google_photos_url, target: '_blank', rel: 'noopener noreferrer', className: 'photo-link'}, text('View on Google Photos')));
+        }
+        popupDiv.appendChild(infoDiv);
+
+        return popupDiv;
     }
 
     function showEmptyState() {
@@ -305,12 +332,13 @@
                     iconAnchor: [14, 28]
                 });
                 var marker = L.marker([ann.lat, ann.lng], { icon: icon });
-                var popupHTML = '<div class="annotation-popup">';
-                if (ann.title) popupHTML += '<strong>' + ann.title + '</strong>';
-                if (ann.date) popupHTML += '<br><span class="annotation-date">' + ann.date + '</span>';
-                if (ann.text) popupHTML += '<p>' + ann.text + '</p>';
-                popupHTML += '</div>';
-                marker.bindPopup(popupHTML);
+                var popup = el('div', {className: 'annotation-popup'},
+                    ann.title ? el('strong', null, text(ann.title)) : null,
+                    ann.date ? el('br', null) : null,
+                    ann.date ? el('span', {className: 'annotation-date'}, text(ann.date)) : null,
+                    ann.text ? el('p', null, text(ann.text)) : null
+                );
+                marker.bindPopup(popup);
                 marker.addTo(map);
             }
         })
@@ -406,7 +434,8 @@
 
     function buildFeed() {
         var keys = Object.keys(dateIndex).sort();
-        var html = '';
+        var fragment = document.createDocumentFragment();
+
         for (var i = 0; i < keys.length; i++) {
             var date = keys[i];
             var entry = dateIndex[date];
@@ -414,39 +443,47 @@
             var maxThumbs = 6;
             var remaining = photos.length - maxThumbs;
 
-            html += '<div class="feed-entry" data-date="' + date + '" style="--entry-color:' + entry.segmentColor + '">';
-            html += '<div class="feed-entry-header">';
-            html += '<span class="feed-entry-date">' + formatDateShort(date) + '</span>';
-            html += '<span class="feed-entry-city" style="color:' + entry.segmentColor + '">' + entry.segmentName + '</span>';
-            html += '</div>';
-
-            // Narrative text placeholder (will be populated by US3)
-            html += '<div class="feed-narrative-slot" data-date="' + date + '"></div>';
-
-            html += '<div class="feed-thumbnails">';
+            var thumbsDiv = el('div', {className: 'feed-thumbnails'});
             for (var t = 0; t < Math.min(photos.length, maxThumbs); t++) {
                 var photo = photos[t];
-                html += '<img class="feed-thumbnail" src="' + photo.thumbnail + '" alt="" data-photo-url="' + photo.url + '" data-photo-lat="' + photo.lat + '" data-photo-lng="' + photo.lng + '" onload="this.classList.add(\'loaded\')">';
+                var img = el('img', {
+                    className: 'feed-thumbnail',
+                    src: photo.thumbnail,
+                    alt: '',
+                    dataset: {
+                        photoUrl: photo.url,
+                        photoLat: photo.lat,
+                        photoLng: photo.lng
+                    },
+                    onload: function () { this.classList.add('loaded'); },
+                    onclick: onFeedThumbnailClick
+                });
+                thumbsDiv.appendChild(img);
             }
             if (remaining > 0) {
-                html += '<span class="feed-more-indicator">+' + remaining + '</span>';
+                thumbsDiv.appendChild(el('span', {className: 'feed-more-indicator'}, text('+' + remaining)));
             }
-            html += '</div>'; // .feed-thumbnails
-            html += '</div>'; // .feed-entry
-        }
-        feedEntries.innerHTML = html;
 
-        // Wire entry click handlers (fly to map)
-        var entryEls = feedEntries.querySelectorAll('.feed-entry');
-        for (var e = 0; e < entryEls.length; e++) {
-            entryEls[e].addEventListener('click', onFeedEntryClick);
+            var entryDiv = el('div', {
+                className: 'feed-entry',
+                dataset: {date: date},
+                style: {},
+                onclick: onFeedEntryClick
+            },
+                el('div', {className: 'feed-entry-header'},
+                    el('span', {className: 'feed-entry-date'}, text(formatDateShort(date))),
+                    el('span', {className: 'feed-entry-city', style: {color: entry.segmentColor}}, text(entry.segmentName))
+                ),
+                el('div', {className: 'feed-narrative-slot', dataset: {date: date}}),
+                thumbsDiv
+            );
+            entryDiv.style.setProperty('--entry-color', entry.segmentColor);
+
+            fragment.appendChild(entryDiv);
         }
 
-        // Wire thumbnail click handlers (open photo viewer)
-        var thumbEls = feedEntries.querySelectorAll('.feed-thumbnail');
-        for (var th = 0; th < thumbEls.length; th++) {
-            thumbEls[th].addEventListener('click', onFeedThumbnailClick);
-        }
+        feedEntries.innerHTML = '';
+        feedEntries.appendChild(fragment);
     }
 
     function onFeedEntryClick(evt) {
@@ -561,23 +598,16 @@
         var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
         for (var i = 0; i < slots.length; i++) {
             var date = slots[i].getAttribute('data-date');
-            var text = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
-            var html = '';
-            if (text) {
-                html = '<p class="feed-narrative"' + (isEditor ? ' data-date="' + date + '"' : '') + '>' + _escapeHtml(text) + '</p>';
+            var narrativeText = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
+            slots[i].textContent = '';
+            if (narrativeText) {
+                slots[i].appendChild(el('p', {className: 'feed-narrative', dataset: isEditor ? {date: date} : {}}, text(narrativeText)));
             } else if (isEditor) {
-                html = '<span class="feed-add-note" data-date="' + date + '">Add note...</span>';
+                slots[i].appendChild(el('span', {className: 'feed-add-note', dataset: {date: date}}, text('Add note...')));
             }
-            slots[i].innerHTML = html;
         }
         // Wire narrative click events
         _wireNarrativeEditing();
-    }
-
-    function _escapeHtml(str) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(str));
-        return div.innerHTML;
     }
 
     function _wireNarrativeEditing() {
