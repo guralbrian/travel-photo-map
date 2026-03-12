@@ -142,6 +142,7 @@
             var panelId = e.detail && e.detail.panel;
             if (panelId === self._activePanel) {
                 self._activePanel = null;
+                if (window.appState) window.appState.set('activePanel', null);
                 self._updateToggleButtons();
             }
         });
@@ -173,6 +174,7 @@
         }
 
         this._activePanel = panelId;
+        if (window.appState) window.appState.set('activePanel', panelId);
         this._updateToggleButtons();
     };
 

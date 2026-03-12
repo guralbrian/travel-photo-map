@@ -934,6 +934,8 @@
             }
         }
 
+        if (window.appState) window.appState.set('visibleDateRange', { min: minDate, max: maxDate });
+
         rebuildPhotoLayer();
         buildPhotoIndex();
 
@@ -1173,6 +1175,14 @@
                 handleMax.addEventListener('input', onTimelineVisualUpdate);
                 handleMin.addEventListener('change', onTimelineRelease);
                 handleMax.addEventListener('change', onTimelineRelease);
+            }
+
+            // Set initial visible date range in appState
+            if (window.appState && uniqueDates.length > 0) {
+                window.appState.set('visibleDateRange', {
+                    min: uniqueDates[0],
+                    max: uniqueDates[uniqueDates.length - 1]
+                });
             }
 
             // Settings slider handlers (debounced)

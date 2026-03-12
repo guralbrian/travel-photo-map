@@ -260,6 +260,7 @@
         $wrap.style.transition = '';
 
         S.open = false; S.idx = -1; S.photos = []; S.srcEl = null;
+        if (window.appState) window.appState.set('viewerOpen', false);
         resetZoom(); cancelLoads(); unlockScroll(); clearHide();
         document.removeEventListener('keydown', onKey);
         emit('photoviewer:close');
@@ -803,6 +804,7 @@
 
         build();
         S.open = true; S.photos = photos; S.srcEl = sourceElement || null;
+        if (window.appState) window.appState.set('viewerOpen', true);
         lockScroll();
 
         $ov.classList.add('pv-controls-visible');
