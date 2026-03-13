@@ -131,7 +131,6 @@
 
     function PanelCoordinator() {
         this._panels = {};       // id → { snap: PanelSnap, toggleBtn: Element }
-        this._activePanel = null;
 
         var self = this;
         document.addEventListener('panel:activate', function (e) {
@@ -140,8 +139,8 @@
         });
         document.addEventListener('panel:deactivate', function (e) {
             var panelId = e.detail && e.detail.panel;
-            if (panelId === self._activePanel) {
-                self._activePanel = null;
+            var active = window.appState ? window.appState.get('activePanel') : null;
+            if (panelId === active) {
                 if (window.appState) window.appState.set('activePanel', null);
                 self._updateToggleButtons();
             }
@@ -173,7 +172,6 @@
             entry.snap.snapTo('collapsed');
         }
 
-        this._activePanel = panelId;
         if (window.appState) window.appState.set('activePanel', panelId);
         this._updateToggleButtons();
     };
@@ -183,7 +181,8 @@
             var btn = this._panels[id].toggleBtn;
             if (!btn) continue;
             // Show toggle button when this panel is NOT the active one
-            if (id !== this._activePanel) {
+            var active = window.appState ? window.appState.get('activePanel') : null;
+            if (id !== active) {
                 btn.classList.add('visible');
             } else {
                 btn.classList.remove('visible');
@@ -192,7 +191,7 @@
     };
 
     PanelCoordinator.prototype.getActivePanel = function () {
-        return this._activePanel;
+        return window.appState ? window.appState.get('activePanel') : null;
     };
 
     /* ═══════════════════════════════════════════════════════════════

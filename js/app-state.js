@@ -10,7 +10,7 @@
         activeRegionId: null,
         visibleDateRange: { min: null, max: null },
         viewerOpen: false,
-        mapInteractive: false,
+        mapInteractive: false,    // Reserved for spec 021 (mobile map policy). Do not consume yet.
         baseLayer: 'Humanitarian'
     };
 

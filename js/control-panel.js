@@ -163,13 +163,32 @@
         toggleBtn.addEventListener('click', togglePanel);
         panel.querySelector('.panel-close').addEventListener('click', togglePanel);
 
-        // Wire base layer switching
+        // Wire base layer switching via appState
         var radios = panel.querySelectorAll('input[name="base-layer"]');
         for (var r = 0; r < radios.length; r++) {
             radios[r].addEventListener('change', function () {
-                _map.removeLayer(_currentBaseLayer);
-                _currentBaseLayer = _baseLayers[this.value];
-                _currentBaseLayer.addTo(_map);
+                if (window.appState) {
+                    window.appState.set('baseLayer', this.value);
+                } else {
+                    _map.removeLayer(_currentBaseLayer);
+                    _currentBaseLayer = _baseLayers[this.value];
+                    _currentBaseLayer.addTo(_map);
+                }
+            });
+        }
+
+        // React to baseLayer changes from any source (radio buttons, URL hash, etc.)
+        if (window.appState) {
+            window.appState.onChange('baseLayer', function (newLayer) {
+                // Swap map tile layer
+                if (_currentBaseLayer) _map.removeLayer(_currentBaseLayer);
+                _currentBaseLayer = _baseLayers[newLayer];
+                if (_currentBaseLayer) _currentBaseLayer.addTo(_map);
+
+                // Sync radio UI in case change came from outside the control panel
+                for (var i = 0; i < radios.length; i++) {
+                    radios[i].checked = (radios[i].value === newLayer);
+                }
             });
         }
 
@@ -261,6 +280,12 @@
             // Gate favorite star visibility based on editor status
             // No-op: photo viewer reads firebaseAuth.isEditor directly
         });
+
+        // visibleDateRange: No onChange subscriber needed here. The timeline sliders
+        // are the *source* of the date range, not a consumer. appState.set('visibleDateRange', ...)
+        // is called in app.js:applyTimelineFilter(). If programmatic date range changes are
+        // needed in the future (e.g., URL hash restore), add an onChange subscriber here to
+        // sync slider positions.
 
         // Wire density slider
         var _densityTimeout = null;

@@ -804,6 +804,10 @@
 
         build();
         S.open = true; S.photos = photos; S.srcEl = sourceElement || null;
+        // viewerOpen: No onChange consumers needed yet. photo-viewer owns this state and
+        // already emits photoviewer:open / photoviewer:close CustomEvents. Spec 021
+        // (mobile map policy) is the likely first consumer — it will subscribe via
+        // appState.onChange('viewerOpen', ...) to disable map interaction while open.
         if (window.appState) window.appState.set('viewerOpen', true);
         lockScroll();
 
