@@ -53,8 +53,17 @@
         return document.createTextNode(str);
     }
 
+    function formatDateShort(isoDate) {
+        if (!isoDate) return '';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var parts = isoDate.split('-');
+        if (parts.length < 3) return isoDate;
+        return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
+    }
+
     window.domHelpers = {
         el: el,
-        text: text
+        text: text,
+        formatDateShort: formatDateShort
     };
 })();

@@ -351,569 +351,12 @@
 
     var tripSegments = [];
 
-    function formatDateShort(isoDate) {
-        if (!isoDate) return '';
-        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        var parts = isoDate.split('-');
-        if (parts.length < 3) return isoDate;
-        return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
-    }
+    var formatDateShort = domHelpers.formatDateShort;
 
-    // ──── Feed Sidebar ────
-    var feedSidebar = document.getElementById('feed-sidebar');
-    var feedToggle = document.getElementById('feed-toggle');
-    var feedClose = document.getElementById('feed-close');
-    var feedEntries = document.getElementById('feed-entries');
-    var activeFeedDate = null;
-
-    // Prevent map interaction behind feed sidebar
-    L.DomEvent.disableClickPropagation(feedSidebar);
-    L.DomEvent.disableScrollPropagation(feedSidebar);
-    if (feedToggle) L.DomEvent.disableClickPropagation(feedToggle);
-
-    // Prevent wheel events from reaching map
-    feedSidebar.addEventListener('wheel', function (e) { e.stopPropagation(); }, { passive: false });
-
-    // Wire PanelSnap for feed sidebar (replaces old touch handlers)
-    var feedPanelSnap = new window.PanelSnap({
-        panelEl: feedSidebar,
-        handleEl: feedSidebar.querySelector('.feed-drag-handle'),
-        collapseBtn: feedClose,
-        statePrefix: 'feed-sidebar',
-        onStateChange: function (state) {
-            document.dispatchEvent(new CustomEvent('trip-feed:state-changed', {
-                detail: { state: state }
-            }));
-            if (state !== 'hidden') {
-                document.dispatchEvent(new CustomEvent('panel:activate', {
-                    detail: { panel: 'trip-feed' }
-                }));
-            } else {
-                document.dispatchEvent(new CustomEvent('panel:deactivate', {
-                    detail: { panel: 'trip-feed' }
-                }));
-            }
-        }
-    });
-
-    // Register with panel coordinator
-    var feedToggleBtn = document.getElementById('trip-feed-toggle-btn');
-    if (window.panelCoordinator) {
-        window.panelCoordinator.register('trip-feed', feedPanelSnap, feedToggleBtn);
-    }
-
-    // Wire toggle buttons to coordinator
-    if (feedToggleBtn) {
-        feedToggleBtn.addEventListener('click', function () {
-            document.dispatchEvent(new CustomEvent('panel:activate', {
-                detail: { panel: 'trip-feed' }
-            }));
-        });
-    }
-
-    // Desktop: old feed toggle button still works
-    if (feedToggle) {
-        feedToggle.addEventListener('click', function () {
-            if (window.innerWidth > 768) {
-                var isHidden = feedSidebar.classList.toggle('hidden');
-                feedToggle.style.display = isHidden ? '' : 'none';
-            } else {
-                document.dispatchEvent(new CustomEvent('panel:activate', {
-                    detail: { panel: 'trip-feed' }
-                }));
-            }
-        });
-    }
-
-    // Default state on mobile: Trip Feed starts hidden
-    if (window.innerWidth <= 768) {
-        feedSidebar.classList.remove('hidden');
-        feedPanelSnap.snapTo('hidden');
-        if (feedToggleBtn) feedToggleBtn.classList.add('visible');
-    }
-
-    function buildFeed() {
-        var keys = Object.keys(dateIndex).sort();
-        var fragment = document.createDocumentFragment();
-
-        for (var i = 0; i < keys.length; i++) {
-            var date = keys[i];
-            var entry = dateIndex[date];
-            var photos = entry.photos;
-            var maxThumbs = 6;
-            var remaining = photos.length - maxThumbs;
-
-            var thumbsDiv = el('div', {className: 'feed-thumbnails'});
-            for (var t = 0; t < Math.min(photos.length, maxThumbs); t++) {
-                var photo = photos[t];
-                var img = el('img', {
-                    className: 'feed-thumbnail',
-                    src: photo.thumbnail,
-                    alt: '',
-                    dataset: {
-                        photoUrl: photo.url,
-                        photoLat: photo.lat,
-                        photoLng: photo.lng
-                    },
-                    onload: function () { this.classList.add('loaded'); },
-                    onclick: onFeedThumbnailClick
-                });
-                thumbsDiv.appendChild(img);
-            }
-            if (remaining > 0) {
-                thumbsDiv.appendChild(el('span', {className: 'feed-more-indicator'}, text('+' + remaining)));
-            }
-
-            var entryDiv = el('div', {
-                className: 'feed-entry',
-                dataset: {date: date},
-                style: {},
-                onclick: onFeedEntryClick
-            },
-                el('div', {className: 'feed-entry-header'},
-                    el('span', {className: 'feed-entry-date'}, text(formatDateShort(date))),
-                    el('span', {className: 'feed-entry-city', style: {color: entry.segmentColor}}, text(entry.segmentName))
-                ),
-                el('div', {className: 'feed-narrative-slot', dataset: {date: date}}),
-                thumbsDiv
-            );
-            entryDiv.style.setProperty('--entry-color', entry.segmentColor);
-
-            fragment.appendChild(entryDiv);
-        }
-
-        feedEntries.innerHTML = '';
-        feedEntries.appendChild(fragment);
-    }
-
-    function onFeedEntryClick(evt) {
-        // Don't handle if clicking on a thumbnail, narrative editor, or add-note
-        if (evt.target.classList.contains('feed-thumbnail') ||
-            evt.target.classList.contains('feed-narrative-editor') ||
-            evt.target.classList.contains('feed-add-note')) return;
-
-        var entryEl = evt.currentTarget;
-        var date = entryEl.getAttribute('data-date');
-        if (!date || !dateIndex[date]) return;
-
-        // Highlight active entry
-        var prev = feedEntries.querySelector('.feed-entry.active');
-        if (prev) prev.classList.remove('active');
-        entryEl.classList.add('active');
-        activeFeedDate = date;
-
-        // Compute bounds from photos and fly
-        var photos = dateIndex[date].photos;
-        var lats = [], lngs = [];
-        for (var i = 0; i < photos.length; i++) {
-            if (photos[i].lat && photos[i].lng) {
-                lats.push(photos[i].lat);
-                lngs.push(photos[i].lng);
-            }
-        }
-        if (lats.length === 0) return;
-
-        var sw, ne;
-        if (lats.length === 1) {
-            // Single photo: create artificial bounds
-            sw = L.latLng(lats[0] - 0.005, lngs[0] - 0.005);
-            ne = L.latLng(lats[0] + 0.005, lngs[0] + 0.005);
-        } else {
-            sw = L.latLng(Math.min.apply(null, lats), Math.min.apply(null, lngs));
-            ne = L.latLng(Math.max.apply(null, lats), Math.max.apply(null, lngs));
-        }
-        var bounds = L.latLngBounds(sw, ne);
-
-        // Asymmetric padding: account for left panel (310px) and right feed (290px)
-        var panelVisible = document.querySelector('.control-panel') && !document.querySelector('.control-panel').classList.contains('hidden');
-        var feedVisible = !feedSidebar.classList.contains('hidden');
-        var padLeft = panelVisible ? 320 : 20;
-        var padRight = feedVisible ? 300 : 20;
-
-        // On mobile, use simpler padding
-        if (window.innerWidth <= 768) {
-            padLeft = 20;
-            padRight = 20;
-            // Auto-snap to half on entry tap
-            if (feedPanelSnap.currentState === 'full') {
-                feedPanelSnap.snapTo('half');
-            }
-        }
-
-        map.flyToBounds(bounds, {
-            paddingTopLeft: [padLeft, 20],
-            paddingBottomRight: [padRight, 20],
-            duration: 0.8,
-            maxZoom: 15
-        });
-
-        // Notify photo wall to scroll to this date
-        if (window.photoWall) {
-            document.dispatchEvent(new CustomEvent('photo-wall:target-date', { detail: { date: date } }));
-        }
-    }
-
-    function onFeedThumbnailClick(evt) {
-        evt.stopPropagation();
-        var url = evt.target.getAttribute('data-photo-url');
-        var lat = evt.target.getAttribute('data-photo-lat');
-        var lng = evt.target.getAttribute('data-photo-lng');
-        if (!url) return;
-
-        // Context-aware: navigate within that day's photos
-        var entryEl = evt.target.closest('.feed-entry');
-        var date = entryEl ? entryEl.getAttribute('data-date') : null;
-        if (date && dateIndex[date]) {
-            var dayPhotos = dateIndex[date].photos;
-            var dayIdx = -1;
-            for (var i = 0; i < dayPhotos.length; i++) {
-                if (dayPhotos[i].url === url) { dayIdx = i; break; }
-            }
-            if (dayIdx >= 0) {
-                window.photoViewer.open(dayPhotos, dayIdx, evt.target);
-                return;
-            }
-        }
-        // Fallback: open in full filteredPhotos set
-        var key = url + '|' + lat + '|' + lng;
-        var idx = photoIndex.hasOwnProperty(key) ? photoIndex[key] : -1;
-        if (idx >= 0) {
-            window.photoViewer.open(filteredPhotos, idx, evt.target);
-        }
-    }
-
-    function updateFeedForTimeline(minDate, maxDate) {
-        var entries = feedEntries.querySelectorAll('.feed-entry');
-        for (var i = 0; i < entries.length; i++) {
-            var d = entries[i].getAttribute('data-date');
-            entries[i].style.display = (d >= minDate && d <= maxDate) ? '' : 'none';
-        }
-    }
-
-    // Old touch handlers removed — PanelSnap handles drag gestures via Pointer Events
-
-    // ──── Feed Narratives ────
-    function renderFeedNarratives() {
-        var slots = feedEntries.querySelectorAll('.feed-narrative-slot');
-        var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
-        for (var i = 0; i < slots.length; i++) {
-            var date = slots[i].getAttribute('data-date');
-            var narrativeText = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
-            slots[i].textContent = '';
-            if (narrativeText) {
-                slots[i].appendChild(el('p', {className: 'feed-narrative', dataset: isEditor ? {date: date} : {}}, text(narrativeText)));
-            } else if (isEditor) {
-                slots[i].appendChild(el('span', {className: 'feed-add-note', dataset: {date: date}}, text('Add note...')));
-            }
-        }
-        // Wire narrative click events
-        _wireNarrativeEditing();
-    }
-
-    function _wireNarrativeEditing() {
-        var isEditor = !!(window.firebaseAuth && window.firebaseAuth.isEditor);
-        if (!isEditor) return;
-
-        // Wire "Add note..." prompts
-        var addNotes = feedEntries.querySelectorAll('.feed-add-note');
-        for (var a = 0; a < addNotes.length; a++) {
-            addNotes[a].addEventListener('click', _onNarrativeEditStart);
-        }
-        // Wire existing narrative text for editing
-        var narratives = feedEntries.querySelectorAll('.feed-narrative[data-date]');
-        for (var n = 0; n < narratives.length; n++) {
-            narratives[n].style.cursor = 'pointer';
-            narratives[n].addEventListener('click', _onNarrativeEditStart);
-        }
-    }
-
-    function _onNarrativeEditStart(evt) {
-        evt.stopPropagation();
-        var date = evt.target.getAttribute('data-date');
-        if (!date) return;
-        var currentText = window.cloudData ? window.cloudData.getDailyNarrative(date) : '';
-        var slot = feedEntries.querySelector('.feed-narrative-slot[data-date="' + date + '"]');
-        if (!slot) return;
-
-        var textarea = document.createElement('textarea');
-        textarea.className = 'feed-narrative-editor';
-        textarea.value = currentText;
-        textarea.setAttribute('data-date', date);
-        textarea.placeholder = 'Write about this day...';
-        slot.innerHTML = '';
-        slot.appendChild(textarea);
-        textarea.focus();
-
-        textarea.addEventListener('blur', function () {
-            _saveNarrativeAndRender(this);
-        });
-        textarea.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.blur();
-            }
-        });
-        textarea.addEventListener('click', function (e) {
-            e.stopPropagation();
-        });
-    }
-
-    function _saveNarrativeAndRender(textarea) {
-        var date = textarea.getAttribute('data-date');
-        var text = textarea.value.trim();
-        if (window.cloudData) {
-            window.cloudData.saveDailyNarrative(date, text);
-        }
-        renderFeedNarratives();
-    }
-
-    // Listen for narratives loaded and auth changes to refresh narrative display
-    window.addEventListener('narratives-loaded', function () {
-        renderFeedNarratives();
-    });
-    window.addEventListener('auth-state-changed', function () {
-        // Re-render narratives to show/hide edit controls
-        if (window.cloudData) {
-            renderFeedNarratives();
-        }
-    });
-
-    // ──── Control Panel (hoisted from Promise.all callback) ────
-    function buildControlPanel() {
-        var totalDates = uniqueDates.length || 1;
-
-        // Build timeline track segments HTML (dot + conditional label + tooltip)
-        var segmentsHtml = '';
-        for (var s = 0; s < timelineSegments.length; s++) {
-            var seg = timelineSegments[s];
-            var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
-            var widthPct = (seg.count / totalDates * 100).toFixed(2);
-            var showInline = parseFloat(widthPct) >= 12 || s === 0 || s === timelineSegments.length - 1;
-            var labelPos = (s % 2 === 0) ? 'label-top' : 'label-bottom';
-            segmentsHtml += '<div class="timeline-segment ' + labelPos + '" data-city="' + seg.cityName + '" style="--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color + '">' +
-                '<span class="segment-dot"></span>' +
-                (showInline ? '<span class="segment-label-inline">' + seg.cityName + '</span>' : '') +
-                '<span class="segment-tooltip">' + seg.cityName + '</span></div>';
-        }
-
-        // Build boundary markers HTML
-        var boundaryHtml = '';
-        for (var bm = 0; bm < boundaryMarkers.length; bm++) {
-            var marker = boundaryMarkers[bm];
-            var pos = (marker.index / totalDates * 100).toFixed(2);
-            if (marker.type === 'month') {
-                boundaryHtml += '<div class="timeline-boundary timeline-boundary-month" style="--boundary-pos:' + pos + '%"><span class="boundary-label">' + marker.label + '</span></div>';
-            } else {
-                boundaryHtml += '<div class="timeline-boundary timeline-boundary-week" style="--boundary-pos:' + pos + '%"></div>';
-            }
-        }
-
-        var maxIdx = uniqueDates.length > 0 ? uniqueDates.length - 1 : 0;
-        var startLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[0]) : '';
-        var endLabel = uniqueDates.length > 0 ? formatDateShort(uniqueDates[maxIdx]) : '';
-
-        // Build layer radio buttons HTML
-        var layerNames = Object.keys(baseLayers);
-        var layerHtml = '<div class="layer-group-title">Base Map</div>';
-        for (var li = 0; li < layerNames.length; li++) {
-            var checked = layerNames[li] === 'Humanitarian' ? ' checked' : '';
-            layerHtml += '<label class="layer-option"><input type="radio" name="base-layer" value="' + layerNames[li] + '"' + checked + '> ' + layerNames[li] + '</label>';
-        }
-        layerHtml += '<hr class="layer-separator">';
-        layerHtml += '<div class="layer-group-title">Overlays</div>';
-        layerHtml += '<label class="layer-option"><input type="checkbox" id="travel-route-toggle" checked> Travel Route</label>';
-
-        // Toggle button
-        var toggleBtn = document.createElement('button');
-        toggleBtn.className = 'panel-toggle';
-        toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
-        document.body.appendChild(toggleBtn);
-
-        // Panel
-        var panel = document.createElement('div');
-        panel.className = 'control-panel hidden';
-        panel.innerHTML =
-            '<div class="panel-header"><h3>Controls</h3><button class="panel-close">&times;</button></div>' +
-            '<div class="auth-section" id="auth-section">' +
-                '<button class="auth-sign-in-btn" id="auth-sign-in-btn">Sign in with Google</button>' +
-                '<div class="auth-user-info" id="auth-user-info" style="display:none">' +
-                    '<img class="auth-avatar" id="auth-avatar" src="" alt="">' +
-                    '<span class="auth-name" id="auth-name"></span>' +
-                    '<a href="#" class="auth-sign-out" id="auth-sign-out">Sign out</a>' +
-                '</div>' +
-                '<span class="pending-writes-indicator" id="pending-writes-indicator" style="display:none" title="Changes pending sync">&#9729;</span>' +
-            '</div>' +
-            '<details class="panel-section" open>' +
-                '<summary>Timeline</summary>' +
-                '<div class="panel-section-content">' +
-                    '<div class="timeline-bar">' +
-                        '<div class="timeline-track">' + segmentsHtml + boundaryHtml + '<div class="timeline-range-fill" style="--range-start:0%;--range-size:100%"></div></div>' +
-                        '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
-                        '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
-                        '<div class="timeline-date-display">' +
-                            '<span class="timeline-date-start">' + startLabel + '</span>' +
-                            '<span class="timeline-date-end">' + endLabel + '</span>' +
-                        '</div>' +
-                        '<div class="timeline-photo-count"><span class="photo-count-number">' + allPhotos.length + '</span> / ' + allPhotos.length + ' photos</div>' +
-                    '</div>' +
-                '</div>' +
-            '</details>' +
-            '<details class="panel-section">' +
-                '<summary>Map Layers</summary>' +
-                '<div class="panel-section-content">' + layerHtml + '</div>' +
-            '</details>' +
-            '<details class="panel-section">' +
-                '<summary>Settings</summary>' +
-                '<div class="panel-section-content">' +
-                    '<label>Photo Density <span class="slider-value" id="density-val"></span></label>' +
-                    '<input type="range" id="density-slider" min="80" max="300" value="' + currentDensityCellSize + '" style="direction:rtl">' +
-                    '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
-                    '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">' +
-                '</div>' +
-            '</details>';
-        document.body.appendChild(panel);
-
-        // Prevent map interaction when interacting with panel
-        L.DomEvent.disableClickPropagation(panel);
-        L.DomEvent.disableScrollPropagation(panel);
-        L.DomEvent.disableClickPropagation(toggleBtn);
-
-        // Toggle open/close
-        function togglePanel() {
-            var isHidden = panel.classList.toggle('hidden');
-            toggleBtn.classList.toggle('open', !isHidden);
-            toggleBtn.style.display = isHidden ? '' : 'none';
-            // On medium viewports, auto-collapse feed when control panel opens
-            if (!isHidden && window.innerWidth >= 769 && window.innerWidth < 1280) {
-                if (!feedSidebar.classList.contains('hidden')) {
-                    feedSidebar.classList.add('hidden');
-                    feedToggle.style.display = '';
-                }
-            }
-        }
-        toggleBtn.addEventListener('click', togglePanel);
-        panel.querySelector('.panel-close').addEventListener('click', togglePanel);
-
-        // Wire base layer switching
-        var radios = panel.querySelectorAll('input[name="base-layer"]');
-        for (var r = 0; r < radios.length; r++) {
-            radios[r].addEventListener('change', function () {
-                map.removeLayer(currentBaseLayer);
-                currentBaseLayer = baseLayers[this.value];
-                currentBaseLayer.addTo(map);
-            });
-        }
-
-        // Wire travel route toggle
-        var routeToggle = panel.querySelector('#travel-route-toggle');
-        if (routeToggle) {
-            routeToggle.addEventListener('change', function () {
-                if (this.checked) {
-                    if (travelRouteLayer) travelRouteLayer.addTo(map);
-                } else {
-                    if (travelRouteLayer) map.removeLayer(travelRouteLayer);
-                }
-            });
-        }
-
-        // Mobile touch handler for segment tooltips
-        var segments = panel.querySelectorAll('.timeline-segment');
-        for (var ts = 0; ts < segments.length; ts++) {
-            segments[ts].addEventListener('touchstart', (function (allSegs) {
-                return function () {
-                    for (var c = 0; c < allSegs.length; c++) allSegs[c].classList.remove('touched');
-                    this.classList.add('touched');
-                };
-            })(segments));
-        }
-
-        // Wire auth UI
-        var signInBtn = document.getElementById('auth-sign-in-btn');
-        var signOutLink = document.getElementById('auth-sign-out');
-        var authUserInfo = document.getElementById('auth-user-info');
-        var authAvatar = document.getElementById('auth-avatar');
-        var authName = document.getElementById('auth-name');
-        var authSection = document.getElementById('auth-section');
-
-        if (signInBtn) {
-            signInBtn.addEventListener('click', function () {
-                if (window.firebaseAuth) window.firebaseAuth.signIn();
-            });
-        }
-        if (signOutLink) {
-            signOutLink.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (window.firebaseAuth) window.firebaseAuth.signOut();
-            });
-        }
-
-        // Hide auth section until Firebase is ready
-        if (authSection && !window.firebaseApp) {
-            authSection.style.display = 'none';
-        }
-
-        window.addEventListener('firebase-ready', function () {
-            if (authSection) authSection.style.display = '';
-        });
-
-        window.addEventListener('auth-state-changed', function (e) {
-            var user = e.detail.user;
-            var isEditor = e.detail.isEditor;
-            if (user) {
-                signInBtn.style.display = 'none';
-                authUserInfo.style.display = '';
-                authAvatar.src = user.photoURL || '';
-                authAvatar.style.display = user.photoURL ? '' : 'none';
-                authName.textContent = user.displayName || user.email || '';
-
-                // Load cloud favorites for signed-in editors
-                if (isEditor && window.cloudData) {
-                    // Migrate localStorage favorites on first sign-in
-                    if (localStorage.getItem('photomap_favorites')) {
-                        window.cloudData.migrateFavorites(user.uid, allPhotos).then(function () {
-                            _cloudFavoritesLoaded = true;
-                            rebuildPhotoLayer();
-                            buildPhotoIndex();
-                        });
-                    } else {
-                        window.cloudData.loadFavorites(user.uid).then(function () {
-                            _cloudFavoritesLoaded = true;
-                            rebuildPhotoLayer();
-                            buildPhotoIndex();
-                        });
-                    }
-                }
-            } else {
-                signInBtn.style.display = '';
-                authUserInfo.style.display = 'none';
-                _cloudFavoritesLoaded = false;
-                rebuildPhotoLayer();
-            }
-
-            // Gate favorite star visibility based on editor status
-            updateEditControlsVisibility();
-        });
-    }
-
-    // ──── Timeline & Settings (hoisted from Promise.all callback) ────
-    function _updatePendingIndicator() {
-        var el = document.getElementById('pending-writes-indicator');
-        if (!el) return;
-        var count = window.cloudData ? window.cloudData.getPendingWritesCount() : 0;
-        el.style.display = count > 0 ? '' : 'none';
-        el.title = count + ' change' + (count !== 1 ? 's' : '') + ' pending sync';
-    }
-
+    // ──── Timeline & Settings ────
     function scheduleFilterUpdate() {
         if (_filterTimeout) clearTimeout(_filterTimeout);
         _filterTimeout = setTimeout(applyTimelineFilter, 150);
-    }
-
-    function updatePhotoCount(count) {
-        var el = document.querySelector('.timeline-photo-count');
-        if (el) {
-            el.innerHTML = '<span class="photo-count-number">' + count + '</span> / ' + allPhotos.length + ' photos';
-        }
     }
 
     // Cheap visual update on every input event
@@ -944,7 +387,7 @@
             var pd = allPhotos[f].date || '';
             if (pd >= minDate && pd <= maxDate) count++;
         }
-        updatePhotoCount(count);
+        window.controlPanel.updatePhotoCount(count);
 
         scheduleFilterUpdate();
     }
@@ -970,7 +413,7 @@
         buildPhotoIndex();
 
         // Update feed to show only entries in the filtered date range
-        updateFeedForTimeline(minDate, maxDate);
+        window.feedController.updateFeedForTimeline(minDate, maxDate);
     }
 
     function onTimelineRelease() {
@@ -1011,8 +454,18 @@
             rebuildPhotoLayer();
             buildPhotoIndex();
 
-            // Build the feed sidebar (hidden initially if landing page active)
-            buildFeed();
+            // Initialize feed controller
+            window.feedController.init({
+                map: map,
+                dateIndex: dateIndex,
+                getFilteredPhotos: function () { return filteredPhotos; },
+                getPhotoIndex: function () { return photoIndex; },
+                formatDateShort: formatDateShort
+            });
+            window.feedController.buildFeed();
+
+            var feedSidebar = document.getElementById('feed-sidebar');
+            var feedToggle = document.getElementById('feed-toggle');
             var landingPageEl = document.getElementById('landing-page');
             var landingActive = landingPageEl && landingPageEl.style.display !== 'none';
 
@@ -1077,7 +530,7 @@
                     itineraryData: itineraryData,
                     gridEl: document.getElementById('region-grid'),
                     itineraryEl: document.getElementById('itinerary-panel'),
-                    feedEntries: feedEntries,
+                    feedEntries: document.getElementById('feed-entries'),
                     toggleBtn: document.getElementById('region-toggle'),
                     rebuildPhotoLayer: rebuildPhotoLayer,
                     buildSmartRoutes: buildSmartRoutes,
@@ -1096,8 +549,10 @@
                     map: map,
                     onEnterMap: function (opts) {
                         // Show feed sidebar and photo wall
-                        feedSidebar.classList.remove('hidden');
-                        feedToggle.style.display = 'none';
+                        var fs = document.getElementById('feed-sidebar');
+                        var ft = document.getElementById('feed-toggle');
+                        if (fs) fs.classList.remove('hidden');
+                        if (ft) ft.style.display = 'none';
                         var wallPanel = document.getElementById('photo-wall-panel');
                         if (wallPanel) wallPanel.style.visibility = '';
                         var reopenBtn = document.getElementById('photo-wall-reopen-btn');
@@ -1188,11 +643,39 @@
                 }
             }
 
-            // Build control panel
-            buildControlPanel();
+            // Initialize control panel
+            window.controlPanel.init({
+                map: map,
+                baseLayers: baseLayers,
+                currentBaseLayer: currentBaseLayer,
+                travelRouteLayer: travelRouteLayer,
+                uniqueDates: uniqueDates,
+                timelineSegments: timelineSegments,
+                boundaryMarkers: boundaryMarkers,
+                allPhotos: allPhotos,
+                feedSidebar: feedSidebar,
+                feedToggle: feedToggle,
+                formatDateShort: formatDateShort,
+                setCloudFavoritesLoaded: function (val) { _cloudFavoritesLoaded = val; },
+                rebuildPhotoLayer: rebuildPhotoLayer,
+                buildPhotoIndex: buildPhotoIndex,
+                initialDensityCellSize: currentDensityCellSize,
+                initialIconSize: currentIconSize,
+                onDensityChange: function (cellSize) {
+                    currentDensityCellSize = cellSize;
+                    ViewportSampler.setCellSize(cellSize);
+                },
+                onSizeChange: function (iconSize) {
+                    currentIconSize = iconSize;
+                    ViewportSampler.updateIconSize(iconSize);
+                    if (filteredPhotos.length > 0) rebuildPhotoLayer();
+                }
+            });
 
             // Pending-writes indicator
-            window.addEventListener('pending-writes-changed', _updatePendingIndicator);
+            window.addEventListener('pending-writes-changed', function () {
+                window.controlPanel.updatePendingIndicator();
+            });
 
             // Timeline slider handlers
             handleMin = document.querySelector('.timeline-handle-min');
@@ -1214,29 +697,6 @@
                     max: uniqueDates[uniqueDates.length - 1]
                 });
             }
-
-            // Settings slider handlers (debounced)
-            var _densityTimeout = null;
-            var _sizeTimeout = null;
-
-            document.getElementById('density-slider').addEventListener('input', function () {
-                currentDensityCellSize = parseInt(this.value, 10);
-                if (_densityTimeout) clearTimeout(_densityTimeout);
-                _densityTimeout = setTimeout(function () {
-                    ViewportSampler.setCellSize(currentDensityCellSize);
-                }, 100);
-            });
-
-            document.getElementById('size-slider').addEventListener('input', function () {
-                currentIconSize = parseInt(this.value, 10);
-                document.getElementById('size-val').textContent = currentIconSize + 'px';
-                if (_sizeTimeout) clearTimeout(_sizeTimeout);
-                _sizeTimeout = setTimeout(function () {
-                    ViewportSampler.updateIconSize(currentIconSize);
-                    // Also update favorites layer
-                    if (filteredPhotos.length > 0) rebuildPhotoLayer();
-                }, 100);
-            });
 
             try {
                 var initBounds = getFilteredBounds();
