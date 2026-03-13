@@ -330,6 +330,8 @@
     function ptrDown(e) {
         if (!S.open) return;
         if (e.target.closest('.pv-ctrl')) return;
+        // Let video overlay buttons handle their own pointer events
+        if (e.target.closest('.pv-video-overlay')) return;
         // Let native video controls handle their own pointer events
         if (e.target.closest('video')) return;
         e.preventDefault();
