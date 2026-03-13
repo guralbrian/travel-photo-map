@@ -28,12 +28,6 @@
 
     /* ── Helpers ── */
 
-    function formatDateShort(dateStr) {
-        var d = new Date(dateStr + 'T12:00:00');
-        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return months[d.getMonth()] + ' ' + d.getDate();
-    }
-
     function formatDateLong(dateStr) {
         var d = new Date(dateStr + 'T12:00:00');
         var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -65,8 +59,8 @@
             panel.dataset.regionIndex = idx;
             panel.innerHTML =
                 '<span class="region-panel-label">' + section.label + '</span>' +
-                '<span class="region-panel-dates">' + formatDateShort(section.startDate) +
-                '\u2013' + formatDateShort(section.endDate) + '</span>';
+                '<span class="region-panel-dates">' + domHelpers.formatDateShort(section.startDate) +
+                '\u2013' + domHelpers.formatDateShort(section.endDate) + '</span>';
             panel.addEventListener('click', function () {
                 selectRegion(idx);
             });
