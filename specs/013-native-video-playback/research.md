@@ -1,6 +1,6 @@
 # Research: Native Video Playback
 
-**Feature**: 013-native-video-playback | **Date**: 2026-03-10
+**Feature**: 013-native-video-playback | **Date**: 2026-03-10 | **Updated**: 2026-03-12
 
 ## 1. ffmpeg Transcoding for Web
 
@@ -468,3 +468,72 @@ Changes:
 ### 4.3 Photo Entries: No Changes
 
 Photo entries already use `web_url` as a direct image URL (Google Photos `lh3.googleusercontent.com` links). No changes needed for photos. The download button for photos (FR-015) will use the existing `web_url` value.
+
+---
+
+## 5. Implementation State Assessment (2026-03-12 Update)
+
+### 5.1 Already Implemented
+
+**Decision**: Most of the original spec is already working in production. Focus remaining work on three targeted changes.
+
+**Evidence**: Code exploration of `photo-viewer.js` and `process_photos.py` confirms:
+
+| Requirement | Status | Location |
+|------------|--------|----------|
+| FR-001: Native `<video>` in lightbox | Done | `photo-viewer.js` `renderVideo()` lines 533-639 |
+| FR-002: Poster frame | Done | `<video poster=...>` attribute |
+| FR-003: Native browser controls | Done | `controls` attribute on `<video>` |
+| FR-004: Two-variant transcoding | Done | `process_photos.py` `transcode_video()` |
+| FR-005: Upload both variants | Done | Firebase Storage `videos/720p/` and `videos/full/` |
+| FR-006: Manifest dual URLs | Done | `web_url` + `web_url_full` in manifest |
+| FR-007: Cleanup on navigate | Done | `finalize()` stops video, removes src |
+| FR-009: Error message | Done | `video.onerror` handler |
+| FR-010: Pipeline error handling | Done | try/catch in transcoding |
+| FR-011: Swipe navigation | Done | `.pv-swipe-zone` elements |
+| FR-013: Download button | Done | Adjacent to quality toggle |
+
+**Rationale**: No need to re-implement working code. The remaining changes are surgical modifications to existing, well-structured code.
+
+### 5.2 Click-Through Bug (FR-016)
+
+**Decision**: The quality toggle button's center clicks propagate to the lightbox close handler. Fix by ensuring proper event propagation and hit area coverage.
+
+**Root cause**: The lightbox close handler (`photo-viewer.js` lines 120-123) fires when `e.target === $ov || e.target === $wrap`. Control buttons with `.pv-ctrl` class call `e.stopPropagation()` to prevent this. The video overlay buttons (`.pv-video-gear`, `.pv-video-download`) may lack:
+1. The `.pv-ctrl` class assignment
+2. Sufficient padding for full hit-area coverage
+3. Explicit `e.stopPropagation()` in their click handlers
+
+**Fix**: Ensure `.pv-ctrl` class is present, add `stopPropagation()`, and increase padding/hit area in CSS.
+
+**Alternatives considered**:
+- Adding a separate transparent click-blocking overlay behind the buttons — more complex than fixing the buttons directly.
+- Changing the close handler to exclude video overlay descendants — fragile, as it couples the close logic to the video overlay structure.
+
+### 5.3 Session-Persistent Quality Toggle
+
+**Decision**: Store quality preference in a module-scoped closure variable (`qualityPref`). No `localStorage` or `sessionStorage` needed.
+
+**Rationale**: The spec says "persist for the page session" (until refresh). A closure variable within the photo-viewer IIFE survives across lightbox open/close cycles within a single page load but resets on refresh. This is the simplest approach with zero side effects.
+
+**Implementation**:
+1. Add `var qualityPref = '720p'` in the IIFE state
+2. Update on toggle: `qualityPref = (qualityPref === '720p') ? 'full' : '720p'`
+3. `renderVideo()` reads `qualityPref` to select initial source
+4. On full-res load failure, revert to `'720p'` silently
+
+**Alternatives considered**:
+- `localStorage`: Persists across refreshes — exceeds spec requirements, could surprise users with bandwidth
+- `sessionStorage`: Works but unnecessarily heavy for a single in-memory boolean
+
+### 5.4 Gear Icon → Labeled Toggle Button
+
+**Decision**: Replace the gear icon with a labeled button showing "720p" or "Full" text.
+
+**Rationale**: A label immediately communicates the current state. A gear icon implies a settings menu (extra interaction step) and doesn't indicate which quality is active. The labeled button aligns with Constitution Principle III (Approachable by Everyone).
+
+**Implementation**: Change the button text content from gear icon to "720p"/"Full". Update CSS for pill/badge styling with readable font. Toggle updates label on click.
+
+**Alternatives considered**:
+- Keep gear icon with tooltip — tooltips don't work on mobile (no hover), violating Principle III
+- Gear icon that cycles on click — no visual feedback of current state without reading the tooltip

@@ -1,6 +1,6 @@
 # Quickstart: Native Video Playback
 
-**Branch**: `013-native-video-playback` | **Date**: 2026-03-10
+**Branch**: `013-native-video-playback` | **Date**: 2026-03-10 | **Updated**: 2026-03-12
 
 ## Prerequisites
 
@@ -77,11 +77,14 @@ Open `http://localhost:8000` in a browser.
 3. Confirm: poster frame (thumbnail) appears immediately, no iframe loading
 4. Confirm: clicking play starts video within 2 seconds
 5. Confirm: native browser controls visible (play/pause, seek, volume, fullscreen)
-6. Confirm: gear icon visible on video overlay -- clicking toggles between 720p and full resolution
-7. Confirm: download button visible -- clicking downloads the active video file
-8. Confirm: swiping/arrow-key navigation between photos and videos works smoothly
-9. Confirm: navigating away from a playing video stops playback
-10. Test on mobile viewport (375px width) -- swipe zones, controls, and download all functional
+6. Confirm: quality toggle button visible showing "720p" — clicking switches to "Full" (full resolution)
+7. Confirm: quality preference persists — navigate to another video, it should load in the last-selected quality
+8. Confirm: clicking the CENTER of the toggle button works (not just the edges) — bug fix verification
+9. Confirm: download button visible — clicking downloads the active video file
+10. Confirm: swiping/arrow-key navigation between photos and videos works smoothly
+11. Confirm: navigating away from a playing video stops playback
+12. Test on mobile viewport (375px width) — swipe zones, controls, toggle, and download all functional
+13. Confirm: if full-res fails to load, toggle silently reverts to "720p" and playback continues
 
 ### Video entries for testing
 
@@ -102,8 +105,8 @@ Videos in the manifest with filenames like:
 
 | File | Change |
 |------|--------|
-| `js/photo-viewer.js` | Replace iframe-based `renderVideo()` with native `<video>` element. Set `src` to `web_url`, `poster` to `thumbnail`. Add gear icon for quality toggle (`web_url` / `web_url_full`). Add download button. Stop video and release resources on navigation. |
-| `css/photo-viewer.css` | Replace `.pv-iframe` styles with `<video>` element styles. Add styles for gear icon and download button overlays. Ensure video controls do not conflict with swipe zones. |
+| `js/photo-viewer.js` | **Already done**: Native `<video>` rendering, quality toggle, download button, cleanup. **Remaining**: (1) Fix click-through bug on toggle button — ensure `.pv-ctrl` class + `stopPropagation()` + adequate hit area. (2) Add session-persistent `qualityPref` variable — `renderVideo()` reads it for initial source selection. (3) Change gear icon to labeled "720p"/"Full" toggle button. |
+| `css/photo-viewer.css` | **Already done**: Video player styles, overlay controls, swipe zones. **Remaining**: Update toggle button styling from icon to labeled pill/badge. Ensure adequate padding for full hit-area coverage. |
 
 ### Frontend (other consumers)
 

@@ -20,7 +20,7 @@ A visitor browsing the travel map clicks a video thumbnail (from the map marker 
 1. **Given** a video entry visible on the map or photo wall, **When** the user clicks its thumbnail, **Then** the lightbox opens showing a poster frame (thumbnail) with a play button overlay — no loading spinner or third-party embed is shown.
 2. **Given** the lightbox is open showing a video poster frame, **When** the user clicks the play button, **Then** video playback begins within 2 seconds on a broadband connection.
 3. **Given** a video is playing in the lightbox, **When** the user interacts with the video, **Then** native browser controls (play/pause, seek bar, volume, fullscreen) are available and functional.
-4. **Given** a video is displayed in the lightbox, **When** the user clicks the gear icon, **Then** they can switch between 720p and full resolution, and playback resumes at the same position.
+4. **Given** a video is displayed in the lightbox, **When** the user clicks the quality toggle button, **Then** it switches between 720p and full resolution, the button label updates to reflect the new state, and playback resumes at the same position.
 5. **Given** a video is displayed in the lightbox, **When** the user clicks the download button, **Then** the currently active video file (at the selected resolution) downloads to their device.
 
 ---
@@ -64,6 +64,7 @@ A visitor is swiping through media in the lightbox. When they swipe from a photo
 - What happens when a video format is not supported by the user's browser? The system should detect unsupported formats and display a clear message rather than a blank player.
 - How does the system handle videos that fail transcoding in the pipeline? Failed videos should be logged and excluded from the manifest (or flagged) rather than producing broken entries.
 - What happens when the user rapidly swipes through multiple videos? Each navigation should cancel the previous video load/playback to avoid resource buildup and audio overlap.
+- What happens when the full-resolution variant fails to load after toggling? The player silently falls back to 720p, continues playback uninterrupted, and the toggle reverts to "720p".
 
 ## Requirements *(mandatory)*
 
@@ -75,9 +76,10 @@ A visitor is swiping through media in the lightbox. When they swipe from a photo
 - **FR-004**: The processing pipeline MUST transcode each video into two variants: a 720p compressed version (~5-8 MB average) as the default, and a full-resolution version for optional high-quality playback.
 - **FR-005**: The processing pipeline MUST upload both video variants to cloud storage and record both streaming URLs in the manifest.
 - **FR-006**: The manifest MUST include direct streaming URLs for both the 720p and full-resolution variants of each video entry.
-- **FR-012**: The video player MUST default to the 720p variant for every video and provide a gear icon overlay allowing the user to switch to full resolution. The preference resets to 720p when navigating to a different video.
-- **FR-013**: The video player MUST display a download button (adjacent to the gear icon) that saves the currently active video file (whichever resolution is selected) to the user's device.
-- **FR-014**: The gear icon and download button MUST be visible on the video player overlay without obscuring playback, consistent with standard video player control placement.
+- **FR-012**: The video player MUST default to 720p on initial page load and provide a quality toggle allowing the user to switch between 720p and full resolution. The selected quality preference MUST persist for the duration of the page session (i.e., until the user refreshes or navigates away from the page entirely). All subsequent videos opened in the lightbox MUST use the last-selected quality.
+- **FR-016**: The quality toggle button MUST capture click/tap events across its entire hit area. Clicks on the center of the toggle MUST NOT propagate to the lightbox close handler. (Bug fix: currently, only edge clicks register on the button; center clicks pass through and dismiss the lightbox.)
+- **FR-013**: The video player MUST display a download button (adjacent to the quality toggle) that saves the currently active video file (whichever resolution is selected) to the user's device.
+- **FR-014**: The quality toggle button (displaying "720p" or "Full") and download button MUST be visible on the video player overlay without obscuring playback, consistent with standard video player control placement.
 - **FR-015**: The lightbox MUST display a download button for photos as well, allowing users to save the currently viewed photo to their device.
 - **FR-007**: Navigating away from a video (swipe, arrow key, close) MUST stop playback and release video resources.
 - **FR-008**: The viewer MUST preload poster frames (thumbnails) for adjacent videos during lightbox navigation.
@@ -103,13 +105,20 @@ A visitor is swiping through media in the lightbox. When they swipe from a photo
 
 ## Clarifications
 
+### Session 2026-03-12
+
+- Q: What should the default quality be on page load for the session-persistent toggle? → A: Default to 720p; user toggles to full res and it persists for the session.
+- Q: What happens when clicking the center of the quality button? → A: Bug fix — center clicks currently pass through to the lightbox close handler. The button must capture clicks across its entire hit area.
+- Q: Should the quality control be a gear icon or a toggle button? → A: Replace gear icon with a labeled toggle button showing "720p" or "Full" for immediate state visibility.
+- Q: What happens if the full-res variant fails to load after toggling? → A: Silently fall back to 720p, continue playback, toggle reverts to "720p".
+
 ### Session 2026-03-10
 
 - Q: Cloud storage tier and cost tolerance? → A: Stay on Firebase Spark (free) tier; aggressively compress videos to minimize bandwidth (~5-8 MB average per video).
 - Q: Compression quality vs. file size tradeoff? → A: Default to 720p with moderate bitrate; provide a user-facing toggle in the viewer to switch to full (original) resolution.
-- Q: Resolution toggle placement and additional controls? → A: Small gear icon on the video player overlay for quality switching (720p/Full); adjacent download button to save the currently active video file.
+- Q: Resolution toggle placement and additional controls? → A: ~~Small gear icon~~ **Updated 2026-03-12**: Labeled toggle button (showing "720p" or "Full") on the video player overlay for quality switching; adjacent download button to save the currently active video file.
 - Q: Should download also work for photos? → A: Yes, add download button for both photos and videos in the lightbox for consistency.
-- Q: Should quality preference persist? → A: No, reset to 720p for each new video. User must toggle per-video.
+- Q: Should quality preference persist? → A: ~~No, reset to 720p for each new video.~~ **Updated 2026-03-12**: Yes, persist for the page session. Default to 720p on initial load; once toggled to full res, all subsequent videos use full res until the page is refreshed.
 
 ## Assumptions
 

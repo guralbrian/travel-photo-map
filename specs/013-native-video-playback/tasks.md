@@ -81,14 +81,32 @@
 
 ---
 
-## Phase 5: Polish & Cross-Cutting Concerns
+## Phase 5: Quality Toggle Improvements (2026-03-12 Clarifications)
+
+**Purpose**: Three targeted changes to the quality toggle based on updated spec (FR-012, FR-014, FR-016). These modify the already-complete US1 work.
+
+> **Note**: T010 (quality toggle implementation) is superseded by T026+T028 below. T010 implemented per-video reset behavior; T026+T028 replace it with session-persistence and a labeled button.
+
+**Independent Test**: (a) Click the center of the "720p" button — it should switch to "Full" without closing the lightbox. (b) Navigate to a second video — it should open at "Full" quality automatically. (c) Refresh the page — toggle resets to "720p".
+
+- [x] T025 [US1] Fix click-through bug on quality toggle button in `js/photo-viewer.js` — verify `.pv-video-gear` and `.pv-video-download` buttons have `.pv-ctrl` class so the lightbox overlay close handler ignores them. Add `e.stopPropagation()` on both buttons' click handlers. In `css/photo-viewer.css` ensure the buttons have enough padding so the full visual area is clickable (FR-016).
+- [x] T026 [P] [US1] Replace gear icon with labeled toggle button in `js/photo-viewer.js` — change `.pv-video-gear` button text from gear icon (`⚙`) to `"720p"` or `"Full"` reflecting current quality. On toggle click, update the button label. When `renderVideo()` renders a new video, set label from `qualityPref` variable (FR-014).
+- [x] T027 [P] [US1] Update toggle button CSS in `css/photo-viewer.css` — remove gear-icon styling; add pill/badge style for the labeled toggle: readable font size (`0.75rem`), horizontal padding (`8px`), dark semi-transparent background, white text. Maintain min 44×44px touch target. Keep position consistent with existing overlay placement (FR-014).
+- [x] T028 [US1] Add session-persistent quality preference in `js/photo-viewer.js` — add `var qualityPref = '720p'` to the IIFE closure state. In `renderVideo()`, use `qualityPref` to choose the initial `<source src>` (`p.web_url_full` if `qualityPref === 'full'` and `p.web_url_full` exists, otherwise `p.web_url`). On toggle click, update `qualityPref`. On full-res `error` event, silently revert `qualityPref` to `'720p'` and reload `p.web_url` (FR-012).
+- [ ] T029 [US1] Visual verification with Playwright MCP at 1440px and 375px — confirm: (a) toggle button shows "720p"/"Full" text label (not gear icon), (b) clicking the center of the toggle works and does not close the lightbox, (c) quality preference persists when navigating to the next video, (d) refreshing page resets to "720p".
+
+**Checkpoint**: Quality toggle is bug-free, session-persistent, and uses labeled button.
+
+---
+
+## Phase 6: Polish & Cross-Cutting Concerns
 
 **Purpose**: Edge cases, cleanup, and final verification
 
 - [x] T021 [P] Remove old iframe-based video playback code from `js/photo-viewer.js` — delete the iframe creation logic, Google Drive preview URL handling, and any conditional branches for the old embed approach. Clean up unused CSS in `css/photo-viewer.css` (iframe-specific styles).
 - [x] T022 [P] Add buffering indicator styling in `css/photo-viewer.css` — ensure the native video element shows a visible loading/buffering state for large files on slow connections (edge case from spec). The browser provides this natively, but verify styling does not hide it.
-- [ ] T023 Run quickstart.md verification checklist — follow all 10 verification steps in `specs/013-native-video-playback/quickstart.md` against localhost:8000. Document any issues.
-- [ ] T024 Final Playwright MCP verification at both 1440px and 375px — full end-to-end: open map, click video marker, verify poster + play + controls + gear + download; navigate photo→video→photo; verify cleanup on close.
+- [ ] T023 Run quickstart.md verification checklist — follow all 13 verification steps in `specs/013-native-video-playback/quickstart.md` against localhost:8000. Document any issues.
+- [ ] T024 Final Playwright MCP verification at both 1440px and 375px — full end-to-end: open map, click video marker, verify poster + play + controls + toggle label + download; navigate photo→video→photo; verify quality persists across navigation; verify cleanup on close.
 
 ---
 
@@ -100,7 +118,8 @@
 - **US2 Pipeline (Phase 2)**: Depends on Phase 1 (Firebase rules must allow reads for uploaded videos)
 - **US1 Frontend (Phase 3)**: Depends on Phase 2 (needs real streaming URLs in manifest)
 - **US3 Navigation (Phase 4)**: Depends on Phase 3 (needs native video player implemented)
-- **Polish (Phase 5)**: Depends on Phases 3 and 4
+- **Quality Toggle Improvements (Phase 5)**: Depends on Phase 3 (modifies existing video player)
+- **Polish (Phase 6)**: Depends on Phases 3, 4, and 5
 
 ### User Story Dependencies
 
@@ -113,7 +132,9 @@ Phase 3: US1 (Frontend)  ← consumes streaming URLs
     ↓
 Phase 4: US3 (Navigation) ← builds on native video player
     ↓
-Phase 5: Polish
+Phase 5: Quality Toggle Improvements (FR-012, FR-014, FR-016) ← modifies Phase 3 work
+    ↓
+Phase 6: Polish
 ```
 
 > **Note**: Implementation order differs from priority order. US2 (P2) is implemented before US1 (P1) because the pipeline produces the streaming URLs the frontend needs. US1 delivers the core user value but cannot be end-to-end tested without US2's output.
@@ -131,37 +152,43 @@ Within Phase 3 (US1):
 - T010 (gear icon) and T011 (download button) can run in parallel after T008/T009
 - T012 (photo download) is independent of video tasks
 
-Within Phase 5 (Polish):
-- T021 (old code removal) and T022 (buffering styles) can run in parallel
+Within Phase 5 (Quality Toggle):
+- T026 (labeled button JS) and T027 (labeled button CSS) can run in parallel
+- T025 (click-through fix) is independent of T026/T027
+
+Within Phase 6 (Polish):
+- T021 (old code removal) and T022 (buffering styles) can run in parallel (already done)
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US2 + US1)
+### Current State (2026-03-12)
 
-1. Complete Phase 1: Setup (Firebase rules + CORS)
-2. Complete Phase 2: US2 Pipeline (transcode + upload + manifest update)
-3. Complete Phase 3: US1 Frontend (native video player + controls)
-4. **STOP and VALIDATE**: Test video playback end-to-end with quickstart checklist
-5. Deploy if ready — this delivers the core value (1-click native playback)
+Phases 1–4 and most of Phase 6 are complete. Remaining open tasks:
 
-### Incremental Delivery
+1. **T007**: Run the pipeline to transcode remaining source videos
+2. **Phase 5** (T025–T029): Quality toggle improvements — bug fix, labeled button, session persistence
+3. **T023–T024**: Final verification
 
-1. Setup + US2 → Pipeline tested independently (URLs work in browser)
-2. Add US1 → Native playback tested end-to-end → Deploy (MVP!)
-3. Add US3 → Navigation polish → Deploy
-4. Polish → Final cleanup → Deploy
+### Remaining Delivery Plan
+
+1. Complete T007 (pipeline run — needs source videos)
+2. Complete Phase 5 (T025→T026+T027 parallel→T028→T029)
+3. Complete T023+T024 (final verification)
+4. Deploy
 
 ---
 
 ## Notes
 
-- Total tasks: 24
-- US2 (Pipeline): 5 tasks (T003-T007)
-- US1 (Frontend): 9 tasks (T008-T016)
-- US3 (Navigation): 4 tasks (T017-T020)
-- Setup: 2 tasks, Polish: 4 tasks
-- Key files modified: `scripts/process_photos.py`, `js/photo-viewer.js`, `css/photo-viewer.css`, `firebase/storage.rules`, `data/manifest.json`
-- No new frontend dependencies — uses native `<video>` element
-- ffmpeg commands from research.md: CRF 24 for 720p, CRF 20 for full-res, both with `-movflags +faststart`
+- Total tasks: 29
+- Setup: 2 tasks (T001-T002) — ✅ done
+- US2 (Pipeline): 5 tasks (T003-T007) — T003-T006 ✅ done, T007 open
+- US1 (Frontend): 9 tasks (T008-T016) — ✅ done (T010 superseded by T026+T028)
+- US3 (Navigation): 4 tasks (T017-T020) — ✅ done
+- Quality Toggle Improvements: 5 tasks (T025-T029) — all open (new)
+- Polish: 4 tasks (T021-T024) — T021-T022 ✅ done, T023-T024 open
+- **Open tasks remaining**: T007, T023, T024, T025, T026, T027, T028, T029
+- Key files for remaining work: `js/photo-viewer.js`, `css/photo-viewer.css`
+- No new frontend dependencies

@@ -22,7 +22,8 @@
         scale: 1, tx: 0, ty: 0,
         loaded: false, pending: null, prePrev: null, preNext: null,
         ctrlVis: false, hideTimer: null, didDrag: false,
-        savedOverflow: '', savedMapPE: '', navGuardUntil: 0
+        savedOverflow: '', savedMapPE: '', navGuardUntil: 0,
+        qualityPref: '720p'  // session-persistent quality preference (FR-012)
     };
     var G = {
         mode: IDLE, ptrs: new Map(),
@@ -552,37 +553,52 @@
         video.setAttribute('preload', 'metadata');
         if (p.thumbnail) video.poster = p.thumbnail;
 
+        // Use session-persistent quality preference (FR-012)
+        var usingFull = S.qualityPref === 'full' && !!p.web_url_full;
         var source = document.createElement('source');
-        source.src = p.web_url;
+        source.src = usingFull ? p.web_url_full : p.web_url;
         source.type = 'video/mp4';
         video.appendChild(source);
 
-        // Error handling (FR-009)
+        // Error handling (FR-009) with silent full-res fallback (FR-012)
         video.addEventListener('error', function () {
-            var msg = document.createElement('div');
-            msg.className = 'pv-error';
-            msg.innerHTML = 'Video unavailable';
-            if (p.google_photos_url) {
-                msg.innerHTML += '<br><a class="pv-error-link" href="' + p.google_photos_url +
-                    '" target="_blank" rel="noopener noreferrer">View on Google Drive</a>';
+            if (S.qualityPref === 'full' && p.web_url) {
+                // Silently fall back to 720p without showing an error (FR-012)
+                S.qualityPref = '720p';
+                source.src = p.web_url;
+                video.load();
+                var gb = wrap.querySelector('.pv-video-gear');
+                if (gb) { gb.textContent = '720p'; gb.dataset.quality = '720p'; }
+                var dlb = wrap.querySelector('.pv-video-download');
+                if (dlb) dlb.dataset.url = p.web_url;
+            } else {
+                var msg = document.createElement('div');
+                msg.className = 'pv-error';
+                msg.innerHTML = 'Video unavailable';
+                if (p.google_photos_url) {
+                    msg.innerHTML += '<br><a class="pv-error-link" href="' + p.google_photos_url +
+                        '" target="_blank" rel="noopener noreferrer">View on Google Drive</a>';
+                }
+                wrap.innerHTML = '';
+                wrap.appendChild(msg);
             }
-            wrap.innerHTML = '';
-            wrap.appendChild(msg);
         });
 
         wrap.appendChild(video);
 
-        // Overlay controls container (gear icon + download button)
+        // Overlay controls: quality toggle + download
+        // Note: NOT using .pv-ctrl — these buttons must always be clickable (FR-016)
         var overlay = document.createElement('div');
         overlay.className = 'pv-video-overlay';
 
-        // Quality toggle (gear icon) — FR-012
+        // Quality toggle button — FR-012, FR-014, FR-016
         if (p.web_url_full) {
             var gearBtn = document.createElement('button');
-            gearBtn.className = 'pv-video-gear pv-ctrl';
-            gearBtn.setAttribute('aria-label', 'Switch quality');
-            gearBtn.textContent = '720p';
-            gearBtn.dataset.quality = '720p';
+            gearBtn.className = 'pv-video-gear';
+            gearBtn.setAttribute('aria-label', 'Switch video quality');
+            var initQuality = usingFull ? 'full' : '720p';
+            gearBtn.textContent = initQuality === 'full' ? 'Full' : '720p';
+            gearBtn.dataset.quality = initQuality;
             gearBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var currentTime = video.currentTime;
@@ -597,8 +613,8 @@
                     if (wasPlaying) video.play().catch(function () {});
                 });
                 gearBtn.dataset.quality = newQuality;
-                gearBtn.textContent = newQuality === '720p' ? '720p' : 'Full';
-                // Update download button URL
+                gearBtn.textContent = newQuality === 'full' ? 'Full' : '720p';
+                S.qualityPref = newQuality;  // persist for page session (FR-012)
                 var dlBtn = wrap.querySelector('.pv-video-download');
                 if (dlBtn) dlBtn.dataset.url = newSrc;
             });
@@ -607,10 +623,10 @@
 
         // Download button — FR-013
         var dlBtn = document.createElement('button');
-        dlBtn.className = 'pv-video-download pv-ctrl';
+        dlBtn.className = 'pv-video-download';
         dlBtn.setAttribute('aria-label', 'Download video');
         dlBtn.innerHTML = '&#8681;'; // ⇩ down arrow
-        dlBtn.dataset.url = p.web_url;
+        dlBtn.dataset.url = usingFull ? p.web_url_full : p.web_url;
         dlBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             var a = document.createElement('a');

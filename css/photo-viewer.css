@@ -379,22 +379,24 @@
     pointer-events: auto;
 }
 
-/* ── Video overlay controls (gear + download) ── */
+/* ── Video overlay controls (quality toggle + download) ── */
+/* z-index: 5 keeps these above swipe zones (z-index: 4), fixing click-through bug (FR-016) */
 .pv-video-overlay {
     position: absolute;
     top: 12px;
     right: 12px;
     display: flex;
     gap: 8px;
-    z-index: 3;
+    z-index: 5;
     pointer-events: auto;
 }
 
-.pv-video-gear,
-.pv-video-download {
-    width: 44px;
+/* Quality toggle: pill/badge shape showing "720p" or "Full" (FR-014) */
+.pv-video-gear {
+    min-width: 44px;
     height: 44px;
-    border-radius: 50%;
+    border-radius: 22px;
+    padding: 0 12px;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -406,17 +408,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s ease, opacity 0.2s ease;
+    transition: background 0.15s ease;
+    pointer-events: auto;
+}
+
+.pv-video-download {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    color: white;
+    font-size: var(--font-lg);
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    pointer-events: auto;
 }
 
 .pv-video-gear:hover,
 .pv-video-download:hover {
     background: rgba(255, 255, 255, 0.25);
-}
-
-.pv-video-download {
-    font-size: var(--font-lg);
-    font-weight: 400;
 }
 
 /* ── Download button (overlay, next to fav) ── */
