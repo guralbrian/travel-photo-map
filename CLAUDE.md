@@ -48,6 +48,8 @@ This is a travel photo map app built with HTML/CSS/JavaScript and Leaflet.js. Ph
 - Vanilla JavaScript (ES5-compatible IIFE) + None (standalone module, no framework or library dependencies) (016-app-state-module)
 - Vanilla JavaScript (ES5-compatible IIFEs) + Leaflet.js 1.9.4 (vendored), no new dependencies (017-dom-builders)
 - N/A — reads existing JSON manifests at runtime (017-dom-builders)
+- Vanilla JavaScript (ES5-compatible IIFE), CSS3 + Leaflet.js (vendored), ViewportSampler.js (local), Leaflet.Photo.css (local) (022-photo-marker-improvements)
+- N/A — no data changes (022-photo-marker-improvements)
 
 - Vanilla JavaScript (ES2020+ modules), Python 3.10+ + Leaflet.js (existing, vendored), Firebase JS SDK v11 (Auth + Firestore Lite, vendored), firebase-admin (Python) (002-cloud-photo-backend)
 
@@ -72,9 +74,9 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 022-photo-marker-improvements: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3 + Leaflet.js (vendored), ViewportSampler.js (local), Leaflet.Photo.css (local)
 - 017-dom-builders: Added Vanilla JavaScript (ES5-compatible IIFEs) + Leaflet.js 1.9.4 (vendored), no new dependencies
 - 016-app-state-module: Added Vanilla JavaScript (ES5-compatible IIFE) + None (standalone module, no framework or library dependencies)
-- 016-app-state-module: Added Vanilla JavaScript (ES5-compatible IIFEs) + None new — Leaflet.js (existing, vendored)
 
 
 ## Testing
