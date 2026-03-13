@@ -49,30 +49,30 @@
         if ($ov) return;
         $ov = document.createElement('div');
         $ov.className = 'pv-overlay';
-        $ov.innerHTML =
-            '<div class="pv-wrap">' +
-                '<div class="pv-media"></div>' +
-            '</div>' +
-            '<button class="pv-close pv-ctrl" aria-label="Close">&times;</button>' +
-            '<button class="pv-fav pv-ctrl" aria-label="Favorite">&#9734;</button>' +
-            '<button class="pv-dl pv-ctrl" aria-label="Download" style="display:none">&#8681;</button>' +
-            '<button class="pv-nav pv-prev pv-ctrl" aria-label="Previous">&#8249;</button>' +
-            '<button class="pv-nav pv-next pv-ctrl" aria-label="Next">&#8250;</button>' +
-            '<div class="pv-info pv-ctrl">' +
-                '<div class="pv-cap-wrap">' +
-                    '<p class="pv-cap"></p>' +
-                    '<div class="pv-cap-ed" style="display:none">' +
-                        '<textarea class="pv-cap-in" rows="2" placeholder="Add a caption..."></textarea>' +
-                    '</div>' +
-                '</div>' +
-                '<p class="pv-date"></p>' +
-                '<div class="pv-tags"></div>' +
-                '<div class="pv-tag-ed" style="display:none">' +
-                    '<div class="pv-tag-chips"></div>' +
-                    '<input class="pv-tag-in" type="text" placeholder="Add tag..." maxlength="50">' +
-                '</div>' +
-                '<a class="pv-link" target="_blank" rel="noopener noreferrer">View on Google Photos</a>' +
-            '</div>';
+        var _el = domHelpers.el;
+        $ov.appendChild(_el('div', {className: 'pv-wrap'},
+            _el('div', {className: 'pv-media'})
+        ));
+        $ov.appendChild(_el('button', {className: 'pv-close pv-ctrl', 'aria-label': 'Close'}, '\u00D7'));
+        $ov.appendChild(_el('button', {className: 'pv-fav pv-ctrl', 'aria-label': 'Favorite'}, '\u2606'));
+        $ov.appendChild(_el('button', {className: 'pv-dl pv-ctrl', 'aria-label': 'Download', style: 'display:none'}, '\u21E9'));
+        $ov.appendChild(_el('button', {className: 'pv-nav pv-prev pv-ctrl', 'aria-label': 'Previous'}, '\u2039'));
+        $ov.appendChild(_el('button', {className: 'pv-nav pv-next pv-ctrl', 'aria-label': 'Next'}, '\u203A'));
+        $ov.appendChild(_el('div', {className: 'pv-info pv-ctrl'},
+            _el('div', {className: 'pv-cap-wrap'},
+                _el('p', {className: 'pv-cap'}),
+                _el('div', {className: 'pv-cap-ed', style: 'display:none'},
+                    _el('textarea', {className: 'pv-cap-in', rows: '2', placeholder: 'Add a caption...'})
+                )
+            ),
+            _el('p', {className: 'pv-date'}),
+            _el('div', {className: 'pv-tags'}),
+            _el('div', {className: 'pv-tag-ed', style: 'display:none'},
+                _el('div', {className: 'pv-tag-chips'}),
+                _el('input', {className: 'pv-tag-in', type: 'text', placeholder: 'Add tag...', maxlength: '50'})
+            ),
+            _el('a', {className: 'pv-link', target: '_blank', rel: 'noopener noreferrer'}, 'View on Google Photos')
+        ));
         document.body.appendChild($ov);
 
         $wrap = $ov.querySelector('.pv-wrap');
@@ -560,15 +560,18 @@
 
         // Error handling (FR-009)
         video.addEventListener('error', function () {
-            var msg = document.createElement('div');
-            msg.className = 'pv-error';
-            msg.innerHTML = 'Video unavailable';
-            if (p.google_photos_url) {
-                msg.innerHTML += '<br><a class="pv-error-link" href="' + p.google_photos_url +
-                    '" target="_blank" rel="noopener noreferrer">View on Google Drive</a>';
-            }
+            var errDiv = domHelpers.el('div', {className: 'pv-error'},
+                'Video unavailable',
+                p.google_photos_url ? domHelpers.el('br') : null,
+                p.google_photos_url ? domHelpers.el('a', {
+                    className: 'pv-error-link',
+                    href: p.google_photos_url,
+                    target: '_blank',
+                    rel: 'noopener noreferrer'
+                }, 'View on Google Drive') : null
+            );
             wrap.innerHTML = '';
-            wrap.appendChild(msg);
+            wrap.appendChild(errDiv);
         });
 
         wrap.appendChild(video);
@@ -610,7 +613,7 @@
         var dlBtn = document.createElement('button');
         dlBtn.className = 'pv-video-download pv-ctrl';
         dlBtn.setAttribute('aria-label', 'Download video');
-        dlBtn.innerHTML = '&#8681;'; // ⇩ down arrow
+        dlBtn.textContent = '\u21E9'; // ⇩ down arrow
         dlBtn.dataset.url = p.web_url;
         dlBtn.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -641,7 +644,8 @@
 
     function errPlaceholder(type) {
         var msg = type === 'video' ? 'Video unavailable' : 'Photo unavailable';
-        $media.innerHTML = '<div class="pv-error">' + msg + '</div>';
+        $media.innerHTML = '';
+        $media.appendChild(domHelpers.el('div', {className: 'pv-error'}, msg));
     }
 
     // ── Preloading (T025, T026, T030) ──
@@ -707,29 +711,30 @@
     }
 
     function renderTags(p) {
-        var el = $ov.querySelector('.pv-tags'), tags = eTags(p);
+        var tagsEl = $ov.querySelector('.pv-tags'), tags = eTags(p);
+        tagsEl.textContent = '';
         if (tags && tags.length) {
-            var h = ''; for (var i = 0; i < tags.length; i++) h += '<span class="pv-tag">' + tags[i] + '</span>';
-            el.innerHTML = h; el.style.display = '';
-        } else { el.innerHTML = ''; el.style.display = 'none'; }
+            for (var i = 0; i < tags.length; i++) tagsEl.appendChild(domHelpers.el('span', {className: 'pv-tag'}, tags[i]));
+            tagsEl.style.display = '';
+        } else { tagsEl.style.display = 'none'; }
     }
 
     function renderTagChips(p) {
-        var tags = eTags(p), h = '';
-        for (var i = 0; i < tags.length; i++)
-            h += '<span class="pv-tag-chip">' + tags[i] + '<button class="pv-chip-x" data-tag="' + tags[i] + '">&times;</button></span>';
-        $tagChips.innerHTML = h;
-        var btns = $tagChips.querySelectorAll('.pv-chip-x');
-        for (var r = 0; r < btns.length; r++) {
-            btns[r].addEventListener('click', function (evt) {
-                evt.stopPropagation();
-                var tag = this.getAttribute('data-tag');
-                var ph = S.photos[S.idx];
-                var cur = eTags(ph).slice();
-                var idx = cur.indexOf(tag); if (idx !== -1) cur.splice(idx, 1);
-                emit('photoviewer:tag-edit', { photoId: pid(ph), tags: cur });
-                renderTagChips(ph); renderTags(ph);
-            });
+        var tags = eTags(p);
+        $tagChips.textContent = '';
+        for (var i = 0; i < tags.length; i++) {
+            (function (tag) {
+                var xBtn = domHelpers.el('button', {className: 'pv-chip-x'}, '\u00D7');
+                xBtn.addEventListener('click', function (evt) {
+                    evt.stopPropagation();
+                    var ph = S.photos[S.idx];
+                    var cur = eTags(ph).slice();
+                    var idx = cur.indexOf(tag); if (idx !== -1) cur.splice(idx, 1);
+                    emit('photoviewer:tag-edit', { photoId: pid(ph), tags: cur });
+                    renderTagChips(ph); renderTags(ph);
+                });
+                $tagChips.appendChild(domHelpers.el('span', {className: 'pv-tag-chip'}, tag, xBtn));
+            })(tags[i]);
         }
     }
 
@@ -743,7 +748,7 @@
     }
 
     function updFav(p) {
-        $fav.innerHTML = p._isFavorite ? '&#9733;' : '&#9734;';
+        $fav.textContent = p._isFavorite ? '\u2605' : '\u2606';
         $fav.classList.toggle('pv-is-fav', !!p._isFavorite);
     }
 

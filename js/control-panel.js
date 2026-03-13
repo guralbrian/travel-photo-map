@@ -49,97 +49,120 @@
     }
 
     function buildControlPanel() {
+        var _el = domHelpers.el;
         var totalDates = _uniqueDates.length || 1;
 
-        // Build timeline track segments HTML
-        var segmentsHtml = '';
+        // Build timeline track with segments and boundary markers
+        var timelineTrack = _el('div', {className: 'timeline-track'});
         for (var s = 0; s < _timelineSegments.length; s++) {
             var seg = _timelineSegments[s];
             var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
             var widthPct = (seg.count / totalDates * 100).toFixed(2);
             var showInline = parseFloat(widthPct) >= 12 || s === 0 || s === _timelineSegments.length - 1;
             var labelPos = (s % 2 === 0) ? 'label-top' : 'label-bottom';
-            segmentsHtml += '<div class="timeline-segment ' + labelPos + '" data-city="' + seg.cityName + '" style="--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color + '">' +
-                '<span class="segment-dot"></span>' +
-                (showInline ? '<span class="segment-label-inline">' + seg.cityName + '</span>' : '') +
-                '<span class="segment-tooltip">' + seg.cityName + '</span></div>';
+            var segEl = _el('div', {
+                className: 'timeline-segment ' + labelPos,
+                dataset: {city: seg.cityName},
+                style: '--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color
+            },
+                _el('span', {className: 'segment-dot'}),
+                showInline ? _el('span', {className: 'segment-label-inline'}, seg.cityName) : null,
+                _el('span', {className: 'segment-tooltip'}, seg.cityName)
+            );
+            timelineTrack.appendChild(segEl);
         }
-
-        // Build boundary markers HTML
-        var boundaryHtml = '';
         for (var bm = 0; bm < _boundaryMarkers.length; bm++) {
             var marker = _boundaryMarkers[bm];
             var pos = (marker.index / totalDates * 100).toFixed(2);
             if (marker.type === 'month') {
-                boundaryHtml += '<div class="timeline-boundary timeline-boundary-month" style="--boundary-pos:' + pos + '%"><span class="boundary-label">' + marker.label + '</span></div>';
+                timelineTrack.appendChild(_el('div', {
+                    className: 'timeline-boundary timeline-boundary-month',
+                    style: '--boundary-pos:' + pos + '%'
+                }, _el('span', {className: 'boundary-label'}, marker.label)));
             } else {
-                boundaryHtml += '<div class="timeline-boundary timeline-boundary-week" style="--boundary-pos:' + pos + '%"></div>';
+                timelineTrack.appendChild(_el('div', {
+                    className: 'timeline-boundary timeline-boundary-week',
+                    style: '--boundary-pos:' + pos + '%'
+                }));
             }
         }
+        timelineTrack.appendChild(_el('div', {className: 'timeline-range-fill', style: '--range-start:0%;--range-size:100%'}));
 
         var maxIdx = _uniqueDates.length > 0 ? _uniqueDates.length - 1 : 0;
         var startLabel = _uniqueDates.length > 0 ? _formatDateShort(_uniqueDates[0]) : '';
         var endLabel = _uniqueDates.length > 0 ? _formatDateShort(_uniqueDates[maxIdx]) : '';
 
-        // Build layer radio buttons HTML
+        // Build layer controls
         var layerNames = Object.keys(_baseLayers);
-        var layerHtml = '<div class="layer-group-title">Base Map</div>';
+        var layerContent = _el('div', {className: 'panel-section-content'},
+            _el('div', {className: 'layer-group-title'}, 'Base Map')
+        );
         for (var li = 0; li < layerNames.length; li++) {
-            var checked = layerNames[li] === 'Humanitarian' ? ' checked' : '';
-            layerHtml += '<label class="layer-option"><input type="radio" name="base-layer" value="' + layerNames[li] + '"' + checked + '> ' + layerNames[li] + '</label>';
+            var radioAttrs = {type: 'radio', name: 'base-layer', value: layerNames[li]};
+            if (layerNames[li] === 'Humanitarian') radioAttrs.checked = '';
+            layerContent.appendChild(_el('label', {className: 'layer-option'},
+                _el('input', radioAttrs),
+                ' ' + layerNames[li]
+            ));
         }
-        layerHtml += '<hr class="layer-separator">';
-        layerHtml += '<div class="layer-group-title">Overlays</div>';
-        layerHtml += '<label class="layer-option"><input type="checkbox" id="travel-route-toggle" checked> Travel Route</label>';
+        layerContent.appendChild(_el('hr', {className: 'layer-separator'}));
+        layerContent.appendChild(_el('div', {className: 'layer-group-title'}, 'Overlays'));
+        var routeCheckbox = _el('input', {type: 'checkbox', id: 'travel-route-toggle', checked: ''});
+        layerContent.appendChild(_el('label', {className: 'layer-option'}, routeCheckbox, ' Travel Route'));
 
-        // Toggle button
+        // Toggle button (SVG via innerHTML — static markup, no user content)
         var toggleBtn = document.createElement('button');
         toggleBtn.className = 'panel-toggle';
         toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
         document.body.appendChild(toggleBtn);
 
         // Panel
-        var panel = document.createElement('div');
-        panel.className = 'control-panel hidden';
-        panel.innerHTML =
-            '<div class="panel-header"><h3>Controls</h3><button class="panel-close">&times;</button></div>' +
-            '<div class="auth-section" id="auth-section">' +
-                '<button class="auth-sign-in-btn" id="auth-sign-in-btn">Sign in with Google</button>' +
-                '<div class="auth-user-info" id="auth-user-info" style="display:none">' +
-                    '<img class="auth-avatar" id="auth-avatar" src="" alt="">' +
-                    '<span class="auth-name" id="auth-name"></span>' +
-                    '<a href="#" class="auth-sign-out" id="auth-sign-out">Sign out</a>' +
-                '</div>' +
-                '<span class="pending-writes-indicator" id="pending-writes-indicator" style="display:none" title="Changes pending sync">&#9729;</span>' +
-            '</div>' +
-            '<details class="panel-section" open>' +
-                '<summary>Timeline</summary>' +
-                '<div class="panel-section-content">' +
-                    '<div class="timeline-bar">' +
-                        '<div class="timeline-track">' + segmentsHtml + boundaryHtml + '<div class="timeline-range-fill" style="--range-start:0%;--range-size:100%"></div></div>' +
-                        '<input type="range" class="timeline-handle timeline-handle-min" min="0" max="' + maxIdx + '" value="0">' +
-                        '<input type="range" class="timeline-handle timeline-handle-max" min="0" max="' + maxIdx + '" value="' + maxIdx + '">' +
-                        '<div class="timeline-date-display">' +
-                            '<span class="timeline-date-start">' + startLabel + '</span>' +
-                            '<span class="timeline-date-end">' + endLabel + '</span>' +
-                        '</div>' +
-                        '<div class="timeline-photo-count"><span class="photo-count-number">' + _allPhotos.length + '</span> / ' + _allPhotos.length + ' photos</div>' +
-                    '</div>' +
-                '</div>' +
-            '</details>' +
-            '<details class="panel-section">' +
-                '<summary>Map Layers</summary>' +
-                '<div class="panel-section-content">' + layerHtml + '</div>' +
-            '</details>' +
-            '<details class="panel-section">' +
-                '<summary>Settings</summary>' +
-                '<div class="panel-section-content">' +
-                    '<label>Photo Density <span class="slider-value" id="density-val"></span></label>' +
-                    '<input type="range" id="density-slider" min="80" max="300" value="' + currentDensityCellSize + '" style="direction:rtl">' +
-                    '<label>Photo Size <span class="slider-value" id="size-val">' + currentIconSize + 'px</span></label>' +
-                    '<input type="range" id="size-slider" min="45" max="180" value="' + currentIconSize + '">' +
-                '</div>' +
-            '</details>';
+        var panel = _el('div', {className: 'control-panel hidden'},
+            _el('div', {className: 'panel-header'},
+                _el('h3', null, 'Controls'),
+                _el('button', {className: 'panel-close'}, '\u00D7')
+            ),
+            _el('div', {className: 'auth-section', id: 'auth-section'},
+                _el('button', {className: 'auth-sign-in-btn', id: 'auth-sign-in-btn'}, 'Sign in with Google'),
+                _el('div', {className: 'auth-user-info', id: 'auth-user-info', style: 'display:none'},
+                    _el('img', {className: 'auth-avatar', id: 'auth-avatar', src: '', alt: ''}),
+                    _el('span', {className: 'auth-name', id: 'auth-name'}),
+                    _el('a', {href: '#', className: 'auth-sign-out', id: 'auth-sign-out'}, 'Sign out')
+                ),
+                _el('span', {className: 'pending-writes-indicator', id: 'pending-writes-indicator', style: 'display:none', title: 'Changes pending sync'}, '\u2601')
+            ),
+            _el('details', {className: 'panel-section', open: ''},
+                _el('summary', null, 'Timeline'),
+                _el('div', {className: 'panel-section-content'},
+                    _el('div', {className: 'timeline-bar'},
+                        timelineTrack,
+                        _el('input', {type: 'range', className: 'timeline-handle timeline-handle-min', min: '0', max: String(maxIdx), value: '0'}),
+                        _el('input', {type: 'range', className: 'timeline-handle timeline-handle-max', min: '0', max: String(maxIdx), value: String(maxIdx)}),
+                        _el('div', {className: 'timeline-date-display'},
+                            _el('span', {className: 'timeline-date-start'}, startLabel),
+                            _el('span', {className: 'timeline-date-end'}, endLabel)
+                        ),
+                        _el('div', {className: 'timeline-photo-count'},
+                            _el('span', {className: 'photo-count-number'}, String(_allPhotos.length)),
+                            ' / ' + _allPhotos.length + ' photos'
+                        )
+                    )
+                )
+            ),
+            _el('details', {className: 'panel-section'},
+                _el('summary', null, 'Map Layers'),
+                layerContent
+            ),
+            _el('details', {className: 'panel-section'},
+                _el('summary', null, 'Settings'),
+                _el('div', {className: 'panel-section-content'},
+                    _el('label', null, 'Photo Density ', _el('span', {className: 'slider-value', id: 'density-val'})),
+                    _el('input', {type: 'range', id: 'density-slider', min: '80', max: '300', value: String(currentDensityCellSize), style: 'direction:rtl'}),
+                    _el('label', null, 'Photo Size ', _el('span', {className: 'slider-value', id: 'size-val'}, currentIconSize + 'px')),
+                    _el('input', {type: 'range', id: 'size-slider', min: '45', max: '180', value: String(currentIconSize)})
+                )
+            )
+        );
         document.body.appendChild(panel);
 
         // Prevent map interaction when interacting with panel
@@ -318,9 +341,11 @@
     }
 
     function updatePhotoCount(count) {
-        var el = document.querySelector('.timeline-photo-count');
-        if (el) {
-            el.innerHTML = '<span class="photo-count-number">' + count + '</span> / ' + _allPhotos.length + ' photos';
+        var countEl = document.querySelector('.timeline-photo-count');
+        if (countEl) {
+            countEl.textContent = '';
+            countEl.appendChild(domHelpers.el('span', {className: 'photo-count-number'}, String(count)));
+            countEl.appendChild(document.createTextNode(' / ' + _allPhotos.length + ' photos'));
         }
     }
 

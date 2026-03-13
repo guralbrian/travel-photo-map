@@ -57,10 +57,9 @@
             var panel = document.createElement('button');
             panel.className = 'region-panel';
             panel.dataset.regionIndex = idx;
-            panel.innerHTML =
-                '<span class="region-panel-label">' + section.label + '</span>' +
-                '<span class="region-panel-dates">' + domHelpers.formatDateShort(section.startDate) +
-                '\u2013' + domHelpers.formatDateShort(section.endDate) + '</span>';
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-label'}, section.label));
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-dates'},
+                domHelpers.formatDateShort(section.startDate) + '\u2013' + domHelpers.formatDateShort(section.endDate)));
             panel.addEventListener('click', function () {
                 selectRegion(idx);
             });
@@ -169,42 +168,33 @@
     /* ── T014 + T016: Render itinerary panel content ── */
 
     function renderItineraryPanel(container, section) {
-        var html = '<div class="itinerary-header">' +
-            '<button class="itinerary-back" id="itinerary-back">' +
-                '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>' +
-                ' All Regions' +
-            '</button>' +
-            '<h3 class="itinerary-title">' + section.label + '</h3>' +
-            '<span class="itinerary-dates">' + formatDateRange(section.startDate, section.endDate) + '</span>' +
-            '</div>' +
-            '<div class="itinerary-days">';
+        var _el = domHelpers.el;
 
+        // Back button (SVG set via innerHTML — static markup, no user content)
+        var backBtn = _el('button', {className: 'itinerary-back'});
+        backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>';
+        backBtn.appendChild(document.createTextNode(' All Regions'));
+        backBtn.addEventListener('click', function () { deselectRegion(); });
+
+        // Days list
+        var daysContainer = _el('div', {className: 'itinerary-days'});
         section.days.forEach(function (day) {
             var hasNotes = day.notes && day.notes.trim().length > 0;
-            html += '<div class="itinerary-day">' +
-                '<div class="itinerary-day-date">' + formatDateLong(day.date) + '</div>' +
-                (hasNotes
-                    ? '<div class="itinerary-day-notes">' + escapeHtml(day.notes) + '</div>'
-                    : '<div class="itinerary-day-notes itinerary-day-notes--empty">No notes recorded</div>') +
-                '</div>';
+            daysContainer.appendChild(_el('div', {className: 'itinerary-day'},
+                _el('div', {className: 'itinerary-day-date'}, formatDateLong(day.date)),
+                hasNotes
+                    ? _el('div', {className: 'itinerary-day-notes'}, day.notes)
+                    : _el('div', {className: 'itinerary-day-notes itinerary-day-notes--empty'}, 'No notes recorded')
+            ));
         });
 
-        html += '</div>';
-        container.innerHTML = html;
-
-        // Wire back button
-        var backBtn = document.getElementById('itinerary-back');
-        if (backBtn) {
-            backBtn.addEventListener('click', function () {
-                deselectRegion();
-            });
-        }
-    }
-
-    function escapeHtml(str) {
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        container.textContent = '';
+        container.appendChild(_el('div', {className: 'itinerary-header'},
+            backBtn,
+            _el('h3', {className: 'itinerary-title'}, section.label),
+            _el('span', {className: 'itinerary-dates'}, formatDateRange(section.startDate, section.endDate))
+        ));
+        container.appendChild(daysContainer);
     }
 
     /* ── T017 + T018: Deselect region — restore overview ── */
@@ -269,9 +259,8 @@
         window.TripModel.getRegions().forEach(function (cfg) {
             var panel = document.createElement('div');
             panel.className = 'region-panel region-panel--disabled';
-            panel.innerHTML =
-                '<span class="region-panel-label">' + cfg.label + '</span>' +
-                '<span class="region-panel-dates">No data</span>';
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-label'}, cfg.label));
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-dates'}, 'No data'));
             grid.appendChild(panel);
         });
 
