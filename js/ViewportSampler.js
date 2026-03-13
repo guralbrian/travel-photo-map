@@ -9,17 +9,17 @@ var ViewportSampler = (function () {
     var _markers = {};         // key -> L.Marker currently on map
     var _layerGroup = null;
     var _iconSize = 90;        // legacy — kept for backward compat, not used for marker sizing
-    var _cellSize = 150;
+    var _cellSize = 100;
     var _onClickHandler = null;
     var _favGetter = null;     // function(photo) -> bool
 
     // Tier configuration for adaptive marker sizing (Apple Maps style)
     // tier 0 = single photo (no stem), tiers 1-3 = clusters (downward pointer stem)
     var TIER_CONFIG = [
-        { maxCount: 1,        frameSize: 70,  stemHeight: 0  },
-        { maxCount: 5,        frameSize: 85,  stemHeight: 12 },
-        { maxCount: 15,       frameSize: 100, stemHeight: 14 },
-        { maxCount: Infinity, frameSize: 115, stemHeight: 16 }
+        { maxCount: 1,        frameSize: 52,  stemHeight: 0  },
+        { maxCount: 5,        frameSize: 64,  stemHeight: 8  },
+        { maxCount: 15,       frameSize: 76,  stemHeight: 10 },
+        { maxCount: Infinity, frameSize: 88,  stemHeight: 12 }
     ];
 
     function getSizeTier(totalPhotos) {
@@ -97,11 +97,14 @@ var ViewportSampler = (function () {
             }
         }
 
-        // Assign each photo to a screen-space grid cell
+        // Assign each photo to a geo-stable grid cell.
+        // map.project returns world-pixel coords at the current zoom level —
+        // constant for a given (lat,lng,zoom) regardless of pan position,
+        // so cell assignments don't change when the user pans the map.
         var cells = {};
         for (var v = 0; v < visible.length; v++) {
             var photo = visible[v];
-            var pt = _map.latLngToContainerPoint(L.latLng(photo.lat, photo.lng));
+            var pt = _map.project(L.latLng(photo.lat, photo.lng), _map.getZoom());
             var cellX = Math.floor(pt.x / _cellSize);
             var cellY = Math.floor(pt.y / _cellSize);
             var cellKey = cellX + ',' + cellY;

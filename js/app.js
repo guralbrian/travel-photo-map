@@ -153,7 +153,7 @@
     var favoritesLayer = null;
     var allPhotos = [];
     var filteredPhotos = [];
-    var currentDensityCellSize = 150;
+    var currentDensityCellSize = 100;
     var currentIconSize = 90;
     var cityClusters = [];
     var photoIndex = {};

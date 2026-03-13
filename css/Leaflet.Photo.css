@@ -13,7 +13,7 @@
     position: relative;
     overflow: hidden;
     border-radius: 6px;
-    border: 3px solid white;
+    border: 2px solid white;
     z-index: 1;
 }
 
@@ -37,21 +37,21 @@
 }
 
 .marker-tier-1::after {
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-top: 12px solid white;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid white;
 }
 
 .marker-tier-2::after {
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 14px solid white;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 10px solid white;
 }
 
 .marker-tier-3::after {
-    border-left: 9px solid transparent;
-    border-right: 9px solid transparent;
-    border-top: 16px solid white;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 12px solid white;
 }
 
 /* Tier 0 — single photo, no stem needed */
