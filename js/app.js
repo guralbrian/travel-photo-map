@@ -76,6 +76,9 @@
     };
     var currentBaseLayer = humanitarian;
 
+    // ──── Map Interaction Policy ────
+    if (window.mapInteraction) window.mapInteraction.init(map);
+
     // ──── Popup Helpers ────
     var el = domHelpers.el, text = domHelpers.text;
 
