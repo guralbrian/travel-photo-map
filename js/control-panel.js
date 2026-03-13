@@ -6,13 +6,9 @@
     var _baseLayers = null;
     var _currentBaseLayer = null;
     var _travelRouteLayer = null;
-    var _uniqueDates = null;
-    var _timelineSegments = null;
-    var _boundaryMarkers = null;
     var _allPhotos = null;
     var _feedSidebar = null;
     var _feedToggle = null;
-    var _formatDateShort = null;
     var _setCloudFavoritesLoaded = null;
     var _rebuildPhotoLayer = null;
     var _buildPhotoIndex = null;
@@ -26,13 +22,9 @@
         _baseLayers = opts.baseLayers;
         _currentBaseLayer = opts.currentBaseLayer;
         _travelRouteLayer = opts.travelRouteLayer;
-        _uniqueDates = opts.uniqueDates;
-        _timelineSegments = opts.timelineSegments;
-        _boundaryMarkers = opts.boundaryMarkers;
         _allPhotos = opts.allPhotos;
         _feedSidebar = opts.feedSidebar;
         _feedToggle = opts.feedToggle;
-        _formatDateShort = opts.formatDateShort;
         _setCloudFavoritesLoaded = opts.setCloudFavoritesLoaded;
         _rebuildPhotoLayer = opts.rebuildPhotoLayer;
         _buildPhotoIndex = opts.buildPhotoIndex;
@@ -50,47 +42,6 @@
 
     function buildControlPanel() {
         var _el = domHelpers.el;
-        var totalDates = _uniqueDates.length || 1;
-
-        // Build timeline track with segments and boundary markers
-        var timelineTrack = _el('div', {className: 'timeline-track'});
-        for (var s = 0; s < _timelineSegments.length; s++) {
-            var seg = _timelineSegments[s];
-            var leftPct = (seg.startIdx / totalDates * 100).toFixed(2);
-            var widthPct = (seg.count / totalDates * 100).toFixed(2);
-            var showInline = parseFloat(widthPct) >= 12 || s === 0 || s === _timelineSegments.length - 1;
-            var labelPos = (s % 2 === 0) ? 'label-top' : 'label-bottom';
-            var segEl = _el('div', {
-                className: 'timeline-segment ' + labelPos,
-                dataset: {city: seg.cityName},
-                style: '--seg-offset:' + leftPct + '%;--seg-size:' + widthPct + '%;background:' + seg.color
-            },
-                _el('span', {className: 'segment-dot'}),
-                showInline ? _el('span', {className: 'segment-label-inline'}, seg.cityName) : null,
-                _el('span', {className: 'segment-tooltip'}, seg.cityName)
-            );
-            timelineTrack.appendChild(segEl);
-        }
-        for (var bm = 0; bm < _boundaryMarkers.length; bm++) {
-            var marker = _boundaryMarkers[bm];
-            var pos = (marker.index / totalDates * 100).toFixed(2);
-            if (marker.type === 'month') {
-                timelineTrack.appendChild(_el('div', {
-                    className: 'timeline-boundary timeline-boundary-month',
-                    style: '--boundary-pos:' + pos + '%'
-                }, _el('span', {className: 'boundary-label'}, marker.label)));
-            } else {
-                timelineTrack.appendChild(_el('div', {
-                    className: 'timeline-boundary timeline-boundary-week',
-                    style: '--boundary-pos:' + pos + '%'
-                }));
-            }
-        }
-        timelineTrack.appendChild(_el('div', {className: 'timeline-range-fill', style: '--range-start:0%;--range-size:100%'}));
-
-        var maxIdx = _uniqueDates.length > 0 ? _uniqueDates.length - 1 : 0;
-        var startLabel = _uniqueDates.length > 0 ? _formatDateShort(_uniqueDates[0]) : '';
-        var endLabel = _uniqueDates.length > 0 ? _formatDateShort(_uniqueDates[maxIdx]) : '';
 
         // Build layer controls
         var layerNames = Object.keys(_baseLayers);
@@ -130,24 +81,6 @@
                     _el('a', {href: '#', className: 'auth-sign-out', id: 'auth-sign-out'}, 'Sign out')
                 ),
                 _el('span', {className: 'pending-writes-indicator', id: 'pending-writes-indicator', style: 'display:none', title: 'Changes pending sync'}, '\u2601')
-            ),
-            _el('details', {className: 'panel-section', open: ''},
-                _el('summary', null, 'Timeline'),
-                _el('div', {className: 'panel-section-content'},
-                    _el('div', {className: 'timeline-bar'},
-                        timelineTrack,
-                        _el('input', {type: 'range', className: 'timeline-handle timeline-handle-min', min: '0', max: String(maxIdx), value: '0'}),
-                        _el('input', {type: 'range', className: 'timeline-handle timeline-handle-max', min: '0', max: String(maxIdx), value: String(maxIdx)}),
-                        _el('div', {className: 'timeline-date-display'},
-                            _el('span', {className: 'timeline-date-start'}, startLabel),
-                            _el('span', {className: 'timeline-date-end'}, endLabel)
-                        ),
-                        _el('div', {className: 'timeline-photo-count'},
-                            _el('span', {className: 'photo-count-number'}, String(_allPhotos.length)),
-                            ' / ' + _allPhotos.length + ' photos'
-                        )
-                    )
-                )
             ),
             _el('details', {className: 'panel-section'},
                 _el('summary', null, 'Map Layers'),
@@ -227,17 +160,6 @@
             });
         }
 
-        // Mobile touch handler for segment tooltips
-        var segments = panel.querySelectorAll('.timeline-segment');
-        for (var ts = 0; ts < segments.length; ts++) {
-            segments[ts].addEventListener('touchstart', (function (allSegs) {
-                return function () {
-                    for (var c = 0; c < allSegs.length; c++) allSegs[c].classList.remove('touched');
-                    this.classList.add('touched');
-                };
-            })(segments));
-        }
-
         // Wire auth UI
         var signInBtn = document.getElementById('auth-sign-in-btn');
         var signOutLink = document.getElementById('auth-sign-out');
@@ -304,12 +226,6 @@
             // No-op: photo viewer reads firebaseAuth.isEditor directly
         });
 
-        // visibleDateRange: No onChange subscriber needed here. The timeline sliders
-        // are the *source* of the date range, not a consumer. appState.set('visibleDateRange', ...)
-        // is called in app.js:applyTimelineFilter(). If programmatic date range changes are
-        // needed in the future (e.g., URL hash restore), add an onChange subscriber here to
-        // sync slider positions.
-
         // Wire density slider
         var _densityTimeout = null;
         document.getElementById('density-slider').addEventListener('input', function () {
@@ -340,13 +256,8 @@
         el.title = count + ' change' + (count !== 1 ? 's' : '') + ' pending sync';
     }
 
-    function updatePhotoCount(count) {
-        var countEl = document.querySelector('.timeline-photo-count');
-        if (countEl) {
-            countEl.textContent = '';
-            countEl.appendChild(domHelpers.el('span', {className: 'photo-count-number'}, String(count)));
-            countEl.appendChild(document.createTextNode(' / ' + _allPhotos.length + ' photos'));
-        }
+    function updatePhotoCount() {
+        // No-op: timeline removed
     }
 
     window.controlPanel = { init: init };

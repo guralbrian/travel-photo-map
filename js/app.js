@@ -159,13 +159,6 @@
     var photoIndex = {};
     var dateIndex = {}; // { "YYYY-MM-DD": { photos: [], segmentName, segmentColor, segmentIndex } }
 
-    // ──── Timeline State (hoisted from Promise.all callback) ────
-    var uniqueDates = [];
-    var boundaryMarkers = [];
-    var timelineSegments = [];
-    var handleMin, handleMax, dateStartLabel, dateEndLabel;
-    var _filterTimeout = null;
-
     // ──── Favorites Subsystem ────
     var _cloudFavoritesLoaded = false;
 
@@ -356,82 +349,6 @@
 
     var formatDateShort = domHelpers.formatDateShort;
 
-    // ──── Timeline & Settings ────
-    function scheduleFilterUpdate() {
-        if (_filterTimeout) clearTimeout(_filterTimeout);
-        _filterTimeout = setTimeout(applyTimelineFilter, 150);
-    }
-
-    // Cheap visual update on every input event
-    function onTimelineVisualUpdate() {
-        var minIdx = parseInt(handleMin.value, 10);
-        var maxIdx = parseInt(handleMax.value, 10);
-        if (minIdx > maxIdx) {
-            if (this === handleMin) { handleMin.value = maxIdx; minIdx = maxIdx; }
-            else { handleMax.value = minIdx; maxIdx = minIdx; }
-        }
-
-        dateStartLabel.textContent = formatDateShort(uniqueDates[minIdx]);
-        dateEndLabel.textContent = formatDateShort(uniqueDates[maxIdx]);
-
-        // Update range fill indicator
-        var totalDates = uniqueDates.length || 1;
-        var rangeFill = document.querySelector('.timeline-range-fill');
-        if (rangeFill) {
-            rangeFill.style.setProperty('--range-start', (minIdx / totalDates * 100) + '%');
-            rangeFill.style.setProperty('--range-size', ((maxIdx - minIdx + 1) / totalDates * 100) + '%');
-        }
-
-        // Quick photo count (no array allocation)
-        var minDate = uniqueDates[minIdx];
-        var maxDate = uniqueDates[maxIdx];
-        var count = 0;
-        for (var f = 0; f < allPhotos.length; f++) {
-            var pd = allPhotos[f].date || '';
-            if (pd >= minDate && pd <= maxDate) count++;
-        }
-        window.controlPanel.updatePhotoCount(count);
-
-        scheduleFilterUpdate();
-    }
-
-    // Expensive filter + rebuild (debounced at 150ms)
-    function applyTimelineFilter() {
-        var minIdx = parseInt(handleMin.value, 10);
-        var maxIdx = parseInt(handleMax.value, 10);
-        var minDate = uniqueDates[minIdx];
-        var maxDate = uniqueDates[maxIdx];
-
-        filteredPhotos = [];
-        for (var f = 0; f < allPhotos.length; f++) {
-            var pd = allPhotos[f].date || '';
-            if (pd >= minDate && pd <= maxDate) {
-                filteredPhotos.push(allPhotos[f]);
-            }
-        }
-
-        if (window.appState) window.appState.set('visibleDateRange', { min: minDate, max: maxDate });
-
-        rebuildPhotoLayer();
-        buildPhotoIndex();
-
-        // Update feed to show only entries in the filtered date range
-        window.feedController.updateFeedForTimeline(minDate, maxDate);
-    }
-
-    function onTimelineRelease() {
-        // Flush any pending debounced filter
-        if (_filterTimeout) {
-            clearTimeout(_filterTimeout);
-            _filterTimeout = null;
-            applyTimelineFilter();
-        }
-        try {
-            var bounds = getFilteredBounds();
-            if (bounds) map.flyToBounds(bounds, { padding: [50, 50], duration: 0.8, maxZoom: 14 });
-        } catch (e) {}
-    }
-
     // ──── Init Sequence ────
     Promise.all([
         fetch('data/trip_segments.json').then(function (r) { return r.ok ? r.json() : []; }),
@@ -587,78 +504,15 @@
                 }
             }
 
-            // Build unique sorted dates
-            var dateSet = {};
-            for (var i = 0; i < allPhotos.length; i++) {
-                if (allPhotos[i].date) dateSet[allPhotos[i].date] = true;
-            }
-            uniqueDates = Object.keys(dateSet).sort();
-
-            // Calculate week/month boundary markers
-            var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            boundaryMarkers = [];
-            for (var bi = 0; bi < uniqueDates.length; bi++) {
-                var bd = new Date(uniqueDates[bi] + 'T12:00:00');
-                if (bd.getDate() === 1) {
-                    boundaryMarkers.push({ index: bi, type: 'month', label: monthNames[bd.getMonth()] });
-                } else if (bd.getDay() === 1) {
-                    boundaryMarkers.push({ index: bi, type: 'week', label: '' });
-                }
-            }
-
-            // Build timeline segments directly from trip segments
-            // Map each date to a segment based on segment boundaries
-            var dateSegmentMap = {};
-            for (var di = 0; di < uniqueDates.length; di++) {
-                var dStr = uniqueDates[di];
-                var dateTime = new Date(dStr + 'T12:00:00'); // Use noon for date-only comparison
-                var bestSeg = -1;
-                for (var si = 0; si < tripSegments.length; si++) {
-                    var segStart = new Date(tripSegments[si].start);
-                    var segEnd = new Date(tripSegments[si].end);
-                    if (dateTime >= segStart && dateTime < segEnd) {
-                        bestSeg = si;
-                        break;
-                    }
-                }
-                dateSegmentMap[dStr] = bestSeg >= 0 ? bestSeg : 0;
-            }
-
-            // Build contiguous runs for timeline segments
-            timelineSegments = [];
-            if (uniqueDates.length > 0) {
-                var runStart = 0;
-                var runSegment = dateSegmentMap[uniqueDates[0]];
-                for (var ri = 1; ri <= uniqueDates.length; ri++) {
-                    var curSegment = ri < uniqueDates.length ? dateSegmentMap[uniqueDates[ri]] : -1;
-                    if (curSegment !== runSegment) {
-                        var seg = tripSegments[runSegment] || {};
-                        timelineSegments.push({
-                            clusterIndex: runSegment,
-                            startIdx: runStart,
-                            count: ri - runStart,
-                            color: seg.color || '#999',
-                            cityName: seg.name || 'Unknown'
-                        });
-                        runStart = ri;
-                        runSegment = curSegment;
-                    }
-                }
-            }
-
             // Initialize control panel
             window.controlPanel.init({
                 map: map,
                 baseLayers: baseLayers,
                 currentBaseLayer: currentBaseLayer,
                 travelRouteLayer: travelRouteLayer,
-                uniqueDates: uniqueDates,
-                timelineSegments: timelineSegments,
-                boundaryMarkers: boundaryMarkers,
                 allPhotos: allPhotos,
                 feedSidebar: feedSidebar,
                 feedToggle: feedToggle,
-                formatDateShort: formatDateShort,
                 setCloudFavoritesLoaded: function (val) { _cloudFavoritesLoaded = val; },
                 rebuildPhotoLayer: rebuildPhotoLayer,
                 buildPhotoIndex: buildPhotoIndex,
@@ -679,27 +533,6 @@
             window.addEventListener('pending-writes-changed', function () {
                 window.controlPanel.updatePendingIndicator();
             });
-
-            // Timeline slider handlers
-            handleMin = document.querySelector('.timeline-handle-min');
-            handleMax = document.querySelector('.timeline-handle-max');
-            dateStartLabel = document.querySelector('.timeline-date-start');
-            dateEndLabel = document.querySelector('.timeline-date-end');
-
-            if (handleMin && handleMax) {
-                handleMin.addEventListener('input', onTimelineVisualUpdate);
-                handleMax.addEventListener('input', onTimelineVisualUpdate);
-                handleMin.addEventListener('change', onTimelineRelease);
-                handleMax.addEventListener('change', onTimelineRelease);
-            }
-
-            // Set initial visible date range in appState
-            if (window.appState && uniqueDates.length > 0) {
-                window.appState.set('visibleDateRange', {
-                    min: uniqueDates[0],
-                    max: uniqueDates[uniqueDates.length - 1]
-                });
-            }
 
             try {
                 var initBounds = getFilteredBounds();

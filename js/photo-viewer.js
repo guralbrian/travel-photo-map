@@ -113,9 +113,9 @@
             e.stopPropagation();
             if (S.idx < 0 || S.idx >= S.photos.length) return;
             var p = S.photos[S.idx];
-            emit('photoviewer:favorite', { photo: p });
             p._isFavorite = !p._isFavorite;
             updFav(p);
+            emit('photoviewer:favorite', { photo: p });
         });
 
         $ov.addEventListener('click', function (e) {

@@ -43,8 +43,6 @@
         // Wire PanelSnap for feed sidebar
         feedPanelSnap = new window.PanelSnap({
             panelEl: feedSidebar,
-            handleEl: feedSidebar.querySelector('.feed-drag-handle'),
-            collapseBtn: feedClose,
             statePrefix: 'feed-sidebar',
             onStateChange: function (state) {
                 document.dispatchEvent(new CustomEvent('trip-feed:state-changed', {
@@ -61,6 +59,18 @@
                 }
             }
         });
+
+        // Manual close button handler (works on both desktop and mobile)
+        if (feedClose) {
+            feedClose.addEventListener('click', function () {
+                if (window.innerWidth > 768) {
+                    feedSidebar.classList.add('hidden');
+                    if (feedToggle) feedToggle.style.display = '';
+                } else {
+                    feedPanelSnap.snapTo('hidden');
+                }
+            });
+        }
 
         // Register with panel coordinator
         var feedToggleBtn = document.getElementById('trip-feed-toggle-btn');
@@ -110,7 +120,6 @@
 
         // Expose public methods
         window.feedController.buildFeed = buildFeed;
-        window.feedController.updateFeedForTimeline = updateFeedForTimeline;
         window.feedController.renderFeedNarratives = renderFeedNarratives;
     }
 
@@ -262,14 +271,6 @@
         var idx = photoIndex.hasOwnProperty(key) ? photoIndex[key] : -1;
         if (idx >= 0) {
             window.photoViewer.open(filteredPhotos, idx, evt.target);
-        }
-    }
-
-    function updateFeedForTimeline(minDate, maxDate) {
-        var entries = feedEntries.querySelectorAll('.feed-entry');
-        for (var i = 0; i < entries.length; i++) {
-            var d = entries[i].getAttribute('data-date');
-            entries[i].style.display = (d >= minDate && d <= maxDate) ? '' : 'none';
         }
     }
 
