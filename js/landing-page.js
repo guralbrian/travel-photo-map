@@ -8,18 +8,6 @@
     var TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
     var TILE_ATTR = '&copy; OpenStreetMap contributors, &copy; CARTO';
 
-    /* ── Region label mapping (matches region-nav.js REGION_SECTIONS) ── */
-    var REGION_SECTIONS = [
-        { label: 'UK',                    jsonRegions: ['UK - London'] },
-        { label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
-        { label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
-        { label: 'Munich',                jsonRegions: ['Munich'] },
-        { label: 'Prague',                jsonRegions: ['Prague'] },
-        { label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
-        { label: 'Berlin / Hamburg',       jsonRegions: ['Berlin', 'Hamburg'] },
-        { label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
-    ];
-
     /* ── Module state ── */
     var _container = null;      // #landing-page
     var _introEl = null;
@@ -71,61 +59,6 @@
         // Fallback: cycle through a palette
         var palette = ['#d4a853','#5b8c6e','#7a6cb5','#c75c5c','#5c8ac7','#c7895c','#5cc7b8','#c75c96'];
         return palette[Math.floor(Math.random() * palette.length)];
-    }
-
-    /* ══════════════════════════════════════
-       Build region data from itinerary
-       ══════════════════════════════════════ */
-
-    function buildRegions(itineraryData) {
-        if (!itineraryData || !itineraryData.regions) return [];
-
-        var regionMap = {};
-        itineraryData.regions.forEach(function (r) {
-            regionMap[r.name] = r;
-        });
-
-        return REGION_SECTIONS.map(function (cfg) {
-            var days = [];
-            var lats = [], lngs = [];
-            var summary = '';
-            var heroPhoto = '';
-
-            cfg.jsonRegions.forEach(function (name) {
-                var r = regionMap[name];
-                if (!r) return;
-                lats.push(r.lat);
-                lngs.push(r.lng);
-                if (r.summary) summary = r.summary;
-                if (r.heroPhoto) heroPhoto = r.heroPhoto;
-                r.days.forEach(function (d) {
-                    days.push({ date: d.date, notes: d.notes || '' });
-                });
-            });
-
-            // Sort and deduplicate days
-            days.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-            var seen = {};
-            days = days.filter(function (d) {
-                if (seen[d.date]) return false;
-                seen[d.date] = true;
-                return true;
-            });
-
-            var avgLat = lats.reduce(function (s, v) { return s + v; }, 0) / (lats.length || 1);
-            var avgLng = lngs.reduce(function (s, v) { return s + v; }, 0) / (lngs.length || 1);
-
-            return {
-                label: cfg.label,
-                jsonRegions: cfg.jsonRegions,
-                center: { lat: avgLat, lng: avgLng },
-                startDate: days.length ? days[0].date : '',
-                endDate: days.length ? days[days.length - 1].date : '',
-                days: days,
-                summary: summary,
-                heroPhoto: heroPhoto
-            };
-        });
     }
 
     /* ══════════════════════════════════════
@@ -186,11 +119,10 @@
                 card.style.background = 'linear-gradient(135deg, ' + color + ' 0%, rgba(24,24,28,0.9) 100%)';
             }
 
-            card.innerHTML =
-                '<div class="landing-card__content">' +
-                    '<h3 class="landing-card__name">' + region.label + '</h3>' +
-                    '<span class="landing-card__dates">' + formatDateRange(region.days) + '</span>' +
-                '</div>';
+            card.appendChild(domHelpers.el('div', {className: 'landing-card__content'},
+                domHelpers.el('h3', {className: 'landing-card__name'}, region.label),
+                domHelpers.el('span', {className: 'landing-card__dates'}, formatDateRange(region.days))
+            ));
 
             card.addEventListener('click', function () {
                 openDetail(index, card);
@@ -234,83 +166,87 @@
         }
         if (!summaryText) summaryText = 'Details coming soon.';
 
-        // Places list HTML
-        var placesHtml = '';
+        var _el = domHelpers.el;
+
+        // Places list
+        var placesList = _el('ul', {className: 'detail-places'});
         region.days.forEach(function (day) {
             if (!day.notes) return;
-            placesHtml +=
-                '<li class="detail-places__item">' +
-                    '<span class="detail-places__date">' + formatDayDate(day.date) + '</span>' +
-                    '<span class="detail-places__notes">' + escapeHtml(day.notes) + '</span>' +
-                '</li>';
+            placesList.appendChild(_el('li', {className: 'detail-places__item'},
+                _el('span', {className: 'detail-places__date'}, formatDayDate(day.date)),
+                _el('span', {className: 'detail-places__notes'}, day.notes)
+            ));
         });
 
-        // Photo grid HTML
-        var photoHtml = '';
+        // Photo grid
         var displayed = Math.min(photos.length, MAX_THUMBNAILS);
+        var photoSection;
         if (photos.length === 0) {
-            photoHtml = '<p class="detail-photos-empty">No photos yet</p>';
+            photoSection = _el('p', {className: 'detail-photos-empty'}, 'No photos yet');
         } else {
-            photoHtml = '<div class="detail-photos-grid">';
+            var photoGrid = _el('div', {className: 'detail-photos-grid'});
             for (var p = 0; p < displayed; p++) {
                 if (photos[p].type === 'video') {
-                    photoHtml += '<div style="position:relative;display:inline-block">' +
-                        '<img src="' + photos[p].thumbnail + '" alt="" loading="lazy">' +
-                        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);pointer-events:none">' +
-                            '<span style="color:rgba(255,255,255,0.9);font-size:24px;text-shadow:0 1px 4px rgba(0,0,0,0.6)">\u25B6</span>' +
-                        '</div></div>';
+                    photoGrid.appendChild(_el('div', {style: 'position:relative;display:inline-block'},
+                        _el('img', {src: photos[p].thumbnail, alt: '', loading: 'lazy'}),
+                        _el('div', {style: 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);pointer-events:none'},
+                            _el('span', {style: 'color:rgba(255,255,255,0.9);font-size:24px;text-shadow:0 1px 4px rgba(0,0,0,0.6)'}, '\u25B6')
+                        )
+                    ));
                 } else {
-                    photoHtml += '<img src="' + photos[p].thumbnail + '" alt="" loading="lazy">';
+                    photoGrid.appendChild(_el('img', {src: photos[p].thumbnail, alt: '', loading: 'lazy'}));
                 }
             }
-            photoHtml += '</div>';
-            if (photos.length > MAX_THUMBNAILS) {
-                photoHtml += '<button class="detail-photos-more" data-region-index="' + index + '">View on map</button>';
-            }
+            photoSection = photoGrid;
         }
 
-        _detailEl.innerHTML =
-            '<div class="detail-header">' +
-                '<h2 class="detail-header__title">' + region.label + ' <span class="detail-header__dates">&middot; ' + dateRange + '</span></h2>' +
-                '<div class="detail-header__actions">' +
-                    '<button class="detail-map-btn" data-region-index="' + index + '">View on map</button>' +
-                    '<button class="detail-close-btn">Back</button>' +
-                '</div>' +
-            '</div>' +
-            '<div class="detail-body">' +
-                '<div class="detail-body__left">' +
-                    '<div>' +
-                        '<h4 class="detail-section-title">Summary</h4>' +
-                        '<p class="detail-summary">' + escapeHtml(summaryText) + '</p>' +
-                    '</div>' +
-                    '<div>' +
-                        '<h4 class="detail-section-title">Places & Dates</h4>' +
-                        '<ul class="detail-places">' + placesHtml + '</ul>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="detail-body__right">' +
-                    '<div>' +
-                        '<h4 class="detail-section-title">Location</h4>' +
-                        '<div class="detail-map-container" id="detail-mini-map"></div>' +
-                    '</div>' +
-                    '<div>' +
-                        '<h4 class="detail-section-title">Photos (' + photos.length + ')</h4>' +
-                        photoHtml +
-                    '</div>' +
-                '</div>' +
-            '</div>';
+        // "View on map" handler
+        function onViewOnMap() { enterMapFromDetail(index); }
 
-        // Wire close button
-        _detailEl.querySelector('.detail-close-btn').addEventListener('click', closeDetail);
+        // Build detail tree
+        var closeBtn = _el('button', {className: 'detail-close-btn'}, 'Back');
+        closeBtn.addEventListener('click', closeDetail);
 
-        // Wire "View on map" buttons
-        var mapBtns = _detailEl.querySelectorAll('.detail-map-btn, .detail-photos-more');
-        for (var b = 0; b < mapBtns.length; b++) {
-            mapBtns[b].addEventListener('click', function () {
-                var idx = parseInt(this.getAttribute('data-region-index'), 10);
-                enterMapFromDetail(idx);
-            });
+        var mapBtn = _el('button', {className: 'detail-map-btn'}, 'View on map');
+        mapBtn.addEventListener('click', onViewOnMap);
+
+        var photosContainer = _el('div', null,
+            _el('h4', {className: 'detail-section-title'}, 'Photos (' + photos.length + ')'),
+            photoSection
+        );
+        if (photos.length > MAX_THUMBNAILS) {
+            var moreBtn = _el('button', {className: 'detail-photos-more'}, 'View on map');
+            moreBtn.addEventListener('click', onViewOnMap);
+            photosContainer.appendChild(moreBtn);
         }
+
+        _detailEl.textContent = '';
+        _detailEl.appendChild(_el('div', {className: 'detail-header'},
+            _el('h2', {className: 'detail-header__title'},
+                region.label + ' ',
+                _el('span', {className: 'detail-header__dates'}, '\u00B7 ' + dateRange)
+            ),
+            _el('div', {className: 'detail-header__actions'}, mapBtn, closeBtn)
+        ));
+        _detailEl.appendChild(_el('div', {className: 'detail-body'},
+            _el('div', {className: 'detail-body__left'},
+                _el('div', null,
+                    _el('h4', {className: 'detail-section-title'}, 'Summary'),
+                    _el('p', {className: 'detail-summary'}, summaryText)
+                ),
+                _el('div', null,
+                    _el('h4', {className: 'detail-section-title'}, 'Places & Dates'),
+                    placesList
+                )
+            ),
+            _el('div', {className: 'detail-body__right'},
+                _el('div', null,
+                    _el('h4', {className: 'detail-section-title'}, 'Location'),
+                    _el('div', {className: 'detail-map-container', id: 'detail-mini-map'})
+                ),
+                photosContainer
+            )
+        ));
 
         // Wire photo thumbnail clicks → open photo viewer
         var photoGrid = _detailEl.querySelector('.detail-photos-grid');
@@ -426,11 +362,6 @@
         }).addTo(_miniMap);
     }
 
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
     /* ══════════════════════════════════════
        Enter Map Transitions
        ══════════════════════════════════════ */
@@ -480,8 +411,8 @@
         _onEnterMap = opts.onEnterMap || null;
         _mainMap = opts.map || null;
 
-        // Build region data
-        _regions = buildRegions(opts.itineraryData);
+        // Read region data from shared model
+        _regions = window.TripModel.getRegions();
 
         // Grab grid wrap ref early (before intro can dismiss)
         _gridWrap = _container.querySelector('.landing-grid-wrap');

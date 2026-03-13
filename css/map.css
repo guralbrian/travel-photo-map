@@ -1303,3 +1303,63 @@ html, body {
         padding: 14px 10px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Map Interaction Policy — Mobile passive/active toggle
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Passive mode: allow page scroll through the map */
+#map.map--passive {
+    touch-action: pan-y !important;
+}
+
+/* Floating toggle button */
+.map-mode-btn {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: var(--z-panel-toggle, 1002);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(24, 24, 28, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #e0e0e0;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.map-mode-btn:active {
+    transform: scale(0.95);
+}
+
+/* Icon container */
+.map-mode-btn .map-mode-icon {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    transition: opacity 0.2s ease;
+}
+
+/* Default: show passive icon, hide active icon */
+.map-mode-btn .map-mode-icon-passive { opacity: 1; }
+.map-mode-btn .map-mode-icon-active  { opacity: 0; }
+
+/* Active state: gold background, swap icons */
+.map-mode-btn--active {
+    background: var(--color-accent, #d4a853);
+    color: #18181c;
+}
+.map-mode-btn--active .map-mode-icon-passive { opacity: 0; }
+.map-mode-btn--active .map-mode-icon-active  { opacity: 1; }
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+    .map-mode-btn { display: none !important; }
+}

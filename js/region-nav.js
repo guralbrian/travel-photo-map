@@ -4,18 +4,6 @@
 (function () {
     'use strict';
 
-    /* ── Config: 8 user-facing sections mapped to JSON region names ── */
-    var REGION_SECTIONS = [
-        { label: 'UK',                   jsonRegions: ['UK - London'] },
-        { label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
-        { label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
-        { label: 'Munich',               jsonRegions: ['Munich'] },
-        { label: 'Prague',               jsonRegions: ['Prague'] },
-        { label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
-        { label: 'Berlin / Hamburg',     jsonRegions: ['Berlin', 'Hamburg'] },
-        { label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
-    ];
-
     /* ── Module state ── */
     var _map = null;
     var _allPhotos = null;
@@ -40,12 +28,6 @@
 
     /* ── Helpers ── */
 
-    function formatDateShort(dateStr) {
-        var d = new Date(dateStr + 'T12:00:00');
-        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return months[d.getMonth()] + ' ' + d.getDate();
-    }
-
     function formatDateLong(dateStr) {
         var d = new Date(dateStr + 'T12:00:00');
         var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -64,54 +46,7 @@
                months[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
     }
 
-    /* ── T007: Build RegionSection objects from itinerary JSON ── */
-
-    function buildRegionSections(itineraryData) {
-        if (!itineraryData || !itineraryData.regions) return [];
-
-        var regionMap = {};
-        itineraryData.regions.forEach(function (r) {
-            regionMap[r.name] = r;
-        });
-
-        return REGION_SECTIONS.map(function (cfg) {
-            var days = [];
-            var lats = [], lngs = [];
-
-            cfg.jsonRegions.forEach(function (name) {
-                var r = regionMap[name];
-                if (!r) return;
-                lats.push(r.lat);
-                lngs.push(r.lng);
-                r.days.forEach(function (d) {
-                    days.push({ date: d.date, notes: d.notes || '' });
-                });
-            });
-
-            // Sort days chronologically and deduplicate by date
-            days.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-            var seen = {};
-            days = days.filter(function (d) {
-                if (seen[d.date]) return false;
-                seen[d.date] = true;
-                return true;
-            });
-
-            var avgLat = lats.reduce(function (s, v) { return s + v; }, 0) / (lats.length || 1);
-            var avgLng = lngs.reduce(function (s, v) { return s + v; }, 0) / (lngs.length || 1);
-
-            return {
-                label: cfg.label,
-                jsonRegions: cfg.jsonRegions,
-                center: { lat: avgLat, lng: avgLng },
-                startDate: days.length ? days[0].date : '',
-                endDate: days.length ? days[days.length - 1].date : '',
-                days: days
-            };
-        });
-    }
-
-    /* ── T008: Render the 2x4 region grid ── */
+    /* ── Render the 2x4 region grid ── */
 
     function renderRegionGrid(container, sections) {
         container.innerHTML = '';
@@ -122,10 +57,9 @@
             var panel = document.createElement('button');
             panel.className = 'region-panel';
             panel.dataset.regionIndex = idx;
-            panel.innerHTML =
-                '<span class="region-panel-label">' + section.label + '</span>' +
-                '<span class="region-panel-dates">' + formatDateShort(section.startDate) +
-                '\u2013' + formatDateShort(section.endDate) + '</span>';
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-label'}, section.label));
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-dates'},
+                domHelpers.formatDateShort(section.startDate) + '\u2013' + domHelpers.formatDateShort(section.endDate)));
             panel.addEventListener('click', function () {
                 selectRegion(idx);
             });
@@ -170,6 +104,7 @@
         if (!section) return;
 
         _activeIndex = index;
+        if (window.appState) window.appState.set('activeRegionId', section.id);
 
         // Save current map bounds for restore
         _savedMapBounds = _map.getBounds();
@@ -233,48 +168,40 @@
     /* ── T014 + T016: Render itinerary panel content ── */
 
     function renderItineraryPanel(container, section) {
-        var html = '<div class="itinerary-header">' +
-            '<button class="itinerary-back" id="itinerary-back">' +
-                '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>' +
-                ' All Regions' +
-            '</button>' +
-            '<h3 class="itinerary-title">' + section.label + '</h3>' +
-            '<span class="itinerary-dates">' + formatDateRange(section.startDate, section.endDate) + '</span>' +
-            '</div>' +
-            '<div class="itinerary-days">';
+        var _el = domHelpers.el;
 
+        // Back button (SVG set via innerHTML — static markup, no user content)
+        var backBtn = _el('button', {className: 'itinerary-back'});
+        backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>';
+        backBtn.appendChild(document.createTextNode(' All Regions'));
+        backBtn.addEventListener('click', function () { deselectRegion(); });
+
+        // Days list
+        var daysContainer = _el('div', {className: 'itinerary-days'});
         section.days.forEach(function (day) {
             var hasNotes = day.notes && day.notes.trim().length > 0;
-            html += '<div class="itinerary-day">' +
-                '<div class="itinerary-day-date">' + formatDateLong(day.date) + '</div>' +
-                (hasNotes
-                    ? '<div class="itinerary-day-notes">' + escapeHtml(day.notes) + '</div>'
-                    : '<div class="itinerary-day-notes itinerary-day-notes--empty">No notes recorded</div>') +
-                '</div>';
+            daysContainer.appendChild(_el('div', {className: 'itinerary-day'},
+                _el('div', {className: 'itinerary-day-date'}, formatDateLong(day.date)),
+                hasNotes
+                    ? _el('div', {className: 'itinerary-day-notes'}, day.notes)
+                    : _el('div', {className: 'itinerary-day-notes itinerary-day-notes--empty'}, 'No notes recorded')
+            ));
         });
 
-        html += '</div>';
-        container.innerHTML = html;
-
-        // Wire back button
-        var backBtn = document.getElementById('itinerary-back');
-        if (backBtn) {
-            backBtn.addEventListener('click', function () {
-                deselectRegion();
-            });
-        }
-    }
-
-    function escapeHtml(str) {
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        container.textContent = '';
+        container.appendChild(_el('div', {className: 'itinerary-header'},
+            backBtn,
+            _el('h3', {className: 'itinerary-title'}, section.label),
+            _el('span', {className: 'itinerary-dates'}, formatDateRange(section.startDate, section.endDate))
+        ));
+        container.appendChild(daysContainer);
     }
 
     /* ── T017 + T018: Deselect region — restore overview ── */
 
     function deselectRegion() {
         _activeIndex = -1;
+        if (window.appState) window.appState.set('activeRegionId', null);
 
         // Hide itinerary, show grid
         _itineraryEl.classList.add('hidden');
@@ -329,12 +256,11 @@
         var grid = document.createElement('div');
         grid.className = 'region-grid-inner';
 
-        REGION_SECTIONS.forEach(function (cfg) {
+        window.TripModel.getRegions().forEach(function (cfg) {
             var panel = document.createElement('div');
             panel.className = 'region-panel region-panel--disabled';
-            panel.innerHTML =
-                '<span class="region-panel-label">' + cfg.label + '</span>' +
-                '<span class="region-panel-dates">No data</span>';
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-label'}, cfg.label));
+            panel.appendChild(domHelpers.el('span', {className: 'region-panel-dates'}, 'No data'));
             grid.appendChild(panel);
         });
 
@@ -357,9 +283,9 @@
         _travelRouteLayerRef = opts.travelRouteLayerRef;
         _filteredPhotosRef = opts.filteredPhotos;
 
-        // Build sections from itinerary data
-        if (opts.itineraryData) {
-            _sections = buildRegionSections(opts.itineraryData);
+        // Read sections from shared model
+        _sections = window.TripModel.getRegions();
+        if (_sections.length && _sections[0].startDate) {
             renderRegionGrid(_gridEl, _sections);
         } else {
             console.warn('[region-nav] Itinerary data not available — showing fallback grid');
