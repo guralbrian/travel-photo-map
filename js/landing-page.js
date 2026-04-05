@@ -155,6 +155,7 @@
 
         _currentRegionIndex = index;
         _escalationDismissed = false;
+        _escalationShown = false;
 
         // Create detail element if not exists
         if (!_detailEl) {
@@ -256,6 +257,7 @@
         });
         escalationDismissBtn.addEventListener('click', function () {
             _escalationDismissed = true;
+            _escalationShown = false;
             escalationPrompt.classList.remove('map-escalation-prompt--visible');
         });
 
@@ -312,6 +314,7 @@
         if (escalationDismiss) {
             escalationDismiss.addEventListener('click', function () {
                 _escalationDismissed = true;
+                _escalationShown = false;
                 var prompt = _detailEl.querySelector('.map-escalation-prompt');
                 if (prompt) prompt.classList.remove('map-escalation-prompt--visible');
             });
@@ -542,6 +545,8 @@
         return viewArea > 0 ? intArea / viewArea : 1;
     }
 
+    var _escalationShown = false; // tracks if prompt is currently shown
+
     function checkBoundsEscalation() {
         if (!_detailMap || !_regionBounds || !_detailEl) return;
 
@@ -549,14 +554,15 @@
         var prompt = _detailEl.querySelector('.map-escalation-prompt');
         if (!prompt) return;
 
-        if (overlap < 0.2 && !_escalationDismissed) {
+        if (overlap < 0.2 && !_escalationDismissed && !_escalationShown) {
+            // Show prompt and keep it visible
             prompt.classList.add('map-escalation-prompt--visible');
-        } else {
+            _escalationShown = true;
+        } else if (_escalationShown && overlap >= 0.5) {
+            // Only auto-hide when user has returned well within region bounds
             prompt.classList.remove('map-escalation-prompt--visible');
-            // Reset dismissed flag when user returns to region
-            if (overlap >= 0.5) {
-                _escalationDismissed = false;
-            }
+            _escalationShown = false;
+            _escalationDismissed = false;
         }
     }
 
