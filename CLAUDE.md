@@ -35,6 +35,8 @@ This is a travel photo map app built with HTML/CSS/JavaScript and Leaflet.js. Ph
 - Static JSON — extends existing `data/itinerary.json` with `summary` and `heroPhoto` fields per region; reads existing `data/manifest.json` for photos (010-trip-landing-page)
 - Vanilla JavaScript (ES5-compatible IIFE in landing-page.js), CSS3, HTML5 + Leaflet.js (vendored), photo-viewer.js (existing global `window.photoViewer`) (010-trip-landing-page)
 - N/A — reads existing `data/manifest.json` and `data/itinerary.json` at runtime (010-trip-landing-page)
+- Vanilla JavaScript (ES5-compatible IIFE pattern), CSS3, HTML5 + Leaflet.js 1.9.4 (vendored), ViewportSampler.js (local), Leaflet.Photo.js (local) (010-trip-landing-page)
+- N/A — reads `data/manifest.json` and `data/itinerary.json` at runtime (010-trip-landing-page)
 - Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (existing, vendored) (011-fix-video-playback)
 - Vanilla JavaScript (ES5-compatible IIFE), CSS3, HTML5 + Leaflet.js (vendored), no new dependencies (011-fix-video-playback)
 - N/A — reads `data/manifest.json` at runtime (011-fix-video-playback)
@@ -74,6 +76,7 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
+- 010-trip-landing-page: Added interactive detail map with ViewportSampler photo clusters
 - 022-photo-marker-improvements: Added Vanilla JavaScript (ES5-compatible IIFE), CSS3 + Leaflet.js (vendored), ViewportSampler.js (local), Leaflet.Photo.css (local)
 - 017-dom-builders: Added Vanilla JavaScript (ES5-compatible IIFEs) + Leaflet.js 1.9.4 (vendored), no new dependencies
 - 016-app-state-module: Added Vanilla JavaScript (ES5-compatible IIFE) + None (standalone module, no framework or library dependencies)

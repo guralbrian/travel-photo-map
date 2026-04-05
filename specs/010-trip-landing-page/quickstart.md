@@ -50,10 +50,13 @@ Both fields are optional — the page works without them (color fallback for mis
 
 ## Modified Files
 
-| File                   | Change                                                    |
-| ---------------------- | --------------------------------------------------------- |
-| `index.html`           | Add landing page HTML container, link CSS, load JS        |
-| `data/itinerary.json`  | Add `summary` and `heroPhoto` fields to each region       |
+| File                      | Change                                                          |
+| ------------------------- | --------------------------------------------------------------- |
+| `index.html`              | Add landing page HTML container, link CSS, load JS              |
+| `data/itinerary.json`     | Add `summary` and `heroPhoto` fields to each region             |
+| `js/ViewportSampler.js`   | Refactor from singleton IIFE to constructor function            |
+| `js/landing-page.js`      | Replace static mini-map with interactive map + ViewportSampler  |
+| `css/landing-page.css`    | Add 50vh map section, two-finger overlay, escalation prompt     |
 
 ## Testing
 
@@ -65,7 +68,11 @@ After starting the local server:
 4. **Card grid**: Verify 8 cards with region names, dates, and hero photos.
 5. **Card detail**: Click a card — should expand to fullscreen detail with summary, places/dates, map, and photos.
 6. **Photo viewer from detail**: Click a photo thumbnail — immersive photo viewer should open. Swipe/arrow to navigate through the region's photos. Close viewer — should return to the detail view (still expanded).
-7. **Overflow button**: If a region has >30 photos, verify the button reads "View on map" (not "+N more"). Click it — should transition to map zoomed to that region.
-8. **Close detail**: Click back/close — should collapse back to the grid.
-9. **Enter map**: Click "Explore the map" — landing page should hide, revealing the full map app.
-10. **Mobile**: Resize to 375px width and repeat steps 1-9.
+7. **Interactive detail map**: In the detail view, verify the map shows photo clusters (tier-based markers). Pan and zoom the map — should respond instantly.
+8. **Map cluster click**: Click a photo cluster on the detail map — immersive photo viewer should open at that photo. Close viewer — return to detail view.
+9. **Mobile two-finger gesture**: On mobile (375px), single-finger drag on the map should scroll the detail view. Two-finger drag should pan the map. Verify "Use two fingers" overlay appears on first single-finger drag.
+10. **Out-of-bounds escalation**: Pan the detail map far from the region's photos. A "Explore the full map?" prompt should appear. Accept — should transition to fullscreen main map at the current viewport position.
+11. **Overflow button**: If a region has >30 photos, verify the button reads "View on map" (not "+N more"). Click it — should transition to map zoomed to that region.
+12. **Close detail**: Click back/close — should collapse back to the grid.
+13. **Enter map**: Click "Explore the map" — landing page should hide, revealing the full map app.
+14. **Mobile**: Resize to 375px width and repeat steps 1-13.

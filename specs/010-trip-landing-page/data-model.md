@@ -42,8 +42,9 @@ Used for the thumbnail grid in the detail view. Photos are filtered by matching 
 | caption   | string | yes                  | Caption text (passed to photo viewer)     |
 | tags      | array  | yes                  | Tag array (passed to photo viewer)        |
 | date      | string | yes                  | For date-range filtering                  |
-| lat       | number | no                   | Not used directly in landing page         |
-| lng       | number | no                   | Not used directly in landing page         |
+| lat       | number | **yes**              | Used for detail map photo clusters and region bounds computation |
+| lng       | number | **yes**              | Used for detail map photo clusters and region bounds computation |
+| type      | string | yes                  | 'photo' or 'video' — determines video badge on map markers      |
 
 ## Entity: Trip Summary (static)
 
@@ -71,4 +72,7 @@ Trip Summary (static, 1)
 3. On card click, detail view reads region's days for the places/dates list.
 4. Detail view filters `manifest.json` photos by date range for thumbnail grid.
 5. On thumbnail click, the full region photo array (from step 4) is passed to `window.photoViewer.open(photos, clickedIndex, imgElement)`.
-6. Mini-map centers on region's `lat`/`lng`.
+6. Detail map initializes during intro animation (hidden, tiles pre-cached).
+7. On card open, detail map repositions to region center, ViewportSampler loads region photos with lat/lng for cluster display.
+8. Detail map computes `L.latLngBounds` from region photos for bounds-overlap tracking (FR-009e escalation).
+9. On photo cluster click, same flow as step 5 — `window.photoViewer.open(photos, clickedIndex)`.

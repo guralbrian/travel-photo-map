@@ -2,8 +2,11 @@
   ViewportSampler - Density-based photo display for the map viewport.
   Divides the visible viewport into a screen-space grid and shows at most
   one photo per cell, with "+N" badges for hidden neighbors.
+
+  Usage: var sampler = new ViewportSampler();
+         sampler.init(map, photos, { onClick: handler });
 */
-var ViewportSampler = (function () {
+window.ViewportSampler = function ViewportSampler() {
     var _map = null;
     var _photos = [];          // full filtered photo array
     var _markers = {};         // key -> L.Marker currently on map
@@ -315,4 +318,4 @@ var ViewportSampler = (function () {
         setPhotos: setPhotos,
         getBounds: getBounds
     };
-})();
+};

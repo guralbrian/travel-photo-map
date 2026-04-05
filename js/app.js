@@ -149,6 +149,7 @@
     }
 
     // ──── Photo State ────
+    var mainSampler = new ViewportSampler();
     var photoLayer = null;
     var favoritesLayer = null;
     var allPhotos = [];
@@ -275,16 +276,16 @@
         }
 
         // Initialize ViewportSampler for regular photos
-        ViewportSampler.setPhotos(regularPhotos);
+        mainSampler.setPhotos(regularPhotos);
         if (!photoLayer) {
-            ViewportSampler.init(map, regularPhotos, {
+            mainSampler.init(map, regularPhotos, {
                 iconSize: currentIconSize,
                 cellSize: currentDensityCellSize,
                 onClick: onPhotoClick
             });
             photoLayer = true; // flag that sampler is initialized
         } else {
-            ViewportSampler.update();
+            mainSampler.update();
         }
 
         // Favorites: separate non-clustered layer (always visible, fixed tier-0 size)
@@ -480,7 +481,10 @@
                         // Invalidate map size after landing page hides
                         setTimeout(function () {
                             map.invalidateSize();
-                            if (opts && opts.region) {
+                            if (opts && opts.viewport) {
+                                // Use detail map's current viewport (escalation)
+                                map.setView(opts.viewport.center, opts.viewport.zoom);
+                            } else if (opts && opts.region) {
                                 // Fly to the selected region
                                 var zoomLevel = opts.region.jsonRegions && opts.region.jsonRegions.length > 1 ? 7 : 10;
                                 map.flyTo([opts.region.center.lat, opts.region.center.lng], zoomLevel, { duration: 0.8 });
@@ -520,11 +524,11 @@
                 initialIconSize: currentIconSize,
                 onDensityChange: function (cellSize) {
                     currentDensityCellSize = cellSize;
-                    ViewportSampler.setCellSize(cellSize);
+                    mainSampler.setCellSize(cellSize);
                 },
                 onSizeChange: function (iconSize) {
                     currentIconSize = iconSize;
-                    ViewportSampler.updateIconSize(iconSize);
+                    mainSampler.updateIconSize(iconSize);
                     if (filteredPhotos.length > 0) rebuildPhotoLayer();
                 }
             });
@@ -543,7 +547,7 @@
 
             // Wire viewport sampler to map movement
             map.on('moveend', function () {
-                ViewportSampler.update();
+                mainSampler.update();
             });
         })
         .catch(function (err) {

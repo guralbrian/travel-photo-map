@@ -21,6 +21,14 @@
 - Q: What should happen to the "+N more" overflow button now that thumbnails open the viewer? → A: Keep it as a "View on map" shortcut only — navigates to the map zoomed to that region.
 - Q: How should the landing page build the photo array for the viewer? → A: Filter manifest.json photos by region date range — same source the map uses, ensuring format compatibility.
 
+### Session 2026-04-04
+
+- Q: When should the detail map begin background loading? → A: During intro animation — the map instance and photo data pre-initialize while the 3.5s intro plays, so it is ready before users reach the card grid.
+- Q: What happens when user taps a photo cluster on the detail map? → A: Open photo viewer — same behavior as the main map, tapping a cluster opens the immersive photo viewer at that photo.
+- Q: How much vertical space should the detail map occupy? → A: ~50% viewport height — balanced split giving substantial map interaction area while leaving room to scroll to other content sections.
+- Q: How to resolve scroll vs. map drag conflict on mobile? → A: Two-finger to pan map — single-finger scrolls the detail view; two-finger gesture pans/zooms the map, with a "Use two fingers to move the map" overlay hint.
+- Q: Can users pan/zoom the detail map beyond the region? → A: Yes, but panning too far beyond the region's photo bounds triggers a prompt to switch to fullscreen main map view with all photos — a natural escalation from region preview to full experience.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Trip Stats Intro Screen (Priority: P1)
@@ -69,7 +77,7 @@ When a visitor clicks or taps a region card, it "flips out" (expands with an eng
 1. **Given** the region card grid is visible, **When** the visitor clicks a region card, **Then** the card expands with a smooth animation into a full-page takeover that fills the viewport and hides the card grid.
 2. **Given** a region detail view is open, **When** looking at the content, **Then** it displays a plain-language summary describing that leg of the trip.
 3. **Given** a region detail view is open, **When** looking at the content, **Then** it includes a list of places visited with corresponding dates.
-4. **Given** a region detail view is open, **When** looking at the content, **Then** it displays a map centered on that region's location.
+4. **Given** a region detail view is open, **When** looking at the content, **Then** it displays an interactive map with photo clusters centered on that region, supporting pan/zoom/pinch. The map responds instantly (no loading delay) because it was pre-initialized during the intro animation.
 5. **Given** a region detail view is open, **When** looking at the content, **Then** it shows a compact, scrollable thumbnail grid of the photos taken during that leg of the trip.
 5a. **Given** a region detail view is open, **When** the visitor clicks a photo thumbnail, **Then** the immersive photo viewer opens showing that photo with the ability to navigate through the region's photos.
 5b. **Given** the photo viewer was opened from a region detail thumbnail, **When** the visitor closes the photo viewer, **Then** they return to the region detail view which remains in its expanded state.
@@ -98,6 +106,8 @@ The visitor can navigate from the landing page into the full interactive map exp
 - What happens on very slow connections? The intro screen and card grid load first (text/layout); photos load progressively in card details.
 - What happens if the browser window is resized while viewing? The grid reflows and detail views adjust to the new viewport.
 - What happens if a visitor navigates directly to a URL hash/deep link? For this foundation version, deep linking is not supported — the landing page always starts from the intro.
+- What happens when a mobile user single-finger drags the detail map? The detail view scrolls normally (map does not pan). A "Use two fingers to move the map" overlay hint appears briefly on the first attempt, then dismisses.
+- What happens when the user pans the detail map far from the region? A prompt appears offering to switch to the fullscreen main map with all photos. Accepting transitions smoothly; dismissing the prompt lets the user continue panning freely.
 
 ## Requirements *(mandatory)*
 
@@ -111,7 +121,12 @@ The visitor can navigate from the landing page into the full interactive map exp
 - **FR-006**: Clicking a region card MUST trigger an animated expansion ("flip out") into a full-page takeover that fills the viewport and hides the card grid.
 - **FR-007**: The detail view MUST include a hand-authored, plain-language summary of that trip leg (stored as a dedicated field per region in the itinerary data).
 - **FR-008**: The detail view MUST include a list of places visited with dates.
-- **FR-009**: The detail view MUST include a map showing the region's location.
+- **FR-009**: The detail view MUST include an interactive map displaying the region's photo clusters (using ViewportSampler with the same tier-based markers as the main map). The map MUST support pan, zoom, and pinch gestures consistent with the main map's interaction rules.
+- **FR-009a**: A hidden Leaflet map instance MUST begin pre-initializing (tiles, manifest data, ViewportSampler) during the intro animation so that the detail map is interactive immediately when a card opens.
+- **FR-009b**: Tapping a photo cluster marker on the detail map MUST open the immersive photo viewer (`window.photoViewer.open`) at the tapped photo, consistent with the main map's click behavior. Closing the viewer MUST return to the detail view.
+- **FR-009c**: The detail map MUST occupy approximately 50% of the viewport height, providing a balanced layout with scrollable content (summary, places/dates, photos) above or below.
+- **FR-009d**: On mobile, the detail map MUST require a two-finger gesture to pan/zoom (single-finger scrolls the detail view). A dismissible "Use two fingers to move the map" overlay hint MUST appear on the first single-finger drag attempt. On desktop, standard click-drag panning and scroll-wheel zoom MUST work normally.
+- **FR-009e**: The detail map MUST start fitted to the region's photo bounds. If the user pans or zooms such that the viewport moves significantly beyond the region's photo extent, a prompt MUST appear offering to switch to the fullscreen main map view with all photos loaded. Accepting the prompt closes the detail view and reveals the main map at the current viewport position.
 - **FR-010**: The detail view MUST display photos from that trip leg as a compact, scrollable thumbnail grid.
 - **FR-010a**: Clicking a photo thumbnail in the detail view MUST open the existing immersive photo viewer (`window.photoViewer.open`) with the region's photo array, starting at the clicked photo. Closing the viewer MUST return the user to the region detail view (detail remains expanded).
 - **FR-010b**: When a region has more than 30 photos, the overflow button MUST read "View on map" (not "+N more") and navigate to the map view zoomed to that region.

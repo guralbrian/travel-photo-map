@@ -370,13 +370,104 @@
     line-height: 1.5;
 }
 
-/* Mini map */
-.detail-map-container {
+/* Interactive detail map (50vh) */
+.detail-map-section {
     width: 100%;
-    height: 240px;
-    border-radius: 10px;
+    height: 50vh;
+    border-radius: 12px;
     overflow: hidden;
+    position: relative;
     border: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+/* Two-finger gesture overlay */
+.map-gesture-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    z-index: 10;
+    pointer-events: none;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 300ms ease;
+}
+
+.map-gesture-overlay--visible {
+    display: flex;
+    opacity: 1;
+}
+
+.map-gesture-overlay--fading {
+    opacity: 0;
+}
+
+/* Out-of-bounds escalation prompt */
+.map-escalation-prompt {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 300ms ease, transform 300ms ease;
+    white-space: nowrap;
+}
+
+.map-escalation-prompt--visible {
+    display: flex;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.map-escalation-prompt__text {
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.map-escalation-prompt__accept {
+    background: var(--color-accent);
+    color: rgba(24, 24, 28, 1);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-fast) ease;
+}
+
+.map-escalation-prompt__accept:hover {
+    background: var(--color-accent-hover);
+}
+
+.map-escalation-prompt__dismiss {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.map-escalation-prompt__dismiss:hover {
+    color: var(--color-text);
 }
 
 /* Photo thumbnail grid */
@@ -470,8 +561,8 @@
         gap: 20px;
     }
 
-    .detail-map-container {
-        height: 180px;
+    .detail-map-section {
+        height: 40vh;
     }
 
     .detail-photos-grid {

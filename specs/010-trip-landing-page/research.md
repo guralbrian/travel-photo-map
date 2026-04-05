@@ -23,16 +23,48 @@
 - Web Animations API: Good but less browser support than CSS transitions. No benefit for this use case.
 - JavaScript `requestAnimationFrame` loop: Rejected — constitution prefers CSS transitions.
 
-## R3: Mini Map in Detail View
+## R3: Interactive Detail Map with Photo Clusters (Updated 2026-04-04)
 
-**Decision**: Create a second, smaller Leaflet map instance inside the detail view. Initialize it only when a card is opened (lazy), destroy it when closed. Use the same tile layer as the main map.
+**Decision**: Replace the static mini-map with a fully interactive Leaflet map instance displaying photo clusters via a dedicated ViewportSampler instance. The map is pre-initialized during the intro animation (3.5s) so it's ready instantly when any card opens.
 
-**Rationale**: Leaflet supports multiple map instances on a page. A dedicated mini-map avoids the complexity of moving/resizing the main map. Lazy initialization keeps initial load fast. The mini-map is read-only with no controls needed.
+**Rationale**: The detail map should be a "window into the actual map" — same photo clusters, same tier-based markers, same interaction model. This requires a real ViewportSampler instance, not a static circle marker. Pre-initializing during intro amortizes the setup cost.
 
-**Alternatives considered**:
-- Static map image: Simpler but less engaging and requires an image service or pre-rendered tiles.
-- Reuse main map by moving it into the detail view: Too risky — would break map state and require complex restoration.
-- Embed an iframe with a map URL: Overweight and off-brand.
+**Key sub-decisions**:
+
+### R3a: ViewportSampler Refactor to Constructor
+
+ViewportSampler is currently a singleton IIFE — all state (`_map`, `_photos`, `_markers`, `_layerGroup`) in module scope. Cannot instantiate twice. Must refactor to a constructor function returning independent instances.
+
+**Approach**: Wrap IIFE body in `function ViewportSampler() { ... return { init, stop, update, ... }; }`. Main map uses `new ViewportSampler()`, detail map uses a second `new ViewportSampler()`. Same API, just instantiated differently. All existing `ViewportSampler.xxx()` calls become `mainSampler.xxx()`.
+
+**Alternatives rejected**:
+- Swap single sampler between maps: Fragile, main map markers disappear during detail view, breaks fullscreen escalation (FR-009e).
+- Simplified cluster renderer: Duplicates logic, divergent visual behavior.
+
+### R3b: Single Hidden Map Pre-initialized During Intro
+
+Create one hidden Leaflet map instance during the intro animation. On card open, move its container into the detail DOM, call `setView()` and `setPhotos()`. On card close, move back to hidden holder.
+
+**Alternatives rejected**:
+- 8 separate map instances: Wastes memory, 8× tile loads.
+- Create on card click: Violates FR-009a (instant interactivity requirement).
+- Reuse main map: Conflicts with same-page show/hide model.
+
+### R3c: Two-Finger Gesture on Mobile (FR-009d)
+
+On mobile: `dragging: false`, `scrollWheelZoom: false`, `touchZoom: true`. Custom PointerEvents handler detects 2+ active pointers → `map.panBy(delta)`. Single-finger passes through to scroll detail view. "Use two fingers" overlay on first single-finger drag, dismissed after 2s or on two-finger gesture.
+
+On desktop: Normal Leaflet interaction (drag, scroll-wheel zoom).
+
+### R3d: Out-of-Bounds Escalation (FR-009e)
+
+Monitor `moveend` events. Compare viewport bounds to region photo bounds (computed as `L.latLngBounds` from all region photos). If viewport/region overlap drops below ~20%, show floating prompt "Explore the full map?" Accept → `enterMapFromDetail()` with current viewport center/zoom passed to main map. Dismiss → hide prompt, re-trigger only if user returns to bounds and leaves again.
+
+### R3e: Detail Map Layout
+
+Full-width map section at ~50vh, positioned at top of detail view. Summary, places/dates, and photo grid stack below as scrollable content. On mobile, map may reduce to ~40vh. Replaces the previous two-column layout for the map section.
+
+**Previous R3 decision (static mini-map) is superseded by this update.**
 
 ## R4: Thumbnail Grid Implementation
 
