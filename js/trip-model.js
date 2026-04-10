@@ -10,18 +10,20 @@
     var _regionMap = {};   // id → region
     var _clusters = [];
     var _dateIndex = {};
+    var _photos = [];      // reference to all photos (with cityName assigned)
     var _initialized = false;
 
     /* ── Canonical region definitions ── */
+    /* segmentNames maps to trip_segments.json names for precise datetime filtering */
     var REGION_SECTIONS = [
-        { id: 'uk',                 label: 'UK',                    jsonRegions: ['UK - London'] },
-        { id: 'copenhagen-pt-1',    label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
-        { id: 'baden-wurttemberg',  label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
-        { id: 'munich',            label: 'Munich',                jsonRegions: ['Munich'] },
-        { id: 'prague',            label: 'Prague',                jsonRegions: ['Prague'] },
-        { id: 'dresden-meissen',   label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
-        { id: 'berlin-hamburg',    label: 'Berlin / Hamburg',       jsonRegions: ['Berlin', 'Hamburg'] },
-        { id: 'copenhagen-pt-2',   label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
+        { id: 'uk',                 segmentNames: ['London'],             label: 'UK',                    jsonRegions: ['UK - London'] },
+        { id: 'copenhagen-pt-1',    segmentNames: ['Copenhagen'],         label: 'Copenhagen Pt.\u00a01', jsonRegions: ['Copenhagen (Visit 1)'] },
+        { id: 'baden-wurttemberg',  segmentNames: ['Heidelberg'],         label: 'Baden-W\u00fcrttemberg', jsonRegions: ['Heidelberg'] },
+        { id: 'munich',            segmentNames: ['Munich'],             label: 'Munich',                jsonRegions: ['Munich'] },
+        { id: 'prague',            segmentNames: ['Prague'],             label: 'Prague',                jsonRegions: ['Prague'] },
+        { id: 'dresden-meissen',   segmentNames: ['Dresden', 'Meissen'], label: 'Dresden / Mei\u00dfen', jsonRegions: ['Dresden / Mei\u00dfen'] },
+        { id: 'berlin-hamburg',    segmentNames: ['Berlin', 'Hamburg'],  label: 'Berlin / Hamburg',       jsonRegions: ['Berlin', 'Hamburg'] },
+        { id: 'copenhagen-pt-2',   segmentNames: ['Copenhagen Pt 2'],    label: 'Copenhagen Pt.\u00a02', jsonRegions: ['Copenhagen (Visit 2)'] }
     ];
 
     /* ══════════════════════════════════════
@@ -36,6 +38,7 @@
                     id: cfg.id,
                     label: cfg.label,
                     jsonRegions: cfg.jsonRegions,
+                    segmentNames: cfg.segmentNames || [],
                     center: { lat: 0, lng: 0 },
                     startDate: '',
                     endDate: '',
@@ -85,6 +88,7 @@
                 id: cfg.id,
                 label: cfg.label,
                 jsonRegions: cfg.jsonRegions,
+                segmentNames: cfg.segmentNames || [],
                 center: { lat: avgLat, lng: avgLng },
                 startDate: days.length ? days[0].date : '',
                 endDate: days.length ? days[days.length - 1].date : '',
