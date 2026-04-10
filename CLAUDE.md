@@ -72,7 +72,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 
 ## Frontend Development
-- After any CSS/JS change to UI components, use the Playwright MCP to screenshot localhost:8000 and verify the change visually before committing.
+- After any CSS/JS change to UI components, use the Playwright MCP to screenshot localhost:8000 and verify the change visually before committing. Save screenshots to `.playwright-mcp/` — never to the project root.
 - Test at both desktop (1440px) and mobile (375px) widths.
 
 ## Recent Changes
@@ -84,7 +84,7 @@ Vanilla JavaScript (ES2020+ modules), Python 3.10+: Follow standard conventions
 
 ## Testing
 
-- After implementing changes, test in the browser using the Playwright MCP before declaring work complete. Watch for: CSS z-index/positioning issues, gesture/pointer event interception, and browser caching of stale assets.
+- After implementing changes, test in the browser using the Playwright MCP before declaring work complete. Watch for: CSS z-index/positioning issues, gesture/pointer event interception, and browser caching of stale assets. All screenshots must go in `.playwright-mcp/`, not the project root.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
