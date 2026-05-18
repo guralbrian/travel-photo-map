@@ -30,6 +30,7 @@
     var _currentRegionIndex = null;
     var _escalationDismissed = false;
     var _moveendHandler = null;  // for cleanup
+    var _detailMapTimeout = null; // for cancelling stale region-switch timeouts
     var _gestureHintShown = false;
 
     /* ══════════════════════════════════════
@@ -339,8 +340,10 @@
         _gridWrap.style.opacity = '0';
         _gridWrap.style.pointerEvents = 'none';
 
-        // Wire interactive detail map after animation
-        setTimeout(function () {
+        // Wire interactive detail map after animation (cancel any stale pending call)
+        if (_detailMapTimeout) clearTimeout(_detailMapTimeout);
+        _detailMapTimeout = setTimeout(function () {
+            _detailMapTimeout = null;
             showDetailMap(region, photos);
         }, 420);
 
@@ -350,6 +353,9 @@
 
     function closeDetail() {
         if (!_detailEl) return;
+
+        // Cancel any pending region-switch timeout
+        if (_detailMapTimeout) { clearTimeout(_detailMapTimeout); _detailMapTimeout = null; }
 
         // Detach detail map
         hideDetailMap();
@@ -427,16 +433,9 @@
         var marker = e.layer;
         if (!marker || !marker.photo) return;
         var photo = marker.photo;
-        // Find index in region photos
-        var idx = 0;
-        for (var i = 0; i < _regionPhotos.length; i++) {
-            if (_regionPhotos[i].url === photo.url &&
-                _regionPhotos[i].lat === photo.lat &&
-                _regionPhotos[i].lng === photo.lng) {
-                idx = i;
-                break;
-            }
-        }
+        // Use reference equality — marker.photo is a direct reference to the object in _regionPhotos
+        var idx = _regionPhotos.indexOf(photo);
+        if (idx < 0) return; // guard: don't open wrong photo if arrays are out of sync
         var srcEl = marker._icon ? marker._icon.querySelector('img') : null;
         if (window.photoViewer) {
             window.photoViewer.open(_regionPhotos, idx, srcEl);
@@ -445,6 +444,9 @@
 
     function showDetailMap(region, photos) {
         if (!_detailMap || !_detailEl) return;
+
+        // Re-sync in case _regionPhotos was overwritten by a rapid region switch
+        _regionPhotos = photos;
 
         var mapSection = _detailEl.querySelector('.detail-map-section');
         if (!mapSection) return;
